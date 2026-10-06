@@ -1,0 +1,10 @@
+Coloque aqui as fotos do produto com estes nomes:
+
+  produto-1.jpg  (foto principal)
+  produto-2.jpg
+  produto-3.jpg
+  produto-4.jpg
+  produto-5.jpg
+
+Enquanto as fotos não forem adicionadas, o site mostra a ilustração
+"ilustracao-tapete.svg". Fotos que faltarem são escondidas da galeria.

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Baby Ocean - Tapete de Água Inflável | Dia das Crianças</title>
+  <meta name="description" content="Baby Ocean - Tapete de Água Inflável por apenas R$ 80,00. O presente perfeito para o Dia das Crianças.">
+  <meta property="og:title" content="Baby Ocean - Tapete de Água Inflável">
+  <meta property="og:description" content="Presente perfeito para o Dia das Crianças por apenas R$ 80,00.">
+  <meta property="og:image" content="images/produto-1.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Barra de aviso -->
+  <div class="announcement">
+    🎁 <strong>Especial Dia das Crianças</strong> — Garanta o presente a tempo!
+  </div>
+
+  <!-- Cabeçalho -->
+  <header class="header">
+    <div class="container header__inner">
+      <a href="#" class="logo">🌊 Baby<span>Ocean</span></a>
+      <nav class="nav">
+        <a href="#beneficios">Benefícios</a>
+        <a href="#como-usar">Como usar</a>
+        <a href="#especificacoes">Especificações</a>
+        <a href="#faq">Dúvidas</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Produto -->
+  <main>
+    <section class="product container">
+      <div class="gallery">
+        <div class="gallery__main">
+          <span class="badge">Dia das Crianças</span>
+          <img id="mainImage" src="images/produto-1.jpg" alt="Baby Ocean - Tapete de Água Inflável" onerror="this.onerror=null;this.src='images/ilustracao-tapete.svg'">
+        </div>
+        <div class="gallery__thumbs" id="thumbs"></div>
+      </div>
+
+      <div class="info">
+        <p class="info__kicker">Brinquedo sensorial para bebês</p>
+        <h1 class="info__title">Baby Ocean - Tapete de Água Inflável</h1>
+
+        <div class="price">
+          <span class="price__now" id="priceNow">R$ 80,00</span>
+          <span class="price__pix">à vista no Pix</span>
+        </div>
+
+        <!-- Contagem regressiva para o Dia das Crianças -->
+        <div class="countdown" id="countdown">
+          <p class="countdown__title">⏰ Faltam para o Dia das Crianças:</p>
+          <div class="countdown__grid">
+            <div><strong id="cd-dias">0</strong><span>dias</span></div>
+            <div><strong id="cd-horas">00</strong><span>horas</span></div>
+            <div><strong id="cd-min">00</strong><span>min</span></div>
+            <div><strong id="cd-seg">00</strong><span>seg</span></div>
+          </div>
+        </div>
+
+        <ul class="highlights">
+          <li>✅ Estimula o desenvolvimento motor e sensorial</li>
+          <li>✅ Ideal para o "tummy time" (tempo de bruços)</li>
+          <li>✅ Peixinhos coloridos que flutuam na água</li>
+          <li>✅ Fácil de encher, esvaziar e guardar</li>
+        </ul>
+
+        <div class="buy">
+          <div class="qty">
+            <button type="button" id="qtyMinus" aria-label="Diminuir quantidade">−</button>
+            <input type="number" id="qty" value="1" min="1" max="10" aria-label="Quantidade">
+            <button type="button" id="qtyPlus" aria-label="Aumentar quantidade">+</button>
+          </div>
+          <a href="#" class="btn btn--buy" id="buyBtn">COMPRAR AGORA</a>
+        </div>
+        <p class="total">Total: <strong id="total">R$ 80,00</strong></p>
+
+        <div class="trust">
+          <div>🚚<span>Enviamos para todo o Brasil</span></div>
+          <div>🔒<span>Compra 100% segura</span></div>
+          <div>💬<span>Atendimento pelo WhatsApp</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Benefícios -->
+    <section class="section section--blue" id="beneficios">
+      <div class="container">
+        <h2 class="section__title">Por que seu bebê vai amar o Baby Ocean?</h2>
+        <div class="cards">
+          <article class="card">
+            <div class="card__icon">🧠</div>
+            <h3>Desenvolvimento sensorial</h3>
+            <p>As cores, o movimento da água e os peixinhos flutuando prendem a atenção do bebê e estimulam a visão e o tato.</p>
+          </article>
+          <article class="card">
+            <div class="card__icon">💪</div>
+            <h3>Fortalece pescoço e costas</h3>
+            <p>Deixa o tempo de bruços muito mais divertido, ajudando a fortalecer os músculos do pescoço, ombros e costas.</p>
+          </article>
+          <article class="card">
+            <div class="card__icon">🧼</div>
+            <h3>Sem bagunça</h3>
+            <p>A água fica totalmente fechada dentro do tapete. Diversão com água sem molhar nada pela casa.</p>
+          </article>
+          <article class="card">
+            <div class="card__icon">🎒</div>
+            <h3>Leve e portátil</h3>
+            <p>Esvazie, dobre e leve para onde quiser: casa da vovó, viagens e passeios.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Como usar -->
+    <section class="section" id="como-usar">
+      <div class="container">
+        <h2 class="section__title">Como usar em 3 passos</h2>
+        <div class="steps">
+          <div class="step"><span>1</span><h3>Encha de ar</h3><p>Encha a borda externa pela válvula de ar.</p></div>
+          <div class="step"><span>2</span><h3>Coloque água</h3><p>Adicione água no centro até os peixinhos flutuarem.</p></div>
+          <div class="step"><span>3</span><h3>Hora de brincar!</h3><p>Coloque o bebê de bruços e acompanhe a diversão.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Especificações -->
+    <section class="section section--light" id="especificacoes">
+      <div class="container narrow">
+        <h2 class="section__title">Especificações</h2>
+        <!-- Confira os dados abaixo com o seu fornecedor antes de publicar -->
+        <table class="specs">
+          <tr><th>Produto</th><td>Baby Ocean - Tapete de Água Inflável</td></tr>
+          <tr><th>Material</th><td>PVC atóxico</td></tr>
+          <tr><th>Idade recomendada</th><td>A partir de 3 meses</td></tr>
+          <tr><th>Conteúdo da embalagem</th><td>1 tapete de água inflável com peixinhos decorativos</td></tr>
+        </table>
+        <p class="warning">⚠️ Use sempre sob a supervisão de um adulto.</p>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section" id="faq">
+      <div class="container narrow">
+        <h2 class="section__title">Dúvidas frequentes</h2>
+        <details>
+          <summary>A água vaza?</summary>
+          <p>Não. A água fica em um compartimento fechado. Basta fechar bem a tampa depois de encher.</p>
+        </details>
+        <details>
+          <summary>A partir de que idade pode usar?</summary>
+          <p>A partir dos 3 meses, quando o bebê já começa a fazer o tempo de bruços. Use sempre com um adulto por perto.</p>
+        </details>
+        <details>
+          <summary>Como faço o pedido?</summary>
+          <p>Clique em "Comprar agora". Você será levado ao nosso WhatsApp com o pedido pronto para finalizar o pagamento e a entrega.</p>
+        </details>
+        <details>
+          <summary>Como limpar?</summary>
+          <p>Passe um pano úmido com sabão neutro. Para guardar, esvazie a água e o ar e deixe secar bem.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- Chamada final -->
+    <section class="cta">
+      <div class="container">
+        <h2>O presente perfeito para o Dia das Crianças 🎈</h2>
+        <p>Baby Ocean por apenas <strong>R$ 80,00</strong></p>
+        <a href="#" class="btn btn--buy btn--light js-buy">QUERO O MEU</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>© <span id="year"></span> Baby Ocean. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- Barra fixa de compra no celular -->
+  <div class="sticky-buy">
+    <div>
+      <small>Baby Ocean</small>
+      <strong>R$ 80,00</strong>
+    </div>
+    <a href="#" class="btn btn--buy js-buy">COMPRAR</a>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
