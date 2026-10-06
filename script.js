@@ -6,7 +6,7 @@ const CONFIG = {
   // Coloque as fotos na pasta "images" com estes nomes.
   // Enquanto a foto não existir, aparece a ilustração do produto.
   fotos: [
-    "images/produto-1.jpg",
+    "images/produto-1.webp",
     "images/produto-2.jpg",
     "images/produto-3.jpg",
     "images/produto-4.jpg",
@@ -42,7 +42,12 @@ CONFIG.fotos.forEach((src, i) => {
   img.alt = `${CONFIG.produto} - foto ${i + 1}`;
   img.loading = "lazy";
   // Esconde a miniatura se a foto ainda não foi adicionada (menos a primeira)
-  img.onerror = () => (i === 0 ? useFallback(img) : btn.remove());
+  img.onerror = () => {
+    if (i === 0) return useFallback(img);
+    btn.remove();
+    // Com uma foto só, a miniatura não precisa aparecer
+    thumbs.hidden = thumbs.children.length <= 1;
+  };
 
   btn.appendChild(img);
   btn.addEventListener("click", () => {

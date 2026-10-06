@@ -1,6 +1,6 @@
 Coloque aqui as fotos do produto com estes nomes:
 
-  produto-1.jpg  (foto principal)
+  produto-1.webp (foto principal)
   produto-2.jpg
   produto-3.jpg
   produto-4.jpg
