@@ -68,6 +68,7 @@ function getQty() {
 
 function updateTotal() {
   totalEl.textContent = brl(getQty() * CONFIG.preco);
+  updateBuyLinks();
 }
 
 document.getElementById("qtyMinus").addEventListener("click", () => {
@@ -81,21 +82,21 @@ document.getElementById("qtyPlus").addEventListener("click", () => {
 qtyInput.addEventListener("change", updateTotal);
 
 // ===== Botões de compra (WhatsApp) =====
-function buyLink() {
+const buyButtons = document.querySelectorAll("#buyBtn, .js-buy");
+
+function updateBuyLinks() {
   const q = getQty();
   const msg =
     `Olá! Quero comprar o *${CONFIG.produto}*.\n` +
     `Quantidade: ${q}\n` +
     `Total: ${brl(q * CONFIG.preco)}`;
-  return `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`;
-}
-
-document.querySelectorAll("#buyBtn, .js-buy").forEach((el) => {
-  el.addEventListener("click", (e) => {
-    e.preventDefault();
-    window.open(buyLink(), "_blank", "noopener");
+  const link = `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`;
+  buyButtons.forEach((el) => {
+    el.href = link;
+    el.target = "_blank";
+    el.rel = "noopener";
   });
-});
+}
 
 // ===== Contagem regressiva =====
 const alvo = new Date(CONFIG.dataEvento).getTime();
