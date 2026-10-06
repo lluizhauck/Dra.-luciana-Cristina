@@ -59,6 +59,15 @@ CONFIG.fotos.forEach((src, i) => {
   thumbs.appendChild(btn);
 });
 
+// ===== Pixel do Facebook: avisa quando a pessoa vai para o pagamento =====
+document.querySelectorAll(".btn--buy").forEach((el) => {
+  el.addEventListener("click", () => {
+    if (typeof fbq === "function") {
+      fbq("track", "InitiateCheckout", { value: CONFIG.preco, currency: "BRL", num_items: 1 });
+    }
+  });
+});
+
 // ===== Contagem regressiva =====
 const alvo = new Date(CONFIG.dataEvento).getTime();
 const countdown = document.getElementById("countdown");
