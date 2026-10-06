@@ -111,13 +111,7 @@ h1, h2, h3 { font-family: "Baloo 2", system-ui, sans-serif; line-height: 1.15; m
 .highlights { list-style: none; padding: 0; margin: 0 0 22px; }
 .highlights li { padding: 4px 0; font-weight: 600; }
 
-.buy { display: flex; gap: 12px; }
-.qty { display: flex; border: 2px solid var(--borda); border-radius: 12px; overflow: hidden; }
-.qty button { width: 44px; border: 0; background: var(--azul-fundo); font-size: 1.3rem; cursor: pointer; color: var(--azul); }
-.qty input { width: 48px; border: 0; text-align: center; font: inherit; font-weight: 700; -moz-appearance: textfield; }
-.qty input::-webkit-outer-spin-button,
-.qty input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-
+.buy { display: flex; margin-bottom: 22px; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 12px; padding: 16px 24px;
@@ -127,9 +121,6 @@ h1, h2, h3 { font-family: "Baloo 2", system-ui, sans-serif; line-height: 1.15; m
 .btn--buy { flex: 1; background: var(--verde); color: var(--branco); box-shadow: 0 6px 18px rgba(37, 211, 102, .35); }
 .btn--buy:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(37, 211, 102, .45); }
 .btn--light { flex: none; }
-
-.total { margin: 10px 0 22px; color: var(--texto-suave); }
-.total strong { color: var(--texto); }
 
 .trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .trust div {

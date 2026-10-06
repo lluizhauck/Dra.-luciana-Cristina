@@ -1,8 +1,6 @@
 // ===== CONFIGURAÇÕES DA LOJA (edite aqui) =====
 const CONFIG = {
-  // Número do WhatsApp com DDI + DDD, só números. Ex.: "5511999999999"
-  // Se ficar vazio, o WhatsApp abre para a pessoa escolher o contato.
-  whatsapp: "",
+  // Os botões "Comprar" apontam para o link de pagamento escrito no index.html
   produto: "Baby Ocean - Tapete de Água Inflável",
   preco: 80.0,
   // Coloque as fotos na pasta "images" com estes nomes.
@@ -56,48 +54,6 @@ CONFIG.fotos.forEach((src, i) => {
   thumbs.appendChild(btn);
 });
 
-// ===== Quantidade e total =====
-const qtyInput = document.getElementById("qty");
-const totalEl = document.getElementById("total");
-
-function getQty() {
-  const q = Math.min(10, Math.max(1, parseInt(qtyInput.value, 10) || 1));
-  qtyInput.value = q;
-  return q;
-}
-
-function updateTotal() {
-  totalEl.textContent = brl(getQty() * CONFIG.preco);
-  updateBuyLinks();
-}
-
-document.getElementById("qtyMinus").addEventListener("click", () => {
-  qtyInput.value = getQty() - 1;
-  updateTotal();
-});
-document.getElementById("qtyPlus").addEventListener("click", () => {
-  qtyInput.value = getQty() + 1;
-  updateTotal();
-});
-qtyInput.addEventListener("change", updateTotal);
-
-// ===== Botões de compra (WhatsApp) =====
-const buyButtons = document.querySelectorAll("#buyBtn, .js-buy");
-
-function updateBuyLinks() {
-  const q = getQty();
-  const msg =
-    `Olá! Quero comprar o *${CONFIG.produto}*.\n` +
-    `Quantidade: ${q}\n` +
-    `Total: ${brl(q * CONFIG.preco)}`;
-  const link = `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`;
-  buyButtons.forEach((el) => {
-    el.href = link;
-    el.target = "_blank";
-    el.rel = "noopener";
-  });
-}
-
 // ===== Contagem regressiva =====
 const alvo = new Date(CONFIG.dataEvento).getTime();
 const countdown = document.getElementById("countdown");
@@ -126,4 +82,3 @@ if (tick()) {
 // ===== Preço e ano =====
 document.getElementById("priceNow").textContent = brl(CONFIG.preco);
 document.getElementById("year").textContent = new Date().getFullYear();
-updateTotal();
