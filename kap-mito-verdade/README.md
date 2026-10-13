@@ -47,6 +47,7 @@ python scripts/build_timeline.py         # cronograma + faixas de áudio no inde
 npx hyperframes check                    # validação (0 erros)
 npx hyperframes preview                  # editar/visualizar no Studio
 npm run render                           # -> render/kap-mito-verdade.mp4
+python scripts/qa.py                     # formato, volume e sincronia do MP4
 ```
 
 `narration.py` baixa os modelos na primeira execução (do GitHub): Kokoro v1.0
@@ -62,11 +63,11 @@ rode o script de novo. O `index.html` lê tudo de `assets/data/timeline.js`.
 index.html                  composição HyperFrames (cenas, SVGs, timeline GSAP)
 assets/data/narration.json  falas, duração, fonemas e tempo de cada palavra
 assets/data/timeline.js     cronograma gerado (não editar à mão)
-assets/audio/vo/            narrações (48 kHz, -16 LUFS)
+assets/audio/vo/            narrações (48 kHz, todas niveladas em -16,5 LUFS)
 assets/audio/sfx/           efeitos (papel, carimbo, marcador, tique)
 assets/img/                 logo KAP (original, sem alteração) + texturas
 assets/fonts/               fontes locais + licenças OFL
-scripts/                    geração de narração, efeitos, texturas e cronograma
+scripts/                    geração de narração, efeitos, texturas, cronograma e QA
 reference/                  imagens originais enviadas (logo e referência)
 ```
 
@@ -107,9 +108,32 @@ reference/                  imagens originais enviadas (logo e referência)
   em textos grandes (66 px ou mais).
 - **Efeitos sonoros.** Sintetizados por código (`scripts/sfx.py`): virada de
   página, carimbo, papel deslizando, marcador e um tique. Não há bancos de som de
-  terceiros, e todos ficam de 11 a 17 LU abaixo da voz.
+  terceiros, e todos ficam bem abaixo da voz.
+- **Volume da voz.** O Kokoro gera picos altos em relação ao volume médio.
+  Por isso cada fala passa por compressor suave e limitador, ficando entre
+  -16,3 e -16,5 LUFS, sem diferença de volume entre a voz masculina e a
+  feminina.
 - **Valores.** O vídeo não mostra taxas, valores nem garantias. O gráfico do
   mito 3 é marcado como "comparação ilustrativa, sem valores".
+
+## Verificação feita no MP4 final
+
+Resultado de `python scripts/qa.py` e das demais checagens:
+
+- `npx hyperframes check`: 0 erros. Os 10 avisos restantes são de contraste
+  do laranja da marca em textos grandes (66 px ou mais).
+- Formato: H.264 High, 1080 × 1920, 60/1 fps, 2.831 quadros; AAC 48 kHz; 47,18 s.
+- Volume da mixagem: -14,1 LUFS integrado, pico verdadeiro -1,9 dBTP (padrão
+  de Reels/TikTok, sem clipar).
+- Sincronia: as 9 narrações foram localizadas na mixagem final por correlação
+  cruzada, todas a 0,0 ms do início agendado. As animações usam os mesmos
+  tempos (`assets/data/timeline.js`).
+- Inteligibilidade: a transcrição automática (Whisper e Parakeet) de cada fala
+  bate palavra por palavra com o roteiro.
+- Quadros conferidos no MP4: o texto é impresso no ritmo da fala, o destaque de
+  "FGTS" e de "compor renda" aparece quando a palavra é dita, a planta é
+  desenhada em "documentação", o "≈" aparece em "próxima", e o CTA final fica
+  legível e dentro da área segura do Reels.
 
 ## Licenças de terceiros
 

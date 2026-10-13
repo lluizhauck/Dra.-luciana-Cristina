@@ -56,7 +56,7 @@ def main():
                      f"assets/audio/sfx/{name}.wav", at, vol))
 
     # abertura
-    fx("paper-slide", 0.12)
+    fx("paper-slide", 0.02)
     s["open"] = {"vo": OPEN_VO_AT, "voEnd": vo("abertura", OPEN_VO_AT)}
     t = s["open"]["voEnd"] + OPEN_HOLD
     s["open"]["out"] = t

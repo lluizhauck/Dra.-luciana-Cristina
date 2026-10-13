@@ -408,7 +408,7 @@
       <div id="vignette"></div>
 
       <!-- AUDIO:BEGIN (gerado por scripts/build_timeline.py) -->
-      <audio id="sfx-paper-slide-1" src="assets/audio/sfx/paper-slide.wav" data-start="0.120" data-duration="0.700" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-paper-slide-1" src="assets/audio/sfx/paper-slide.wav" data-start="0.020" data-duration="0.700" data-track-index="11" data-volume="1.0"></audio>
       <audio id="vo-abertura" src="assets/audio/vo/abertura.wav" data-start="0.550" data-duration="2.232" data-track-index="10" data-volume="1.0"></audio>
       <audio id="sfx-paper-slide-2" src="assets/audio/sfx/paper-slide.wav" data-start="3.632" data-duration="0.700" data-track-index="11" data-volume="1.0"></audio>
       <audio id="vo-mito1" src="assets/audio/vo/mito1.wav" data-start="4.382" data-duration="2.691" data-track-index="10" data-volume="1.0"></audio>
@@ -561,7 +561,7 @@
           const o = S.open;
           tl.fromTo("#loose1", { x: -120, rotation: -16 }, { x: 0, rotation: -9, duration: 1.6, ease: "power2.out" }, 0);
           tl.fromTo("#loose2", { x: 140, rotation: 14 }, { x: 0, rotation: 8, duration: 1.6, ease: "power2.out" }, 0.05);
-          tl.fromTo("#logoCard", { y: -520, rotation: -9 }, { y: 0, rotation: -2, duration: 0.8, ease: "power3.out" }, 0.1);
+          tl.fromTo("#logoCard", { y: -46, rotation: -6, scale: 1.05 }, { y: 0, rotation: -2, scale: 1, duration: 0.7, ease: "power3.out" }, 0);
           tl.fromTo(tMitos, { opacity: 0, scale: 0.55, rotation: -10 }, { opacity: 1, scale: 1, rotation: -3, duration: 0.5, ease: "back.out(2.2)" }, o.vo + ow[0].start - 0.08);
           tl.fromTo("#tBanner", { clipPath: "inset(0% 100% 0% 0%)", rotation: -2 }, { clipPath: "inset(0% 0% 0% 0%)", rotation: -2, duration: 0.42, ease: "power3.out" }, o.vo + ow[2].start - 0.06);
           tl.fromTo(tCasa, { opacity: 0, clipPath: "inset(-20% 100% -20% -10%)", rotation: -4 }, { opacity: 1, clipPath: "inset(-20% -10% -20% -10%)", rotation: -4, duration: 0.55, ease: "power2.out" }, o.vo + ow[4].start - 0.05);
