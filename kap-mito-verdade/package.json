@@ -1,0 +1,21 @@
+{
+  "name": "kap-mito-verdade",
+  "version": "1.0.0",
+  "description": "KAP Edificações — Mito x Verdade (vídeo vertical 1080x1920, 60 fps, HyperFrames)",
+  "scripts": {
+    "assets": "python scripts/narration.py && python scripts/sfx.py && python scripts/textures.py && python scripts/build_timeline.py",
+    "timeline": "python scripts/build_timeline.py",
+    "dev": "npx --yes hyperframes@0.8.154 preview",
+    "check": "npx --yes hyperframes@0.8.154 check",
+    "render": "npx --yes hyperframes@0.8.154 render --fps 60 --quality delivery --output render/kap-mito-verdade.mp4"
+  },
+  "devDependencies": {
+    "@fontsource/anton": "5.3.0",
+    "@fontsource/kaushan-script": "5.3.0",
+    "@fontsource/manrope": "5.3.0",
+    "gsap": "3.13.0",
+    "hyperframes": "0.8.154"
+  },
+  "private": true,
+  "type": "module"
+}

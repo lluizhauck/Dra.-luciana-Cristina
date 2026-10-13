@@ -1,0 +1,9 @@
+node_modules/
+.cache/
+.hyperframes/
+renders/
+*.24k.wav
+__pycache__/
+render/work-*/
+render/.*
+render/*.log

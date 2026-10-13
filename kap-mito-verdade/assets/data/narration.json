@@ -1,0 +1,492 @@
+{
+  "engine": "kokoro-v1.0 (kokoro-onnx)",
+  "speed": 1.0,
+  "lufs": -16.0,
+  "lines": {
+    "abertura": {
+      "voice": "pm_alex",
+      "text": "Três mitos sobre financiar sua casa.",
+      "spoken": "Três mitos sobre financiar sua casa.",
+      "phonemes": "trˈez mˈitʊs sˈobry fˌinɐ̃ŋsiˈar sˌuæ kˈazæ.",
+      "duration": 2.232,
+      "asr": "Três mitos sobre financiar sua casa.",
+      "words": [
+        {
+          "w": "Três",
+          "start": 0.0,
+          "end": 0.4
+        },
+        {
+          "w": "mitos",
+          "start": 0.4,
+          "end": 0.8
+        },
+        {
+          "w": "sobre",
+          "start": 0.8,
+          "end": 1.04
+        },
+        {
+          "w": "financiar",
+          "start": 1.04,
+          "end": 1.6
+        },
+        {
+          "w": "sua",
+          "start": 1.6,
+          "end": 1.84
+        },
+        {
+          "w": "casa.",
+          "start": 1.84,
+          "end": 2.232
+        }
+      ]
+    },
+    "mito1": {
+      "voice": "pm_alex",
+      "text": "Preciso ter cem mil reais para dar de entrada?",
+      "spoken": "Preciso ter cem mil reais para dar de entrada?",
+      "phonemes": "prˌesˈizʊ ter sˈeɪŋ mˈiʊ xeˈaɪs pˌaɾæ dˈar dʒj ˌeɪŋtrˈadæ?",
+      "duration": 2.691,
+      "question_intonation": {
+        "stressed_at": 2.38,
+        "oxytone": false,
+        "peak_st": 6.5
+      },
+      "asr": "Preciso ter 100 mil reais para dar de entrada.",
+      "words": [
+        {
+          "w": "Preciso",
+          "start": 0.08,
+          "end": 0.48
+        },
+        {
+          "w": "ter",
+          "start": 0.48,
+          "end": 0.76
+        },
+        {
+          "w": "cem",
+          "start": 0.76,
+          "end": 1.04
+        },
+        {
+          "w": "mil",
+          "start": 1.04,
+          "end": 1.28
+        },
+        {
+          "w": "reais",
+          "start": 1.28,
+          "end": 1.6
+        },
+        {
+          "w": "para",
+          "start": 1.6,
+          "end": 1.84
+        },
+        {
+          "w": "dar",
+          "start": 1.84,
+          "end": 2.0
+        },
+        {
+          "w": "de",
+          "start": 2.0,
+          "end": 2.24
+        },
+        {
+          "w": "entrada?",
+          "start": 2.24,
+          "end": 2.691
+        }
+      ]
+    },
+    "verdade1": {
+      "voice": "pf_dora",
+      "text": "Você pode utilizar o FGTS e compor renda, conforme as condições do financiamento.",
+      "spoken": "Você pode utilizar o FGTS e compor renda, conforme as condições do financiamento.",
+      "phonemes": "vosˌe pˌɔdʒj ˌutʃilizˈaɾ ʊ ˌɛfyʒˌetˌeˈɛsy i kompˈor xˈeɪŋdæ, kˌoŋfˈɔɾmj as kˌoŋdʒisˈõjz dʊ fˌinɐ̃ŋsˌiæmˈeɪŋtʊ.",
+      "duration": 5.345,
+      "asr": "Você pode utilizar o FGTS compor renda, conforme as condições do financiamento.",
+      "words": [
+        {
+          "w": "Você",
+          "start": 0.0,
+          "end": 0.32
+        },
+        {
+          "w": "pode",
+          "start": 0.32,
+          "end": 0.56
+        },
+        {
+          "w": "utilizar",
+          "start": 0.56,
+          "end": 0.96
+        },
+        {
+          "w": "o",
+          "start": 0.96,
+          "end": 1.2
+        },
+        {
+          "w": "FGTS",
+          "start": 1.2,
+          "end": 1.904
+        },
+        {
+          "w": "e",
+          "start": 1.904,
+          "end": 2.08
+        },
+        {
+          "w": "compor",
+          "start": 2.08,
+          "end": 2.56
+        },
+        {
+          "w": "renda,",
+          "start": 2.56,
+          "end": 3.12
+        },
+        {
+          "w": "conforme",
+          "start": 3.12,
+          "end": 3.68
+        },
+        {
+          "w": "as",
+          "start": 3.68,
+          "end": 3.92
+        },
+        {
+          "w": "condições",
+          "start": 3.92,
+          "end": 4.4
+        },
+        {
+          "w": "do",
+          "start": 4.4,
+          "end": 4.56
+        },
+        {
+          "w": "financiamento.",
+          "start": 4.56,
+          "end": 5.345
+        }
+      ]
+    },
+    "mito2": {
+      "voice": "pm_alex",
+      "text": "Vou resolver toda a burocracia sozinho?",
+      "spoken": "Vou resolver toda a burocracia sozinho?",
+      "phonemes": "vow xˌezowvˈer tˈodæ a bˌuɾokrasˈiæ sˌozˈiɲʊ?",
+      "duration": 2.419,
+      "question_intonation": {
+        "stressed_at": 1.98,
+        "oxytone": false,
+        "peak_st": 6.5
+      },
+      "asr": "Vou resolver toda a burocracia sozinho.",
+      "words": [
+        {
+          "w": "Vou",
+          "start": 0.08,
+          "end": 0.32
+        },
+        {
+          "w": "resolver",
+          "start": 0.32,
+          "end": 0.8
+        },
+        {
+          "w": "toda",
+          "start": 0.8,
+          "end": 1.04
+        },
+        {
+          "w": "a",
+          "start": 1.04,
+          "end": 1.12
+        },
+        {
+          "w": "burocracia",
+          "start": 1.12,
+          "end": 1.84
+        },
+        {
+          "w": "sozinho?",
+          "start": 1.84,
+          "end": 2.419
+        }
+      ]
+    },
+    "verdade2": {
+      "voice": "pf_dora",
+      "text": "A KAP auxilia com a documentação técnica da obra.",
+      "spoken": "A Kápi auxilia com a documentação técnica da obra.",
+      "phonemes": "a kˈapi ˌaʊsilˈiæ koŋ a dˌokumˌeɪŋtasˈɐ̃ʊ̃ tˈɛknikæ da ˈɔbræ.",
+      "duration": 3.077,
+      "asr": "A CAP auxilia com a documentação técnica da obra.",
+      "words": [
+        {
+          "w": "A",
+          "start": 0.0,
+          "end": 0.14
+        },
+        {
+          "w": "KAP",
+          "start": 0.14,
+          "end": 0.56
+        },
+        {
+          "w": "auxilia",
+          "start": 0.56,
+          "end": 1.2
+        },
+        {
+          "w": "com",
+          "start": 1.2,
+          "end": 1.36
+        },
+        {
+          "w": "a",
+          "start": 1.36,
+          "end": 1.44
+        },
+        {
+          "w": "documentação",
+          "start": 1.44,
+          "end": 2.08
+        },
+        {
+          "w": "técnica",
+          "start": 2.08,
+          "end": 2.56
+        },
+        {
+          "w": "da",
+          "start": 2.56,
+          "end": 2.64
+        },
+        {
+          "w": "obra.",
+          "start": 2.64,
+          "end": 3.077
+        }
+      ]
+    },
+    "mito3": {
+      "voice": "pm_alex",
+      "text": "Financiar é sempre mais caro que alugar?",
+      "spoken": "Financiar é sempre mais caro que alugar?",
+      "phonemes": "fˌinɐ̃ŋsiˈaɾ ɛ sˌeɪmpry mˈaɪs kˈaɾʊ ky ˌaluɡˈar?",
+      "duration": 2.418,
+      "question_intonation": {
+        "stressed_at": 2.22,
+        "oxytone": true,
+        "peak_st": 6.5
+      },
+      "asr": "Financiar é sempre mais caro que alugar.",
+      "words": [
+        {
+          "w": "Financiar",
+          "start": 0.08,
+          "end": 0.72
+        },
+        {
+          "w": "é",
+          "start": 0.72,
+          "end": 0.88
+        },
+        {
+          "w": "sempre",
+          "start": 0.88,
+          "end": 1.2
+        },
+        {
+          "w": "mais",
+          "start": 1.2,
+          "end": 1.36
+        },
+        {
+          "w": "caro",
+          "start": 1.36,
+          "end": 1.76
+        },
+        {
+          "w": "que",
+          "start": 1.76,
+          "end": 1.92
+        },
+        {
+          "w": "alugar?",
+          "start": 1.92,
+          "end": 2.418
+        }
+      ]
+    },
+    "verdade3": {
+      "voice": "pf_dora",
+      "text": "Compare os valores. A prestação pode ficar próxima do aluguel.",
+      "spoken": "Compare os valores. A prestação pode ficar próxima do aluguel.",
+      "phonemes": "kˌompˈaɾi ʊz vˌalˈoɾys. a prˌestasˈɐ̃ʊ̃ pˌɔdʒy fikˈar prˈɔsimæ dʊ ˌaluɡˈɛʊ.",
+      "duration": 3.715,
+      "asr": "Compare os valores. A prestação pode ficar próxima do aluguel.",
+      "words": [
+        {
+          "w": "Compare",
+          "start": 0.0,
+          "end": 0.56
+        },
+        {
+          "w": "os",
+          "start": 0.56,
+          "end": 0.72
+        },
+        {
+          "w": "valores.",
+          "start": 0.72,
+          "end": 1.28
+        },
+        {
+          "w": "A",
+          "start": 1.28,
+          "end": 1.44
+        },
+        {
+          "w": "prestação",
+          "start": 1.44,
+          "end": 2.0
+        },
+        {
+          "w": "pode",
+          "start": 2.0,
+          "end": 2.32
+        },
+        {
+          "w": "ficar",
+          "start": 2.32,
+          "end": 2.64
+        },
+        {
+          "w": "próxima",
+          "start": 2.64,
+          "end": 2.96
+        },
+        {
+          "w": "do",
+          "start": 2.96,
+          "end": 3.12
+        },
+        {
+          "w": "aluguel.",
+          "start": 3.12,
+          "end": 3.715
+        }
+      ]
+    },
+    "fim1": {
+      "voice": "pf_dora",
+      "text": "Menos boatos. Mais contas no papel.",
+      "spoken": "Menos boatos. Mais contas no papel.",
+      "phonemes": "mˈenʊz bˌoˈatʊs. mˈaɪs kˈoŋtæz nʊ papˈɛʊ.",
+      "duration": 2.178,
+      "asr": "Menos boatos, mais contas no papel.",
+      "words": [
+        {
+          "w": "Menos",
+          "start": 0.0,
+          "end": 0.32
+        },
+        {
+          "w": "boatos.",
+          "start": 0.32,
+          "end": 1.04
+        },
+        {
+          "w": "Mais",
+          "start": 1.04,
+          "end": 1.28
+        },
+        {
+          "w": "contas",
+          "start": 1.28,
+          "end": 1.68
+        },
+        {
+          "w": "no",
+          "start": 1.68,
+          "end": 1.76
+        },
+        {
+          "w": "papel.",
+          "start": 1.76,
+          "end": 2.178
+        }
+      ]
+    },
+    "fim2": {
+      "voice": "pf_dora",
+      "text": "Comente SIMULAR. Receba um diagnóstico real e gratuito no direct.",
+      "spoken": "Comente SIMULAR. Receba um diagnóstico real e gratuito no dairécti.",
+      "phonemes": "kˌomˈeɪŋtʃy sˌimulˈar. xˌesˈebæ ũŋ dʒˌiaɡnˈɔstʃikʊ xeˈaʊ i ɡrˌatˈuɪtʊ nʊ dˌaɪɾˈɛktʃi.",
+      "duration": 3.995,
+      "asr": "Comente simular, receba um diagnóstico real e gratuito no Direct.",
+      "words": [
+        {
+          "w": "Comente",
+          "start": 0.0,
+          "end": 0.48
+        },
+        {
+          "w": "SIMULAR.",
+          "start": 0.48,
+          "end": 1.12
+        },
+        {
+          "w": "Receba",
+          "start": 1.12,
+          "end": 1.6
+        },
+        {
+          "w": "um",
+          "start": 1.6,
+          "end": 1.68
+        },
+        {
+          "w": "diagnóstico",
+          "start": 1.68,
+          "end": 2.4
+        },
+        {
+          "w": "real",
+          "start": 2.4,
+          "end": 2.64
+        },
+        {
+          "w": "e",
+          "start": 2.64,
+          "end": 2.8
+        },
+        {
+          "w": "gratuito",
+          "start": 2.8,
+          "end": 3.12
+        },
+        {
+          "w": "no",
+          "start": 3.12,
+          "end": 3.28
+        },
+        {
+          "w": "direct.",
+          "start": 3.28,
+          "end": 3.995
+        }
+      ]
+    }
+  }
+}

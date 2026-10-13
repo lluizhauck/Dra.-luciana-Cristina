@@ -1,0 +1,10 @@
+# Python 3.10+ — geração de narração, efeitos e texturas
+kokoro-onnx==0.6.1
+soundfile==0.14.0
+numpy
+scipy
+pyloudnorm
+pyworld
+setuptools<81   # pyworld ainda importa pkg_resources
+sherpa-onnx==1.13.8   # só para medir o tempo de cada palavra (alinhamento)
+pillow

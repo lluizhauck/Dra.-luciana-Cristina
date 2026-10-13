@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>KAP Edificações — 3 mitos sobre financiar sua casa</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <script src="assets/data/timeline.js"></script>
+    <style>
+      /* Tipografia
+         Anton       -> títulos e carimbos (LIBERDADE / ESSA CASA na referência)
+         KAP Sans    -> textos sem serifa. Substituto do Satoshi: Manrope (OFL).
+         KAP Script  -> palavra manuscrita (NOSSA na referência). Substituto da Amertha: Kaushan Script (OFL).
+         Para usar as fontes originais, troque apenas os arquivos em `src` abaixo. */
+      @font-face { font-family: "Anton"; src: url("assets/fonts/Anton-Regular.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "KAP Sans"; src: url("assets/fonts/Manrope-500.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "KAP Sans"; src: url("assets/fonts/Manrope-600.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "KAP Sans"; src: url("assets/fonts/Manrope-700.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "KAP Sans"; src: url("assets/fonts/Manrope-800.woff2") format("woff2"); font-weight: 800; }
+      @font-face { font-family: "KAP Script"; src: url("assets/fonts/KaushanScript-Regular.woff2") format("woff2"); font-weight: 400; }
+
+      :root {
+        --creme: #f0eee6;
+        --preto: #1f1e1d;
+        --laranja: #d97757;
+        --display: "Anton", "KAP Sans", sans-serif;
+        --sans: "KAP Sans", sans-serif;
+        --script: "KAP Script", cursive;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--preto); }
+      #root {
+        position: relative; width: 100%; height: 100%; overflow: hidden;
+        font-family: var(--sans); color: var(--preto);
+        -webkit-font-smoothing: antialiased;
+      }
+      #desk { position: absolute; inset: 0; background: url("assets/img/desk.jpg") center / cover; }
+      #vignette {
+        position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(120% 80% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
+      }
+      #cam, #shake { position: absolute; inset: 0; }
+
+      /* ---------- folhas ---------- */
+      .pair { position: absolute; inset: 0; perspective: 2600px; perspective-origin: 540px 900px; }
+      .face {
+        position: absolute; left: 100px; top: 320px; width: 880px; height: 1220px;
+        background: url("assets/img/paper-grain.jpg") center / cover, var(--creme); background-blend-mode: multiply;
+        border-radius: 8px; overflow: hidden;
+        box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3), 0 28px 50px -12px rgba(0, 0, 0, 0.6), 0 70px 120px -40px rgba(0, 0, 0, 0.55);
+      }
+      .leaf { position: absolute; left: 100px; top: 320px; width: 880px; height: 1220px; transform-style: preserve-3d; transform-origin: 0% 50%; }
+      .leaf > .face { left: 0; top: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+      .leaf > .face.back { transform: rotateY(180deg); }
+      .back-print { position: absolute; inset: 0; opacity: 0.07; transform: scaleX(-1); padding: 215px 72px; font-weight: 800; font-size: 78px; line-height: 1.06; }
+      .shade, .cast, .dim { position: absolute; inset: 0; pointer-events: none; z-index: 8; opacity: 0; }
+      .shade { background: linear-gradient(90deg, rgba(31, 30, 29, 0.05), rgba(31, 30, 29, 0.55)); }
+      .cast { background: linear-gradient(90deg, rgba(31, 30, 29, 0.55), rgba(31, 30, 29, 0) 70%); }
+      .dim { background: var(--preto); }
+
+      .head { position: absolute; left: 72px; right: 72px; top: 60px; height: 90px; display: flex; align-items: center; gap: 22px; }
+      .num { font-family: var(--display); font-size: 84px; line-height: 1; color: var(--laranja); }
+      .topic { font-weight: 800; font-size: 32px; letter-spacing: 0.2em; text-transform: uppercase; }
+      .kind { margin-left: auto; font-weight: 700; font-size: 22px; letter-spacing: 0.22em; text-transform: uppercase; opacity: 0.5; }
+      .rule { position: absolute; left: 72px; right: 72px; top: 168px; height: 4px; background: var(--preto); transform-origin: 0 50%; }
+
+      .q { position: absolute; left: 72px; width: 736px; top: 232px; font-weight: 800; font-size: 76px; line-height: 1.08; letter-spacing: -0.015em; }
+      .q .quote { position: absolute; left: -46px; top: -64px; font-family: var(--script); font-size: 190px; line-height: 1; color: var(--laranja); }
+      .t { position: absolute; left: 72px; width: 736px; top: 226px; font-weight: 800; font-size: 66px; line-height: 1.14; letter-spacing: -0.01em; }
+      .w { display: inline-block; }
+      .nw { white-space: nowrap; }
+      .truth .illus { top: 676px; }
+      .em { color: var(--laranja); }
+      .hl {
+        background-image: linear-gradient(transparent 10%, rgba(217, 119, 87, 0.6) 10%, rgba(217, 119, 87, 0.6) 92%, transparent 92%);
+        background-repeat: no-repeat; background-size: 0% 100%;
+        -webkit-box-decoration-break: clone; box-decoration-break: clone; padding: 0 6px; margin: 0 -6px;
+      }
+      .strike { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+      .strike path { fill: none; stroke: var(--laranja); stroke-width: 13; stroke-linecap: round; mix-blend-mode: multiply; }
+
+      .illus { position: absolute; left: 70px; width: 740px; top: 640px; height: 420px; }
+      .illus svg { width: 100%; height: 100%; overflow: visible; }
+      .ink:not([fill]) { fill: none; }
+      .ink { stroke: var(--preto); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+      .lbl { font-family: var(--sans); font-weight: 800; font-size: 27px; letter-spacing: 0.12em; fill: var(--preto); }
+      .note { font-family: var(--sans); font-weight: 600; font-size: 22px; fill: var(--preto); opacity: 0.55; }
+
+      .foot { position: absolute; left: 72px; right: 72px; bottom: 44px; display: flex; justify-content: space-between; font-size: 22px; font-weight: 700; letter-spacing: 0.06em; opacity: 0.5; }
+
+      /* carimbos */
+      .stamp {
+        position: absolute; z-index: 7; display: flex; align-items: center; gap: 18px;
+        font-family: var(--display); line-height: 1; letter-spacing: 0.03em;
+        border: 11px solid currentColor; border-radius: 22px; padding: 6px 34px 12px;
+        mix-blend-mode: multiply;
+        -webkit-mask-image: url("assets/img/stamp-ink.png"); mask-image: url("assets/img/stamp-ink.png");
+        -webkit-mask-size: cover; mask-size: cover;
+      }
+      .stamp svg { width: 0.62em; height: 0.62em; }
+      .stamp.mito { color: var(--preto); font-size: 168px; right: 54px; top: 470px; }
+      .stamp.verdade { color: var(--laranja); font-size: 90px; right: 32px; top: 42px; border-width: 8px; padding: 4px 22px 8px; }
+
+      /* ---------- abertura ---------- */
+      #open { position: absolute; inset: 0; }
+      .loose { position: absolute; width: 760px; height: 1040px; background: var(--creme); border-radius: 6px; box-shadow: 0 30px 60px -10px rgba(0, 0, 0, 0.6); overflow: hidden; }
+      .loose::after { content: ""; position: absolute; inset: 0; background: var(--preto); opacity: 0.55; }
+      .loose .lines { position: absolute; inset: 120px 70px; background: repeating-linear-gradient(transparent 0 58px, rgba(31, 30, 29, 0.25) 58px 62px); }
+      #loose1 { left: -430px; top: 120px; }
+      #loose2 { left: 760px; top: 1180px; }
+      .logo-card {
+        position: absolute; left: 200px; top: 300px; width: 680px; height: 300px; background: #ffffff; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3), 0 30px 60px -12px rgba(0, 0, 0, 0.65);
+      }
+      .logo-card img { position: relative; width: 560px; height: auto; display: block; }
+      .tape { position: absolute; width: 150px; height: 42px; background: rgba(240, 238, 230, 0.62); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); }
+      .tape.a { left: -38px; top: 14px; transform: rotate(-32deg); }
+      .tape.b { right: -38px; top: 14px; transform: rotate(32deg); }
+
+      .title { position: absolute; left: 0; right: 0; top: 690px; display: flex; flex-direction: column; align-items: center; }
+      .sticker { position: relative; display: block; white-space: nowrap; }
+      .sticker > span { display: block; }
+      .sticker .st-o { position: absolute; inset: 0; color: var(--creme); }
+      .sticker .st-f {
+        position: relative; color: transparent;
+        background: url("assets/img/crumple.jpg") center / 140% auto, var(--laranja);
+        background-blend-mode: multiply; -webkit-background-clip: text; background-clip: text;
+      }
+      .sticker.dark .st-f { background-color: var(--preto); background-blend-mode: screen; background-image: none; color: var(--preto); }
+      .t-mitos { font-family: var(--display); font-size: 260px; line-height: 1.02; letter-spacing: 0.01em; }
+      .t-banner {
+        margin-top: 4px; background: var(--creme); color: var(--preto); font-weight: 800; font-size: 66px; letter-spacing: 0.02em;
+        padding: 6px 34px 12px; text-transform: uppercase; box-shadow: 0 10px 0 rgba(0, 0, 0, 0.35);
+      }
+      .t-banner b { color: var(--laranja); font-weight: 800; }
+      .t-casa { font-family: var(--script); font-size: 196px; line-height: 1.1; margin-top: -6px; padding: 0 30px; }
+
+      /* ---------- encerramento ---------- */
+            .grid {
+        position: absolute; inset: 0; opacity: 0.09;
+        background-image: repeating-linear-gradient(0deg, var(--preto) 0 2px, transparent 2px 44px), repeating-linear-gradient(90deg, var(--preto) 0 2px, transparent 2px 44px);
+      }
+      .pencil { position: absolute; font-family: var(--script); font-size: 74px; color: var(--preto); opacity: 0.14; }
+      .close-label { position: absolute; left: 175px; top: 56px; width: 530px; height: 226px; background: #ffffff; border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12), 0 14px 26px -12px rgba(0, 0, 0, 0.35); }
+      .close-label img { width: 480px; height: auto; display: block; }
+      .close-label .tape { width: 120px; height: 36px; background: rgba(217, 119, 87, 0.35); }
+      .slogan { position: absolute; left: 0; right: 0; top: 318px; text-align: center; }
+      .slogan .ln { display: block; font-family: var(--display); font-size: 116px; line-height: 1.04; letter-spacing: 0.01em; }
+      .slogan .ln.orange { color: var(--laranja); }
+      .slogan .ln.script { font-family: var(--script); font-size: 108px; line-height: 1.12; }
+      .boatos { position: relative; display: inline-block; }
+      .divider { position: absolute; left: 120px; right: 120px; top: 716px; height: 0; border-top: 4px dashed rgba(31, 30, 29, 0.35); }
+      .bubble {
+        position: absolute; left: 80px; width: 720px; top: 756px; height: 196px; background: var(--preto); border-radius: 34px;
+        display: flex; align-items: center; justify-content: center; gap: 22px;
+      }
+      .bubble::after { content: ""; position: absolute; left: 70px; bottom: -34px; border: 20px solid transparent; border-top: 22px solid var(--preto); border-left: 26px solid var(--preto); }
+      .bubble .c1 { font-weight: 700; font-size: 46px; color: var(--creme); }
+      .bubble .c2 { font-family: var(--display); font-size: 108px; line-height: 1; color: var(--laranja); letter-spacing: 0.02em; display: inline-block; }
+      .direct { position: absolute; left: 92px; width: 696px; top: 1006px; display: flex; gap: 24px; align-items: flex-start; }
+      .direct svg { flex: 0 0 72px; width: 72px; height: 72px; margin-top: 6px; }
+      .direct p { font-weight: 800; font-size: 42px; line-height: 1.2; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-fps="60" data-duration="47.17">
+      <div id="desk"></div>
+      <div id="cam">
+        <div id="shake">
+          <!-- ================= ABERTURA ================= -->
+          <div id="open">
+            <div class="loose" id="loose1"><div class="lines"></div></div>
+            <div class="loose" id="loose2"><div class="lines"></div></div>
+            <div class="logo-card" id="logoCard">
+              <span class="tape a"></span><span class="tape b"></span>
+              <img src="assets/img/kap-logo.png" alt="KAP Edificações" />
+            </div>
+            <div class="title">
+              <div class="sticker t-mitos" id="tMitos"><span class="st-o">3 MITOS</span><span class="st-f">3 MITOS</span></div>
+              <div class="t-banner" id="tBanner">sobre <b>financiar</b></div>
+              <div class="sticker t-casa" id="tCasa"><span class="st-o">sua casa</span><span class="st-f">sua casa</span></div>
+            </div>
+          </div>
+
+          <!-- ================= MITO 1 / VERDADE 1 ================= -->
+          <div class="pair" id="pair1">
+            <div class="face truth">
+              <div class="cast"></div><div class="dim"></div>
+              <div class="head"><span class="num" data-layout-allow-overlap data-layout-allow-occlusion>01</span><span class="topic" data-layout-allow-overlap data-layout-allow-occlusion>Entrada</span></div>
+              <div class="rule"></div>
+              <div class="stamp verdade">VERDADE</div>
+              <p class="t" data-words="verdade1">Você pode utilizar o <span class="hl">FGTS</span> e <span class="hl">compor renda</span>, conforme as condições do financiamento.</p>
+              <div class="illus">
+                <svg viewBox="0 0 740 420">
+                  <g class="i-card">
+                    <rect x="40" y="70" width="290" height="190" rx="24" fill="#D97757" class="ink" />
+                    <rect x="78" y="112" width="58" height="44" rx="8" fill="#F0EEE6" class="ink" style="stroke-width: 5" />
+                    <path d="M78 178 H290" class="ink" style="stroke-width: 5; opacity: 0.5" />
+                    <text x="80" y="244" font-family="Anton" font-size="74" fill="#1F1E1D">FGTS</text>
+                  </g>
+                  <text class="lbl i-card-l" x="185" y="330" text-anchor="middle">USAR O FGTS</text>
+                  <g class="i-plus"><path d="M372 125 V205 M332 165 H412" class="ink" style="stroke: #D97757; stroke-width: 14" /></g>
+                  <g class="i-people">
+                    <circle cx="612" cy="104" r="40" fill="#D97757" class="ink" />
+                    <path d="M540 262 C540 196 574 166 612 166 C650 166 684 196 684 262 Z" fill="#D97757" class="ink" />
+                    <circle cx="530" cy="118" r="44" fill="#F0EEE6" class="ink" />
+                    <path d="M452 276 C452 204 488 172 530 172 C572 172 608 204 608 276 Z" fill="#F0EEE6" class="ink" />
+                  </g>
+                  <text class="lbl i-people-l" x="572" y="330" text-anchor="middle">COMPOR RENDA</text>
+                </svg>
+              </div>
+              <div class="foot"><span data-layout-allow-overlap data-layout-allow-occlusion>KAP Edificações</span><span data-layout-allow-overlap data-layout-allow-occlusion>Folha 1 de 3</span></div>
+            </div>
+            <div class="leaf">
+              <div class="face front">
+                <div class="head"><span class="num">01</span><span class="topic">Entrada</span><span class="kind">Mito x Verdade</span></div>
+                <div class="rule"></div>
+                <p class="q" data-words="mito1"><span class="quote" data-layout-allow-overflow>“</span>Preciso ter <span class="em">cem mil reais</span> para dar de entrada?</p>
+                <div class="illus">
+                  <svg viewBox="0 0 740 420">
+                    <g class="i-bill" style="--r: -16">
+                      <rect x="60" y="150" width="300" height="150" rx="14" fill="#D97757" class="ink" />
+                      <rect x="78" y="168" width="264" height="114" rx="8" class="ink" style="stroke-width: 3; opacity: 0.55" />
+                      <circle cx="210" cy="225" r="38" fill="#F0EEE6" class="ink" style="stroke-width: 5" />
+                      <text x="210" y="240" text-anchor="middle" font-family="Anton" font-size="40" fill="#1F1E1D">R$</text>
+                    </g>
+                    <g class="i-bill" style="--r: -3">
+                      <rect x="80" y="130" width="300" height="150" rx="14" fill="#D97757" class="ink" />
+                      <rect x="98" y="148" width="264" height="114" rx="8" class="ink" style="stroke-width: 3; opacity: 0.55" />
+                      <circle cx="230" cy="205" r="38" fill="#F0EEE6" class="ink" style="stroke-width: 5" />
+                      <text x="230" y="220" text-anchor="middle" font-family="Anton" font-size="40" fill="#1F1E1D">R$</text>
+                    </g>
+                    <g class="i-bill" style="--r: 11">
+                      <rect x="100" y="110" width="300" height="150" rx="14" fill="#D97757" class="ink" />
+                      <rect x="118" y="128" width="264" height="114" rx="8" class="ink" style="stroke-width: 3; opacity: 0.55" />
+                      <circle cx="250" cy="185" r="38" fill="#F0EEE6" class="ink" style="stroke-width: 5" />
+                      <text x="250" y="200" text-anchor="middle" font-family="Anton" font-size="40" fill="#1F1E1D">R$</text>
+                    </g>
+                    <g class="i-coins">
+                      <g class="coin"><rect x="470" y="312" width="140" height="26" fill="#D97757" /><ellipse cx="540" cy="338" rx="70" ry="20" fill="#D97757" class="ink" style="stroke-width: 6" /><path d="M470 312 V338 M610 312 V338" class="ink" style="stroke-width: 6" /><ellipse cx="540" cy="312" rx="70" ry="20" fill="#E9A68D" class="ink" style="stroke-width: 6" /></g>
+                      <g class="coin"><rect x="470" y="282" width="140" height="26" fill="#D97757" /><ellipse cx="540" cy="308" rx="70" ry="20" fill="#D97757" class="ink" style="stroke-width: 6" /><path d="M470 282 V308 M610 282 V308" class="ink" style="stroke-width: 6" /><ellipse cx="540" cy="282" rx="70" ry="20" fill="#E9A68D" class="ink" style="stroke-width: 6" /></g>
+                      <g class="coin"><rect x="470" y="252" width="140" height="26" fill="#D97757" /><ellipse cx="540" cy="278" rx="70" ry="20" fill="#D97757" class="ink" style="stroke-width: 6" /><path d="M470 252 V278 M610 252 V278" class="ink" style="stroke-width: 6" /><ellipse cx="540" cy="252" rx="70" ry="20" fill="#E9A68D" class="ink" style="stroke-width: 6" /></g>
+                      <g class="coin"><rect x="580" y="312" width="140" height="26" fill="#D97757" /><ellipse cx="650" cy="338" rx="70" ry="20" fill="#D97757" class="ink" style="stroke-width: 6" /><path d="M580 312 V338 M720 312 V338" class="ink" style="stroke-width: 6" /><ellipse cx="650" cy="312" rx="70" ry="20" fill="#E9A68D" class="ink" style="stroke-width: 6" /></g>
+                    </g>
+                  </svg>
+                </div>
+                <div class="stamp mito"><svg viewBox="0 0 100 100"><path d="M18 18 L82 82 M82 18 L18 82" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" /></svg>MITO</div>
+                <div class="foot"><span>KAP Edificações</span><span>Folha 1 de 3</span></div>
+                <div class="shade"></div>
+              </div>
+              <div class="face back"><div class="back-print">Preciso ter cem mil reais para dar de entrada?</div><div class="shade"></div></div>
+            </div>
+          </div>
+
+          <!-- ================= MITO 2 / VERDADE 2 ================= -->
+          <div class="pair" id="pair2">
+            <div class="face truth">
+              <div class="cast"></div><div class="dim"></div>
+              <div class="head"><span class="num" data-layout-allow-overlap data-layout-allow-occlusion>02</span><span class="topic" data-layout-allow-overlap data-layout-allow-occlusion>Burocracia</span></div>
+              <div class="rule"></div>
+              <div class="stamp verdade">VERDADE</div>
+              <p class="t" data-words="verdade2">A <span class="em">KAP</span> auxilia com a <span class="hl">documentação técnica</span> da obra.</p>
+              <div class="illus">
+                <svg viewBox="0 0 740 420">
+                  <g class="i-plan">
+                    <path class="draw" d="M40 40 H420 V330 H40 Z" fill="none" stroke="#1F1E1D" stroke-width="12" stroke-linejoin="round" />
+                    <path class="draw" d="M220 40 V170 M40 170 H160 M220 230 V330 M300 170 H420 M220 170 H240" fill="none" stroke="#1F1E1D" stroke-width="8" stroke-linecap="round" />
+                    <path class="draw" d="M160 170 A60 60 0 0 1 220 230" fill="none" stroke="#D97757" stroke-width="6" stroke-dasharray="10 8" />
+                    <path class="draw" d="M240 170 A60 60 0 0 0 300 230" fill="none" stroke="#D97757" stroke-width="6" stroke-dasharray="10 8" />
+                    <path class="draw" d="M80 40 H160 M290 330 H380" fill="none" stroke="#F0EEE6" stroke-width="8" />
+                    <path class="draw" d="M80 40 H160 M290 330 H380" fill="none" stroke="#1F1E1D" stroke-width="3" />
+                    <path class="draw" d="M40 375 H420 M40 362 V388 M420 362 V388 M462 40 V330 M449 40 H475 M449 330 H475" fill="none" stroke="#1F1E1D" stroke-width="3" opacity="0.6" />
+                  </g>
+                  <g class="i-hat">
+                    <path d="M520 150 C520 92 560 58 612 58 C664 58 704 92 704 150" fill="#D97757" class="ink" />
+                    <path d="M598 58 V126 M626 58 V126" class="ink" style="stroke-width: 6" />
+                    <rect x="500" y="148" width="224" height="26" rx="13" fill="#D97757" class="ink" />
+                  </g>
+                  <g class="i-square">
+                    <path d="M526 214 V352 H690 Z" fill="#F0EEE6" class="ink" />
+                    <path d="M552 286 V326 H590 Z" class="ink" style="stroke-width: 5" />
+                    <path d="M526 244 H546 M526 274 H540 M526 304 H546 M560 352 V336 M590 352 V342 M620 352 V336 M650 352 V342" class="ink" style="stroke-width: 4" />
+                  </g>
+                  <g class="i-check">
+                    <circle cx="420" cy="330" r="46" fill="#D97757" class="ink" />
+                    <path d="M398 330 L414 348 L446 312" class="ink" style="stroke: #F0EEE6; stroke-width: 10" />
+                  </g>
+                </svg>
+              </div>
+              <div class="foot"><span data-layout-allow-overlap data-layout-allow-occlusion>KAP Edificações</span><span data-layout-allow-overlap data-layout-allow-occlusion>Folha 2 de 3</span></div>
+            </div>
+            <div class="leaf">
+              <div class="face front">
+                <div class="head"><span class="num">02</span><span class="topic">Burocracia</span><span class="kind">Mito x Verdade</span></div>
+                <div class="rule"></div>
+                <p class="q" data-words="mito2"><span class="quote" data-layout-allow-overflow>“</span>Vou resolver toda a burocracia <span class="em">sozinho</span>?</p>
+                <div class="illus">
+                  <svg viewBox="0 0 740 420">
+                    <g class="i-docs">
+                      <g class="doc" style="--r: -9"><rect x="110" y="70" width="250" height="320" rx="10" fill="#F0EEE6" class="ink" /><path d="M146 130 H324 M146 170 H324 M146 210 H290 M146 250 H310" class="ink" style="stroke-width: 5; opacity: 0.5" /></g>
+                      <g class="doc" style="--r: 6"><rect x="130" y="60" width="250" height="320" rx="10" fill="#F0EEE6" class="ink" /><path d="M166 120 H344 M166 160 H344 M166 200 H310 M166 240 H330" class="ink" style="stroke-width: 5; opacity: 0.5" /></g>
+                      <g class="doc" style="--r: -4"><rect x="120" y="50" width="250" height="320" rx="10" fill="#F0EEE6" class="ink" /><path d="M156 110 H334 M156 150 H334 M156 190 H300 M156 230 H320" class="ink" style="stroke-width: 5; opacity: 0.5" /></g>
+                      <g class="doc" style="--r: 10"><rect x="140" y="40" width="250" height="320" rx="10" fill="#F0EEE6" class="ink" /><path d="M176 100 H354 M176 140 H354 M176 180 H320 M176 220 H340" class="ink" style="stroke-width: 5; opacity: 0.5" /><rect x="176" y="270" width="110" height="46" rx="6" fill="none" stroke="#D97757" stroke-width="5" /></g>
+                      <g class="doc" style="--r: -2"><rect x="128" y="30" width="250" height="320" rx="10" fill="#F0EEE6" class="ink" /><path d="M164 90 H342 M164 130 H342 M164 170 H308 M164 210 H328" class="ink" style="stroke-width: 5; opacity: 0.5" /><path d="M300 30 V0 Q300 -14 314 -14 Q328 -14 328 0 V52" fill="none" stroke="#1F1E1D" stroke-width="6" stroke-linecap="round" /></g>
+                    </g>
+                    <g class="i-person">
+                      <circle cx="568" cy="214" r="38" fill="#1F1E1D" />
+                      <path d="M506 372 C506 300 532 264 568 264 C604 264 630 300 630 372 Z" fill="#1F1E1D" />
+                    </g>
+                    <text class="i-ask" x="630" y="190" font-family="Anton" font-size="120" fill="#D97757">?</text>
+                  </svg>
+                </div>
+                <div class="stamp mito"><svg viewBox="0 0 100 100"><path d="M18 18 L82 82 M82 18 L18 82" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" /></svg>MITO</div>
+                <div class="foot"><span>KAP Edificações</span><span>Folha 2 de 3</span></div>
+                <div class="shade"></div>
+              </div>
+              <div class="face back"><div class="back-print">Vou resolver toda a burocracia sozinho?</div><div class="shade"></div></div>
+            </div>
+          </div>
+
+          <!-- ================= MITO 3 / VERDADE 3 ================= -->
+          <div class="pair" id="pair3">
+            <div class="face truth">
+              <div class="cast"></div><div class="dim"></div>
+              <div class="head"><span class="num" data-layout-allow-overlap data-layout-allow-occlusion>03</span><span class="topic" data-layout-allow-overlap data-layout-allow-occlusion>Parcelas</span></div>
+              <div class="rule"></div>
+              <div class="stamp verdade">VERDADE</div>
+              <p class="t" data-words="verdade3"><span class="hl">Compare os valores.</span> <span class="nw">A prestação</span> pode ficar <span class="hl">próxima do aluguel</span>.</p>
+              <div class="illus">
+                <svg viewBox="0 0 740 420">
+                  <g class="i-calc">
+                    <rect x="30" y="60" width="150" height="210" rx="18" fill="#F0EEE6" class="ink" />
+                    <rect x="54" y="84" width="102" height="44" rx="6" fill="#1F1E1D" />
+                    <g fill="#D97757" stroke="#1F1E1D" stroke-width="4">
+                      <rect x="54" y="148" width="28" height="24" rx="5" /><rect x="91" y="148" width="28" height="24" rx="5" /><rect x="128" y="148" width="28" height="24" rx="5" />
+                      <rect x="54" y="184" width="28" height="24" rx="5" /><rect x="91" y="184" width="28" height="24" rx="5" /><rect x="128" y="184" width="28" height="24" rx="5" />
+                      <rect x="54" y="220" width="28" height="24" rx="5" /><rect x="91" y="220" width="28" height="24" rx="5" /><rect x="128" y="220" width="28" height="24" rx="5" />
+                    </g>
+                  </g>
+                  <path d="M240 330 H720" class="ink" style="stroke-width: 6" />
+                  <rect class="i-bar1" x="290" y="96" width="150" height="234" rx="6" fill="#1F1E1D" />
+                  <rect class="i-bar2 ink" x="520" y="108" width="150" height="222" rx="6" fill="#D97757" />
+                  <g class="i-approx"><path d="M430 34 Q455 14 480 34 T530 34 M430 64 Q455 44 480 64 T530 64" fill="none" stroke="#1F1E1D" stroke-width="10" stroke-linecap="round" /></g>
+                  <text class="lbl i-bar1-l" x="365" y="374" text-anchor="middle">ALUGUEL</text>
+                  <text class="lbl i-bar2-l" x="595" y="374" text-anchor="middle">PRESTAÇÃO</text>
+                  <text class="note i-note" x="720" y="414" text-anchor="end">comparação ilustrativa, sem valores</text>
+                </svg>
+              </div>
+              <div class="foot"><span data-layout-allow-overlap data-layout-allow-occlusion>KAP Edificações</span><span data-layout-allow-overlap data-layout-allow-occlusion>Folha 3 de 3</span></div>
+            </div>
+            <div class="leaf">
+              <div class="face front">
+                <div class="head"><span class="num">03</span><span class="topic">Parcelas</span><span class="kind">Mito x Verdade</span></div>
+                <div class="rule"></div>
+                <p class="q" data-words="mito3"><span class="quote" data-layout-allow-overflow>“</span>Financiar é <span class="em">sempre mais caro</span> que alugar?</p>
+                <div class="illus">
+                  <svg viewBox="0 0 740 420">
+                    <path d="M370 116 V350 M300 360 H440" class="ink" style="stroke-width: 10" />
+                    <g class="i-beam"><path d="M150 116 H590" class="ink" style="stroke-width: 10" /><circle cx="370" cy="116" r="14" fill="#D97757" class="ink" style="stroke-width: 5" /></g>
+                    <g class="i-panL">
+                      <path d="M150 116 L100 236 M150 116 L200 236" class="ink" style="stroke-width: 4" />
+                      <path d="M80 236 H220 Q212 270 150 270 Q88 270 80 236 Z" fill="#F0EEE6" class="ink" style="stroke-width: 6" />
+                      <path d="M112 232 V188 L150 158 L188 188 V232" fill="#D97757" class="ink" style="stroke-width: 6" />
+                      <text class="lbl" x="150" y="312" text-anchor="middle">FINANCIAR</text>
+                    </g>
+                    <g class="i-panR">
+                      <path d="M590 116 L540 236 M590 116 L640 236" class="ink" style="stroke-width: 4" />
+                      <path d="M520 236 H660 Q652 270 590 270 Q528 270 520 236 Z" fill="#F0EEE6" class="ink" style="stroke-width: 6" />
+                      <circle cx="568" cy="206" r="20" fill="#D97757" class="ink" style="stroke-width: 6" />
+                      <path d="M588 206 H632 M618 206 V222 M630 206 V218" class="ink" style="stroke-width: 6" />
+                      <text class="lbl" x="590" y="312" text-anchor="middle">ALUGAR</text>
+                    </g>
+                  </svg>
+                </div>
+                <div class="stamp mito"><svg viewBox="0 0 100 100"><path d="M18 18 L82 82 M82 18 L18 82" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" /></svg>MITO</div>
+                <div class="foot"><span>KAP Edificações</span><span>Folha 3 de 3</span></div>
+                <div class="shade"></div>
+              </div>
+              <div class="face back"><div class="back-print">Financiar é sempre mais caro que alugar?</div><div class="shade"></div></div>
+            </div>
+          </div>
+
+          <!-- ================= ENCERRAMENTO ================= -->
+          <div class="pair" id="pairClose">
+            <div class="face close">
+              <div class="grid"></div>
+              <span class="pencil" style="left: 40px; top: 660px">+</span>
+              <span class="pencil" style="left: 800px; top: 650px">=</span>
+              <span class="pencil" style="left: 46px; top: 1110px">÷</span>
+              <span class="pencil" style="left: 796px; top: 1100px">×</span>
+              <div class="close-label"><span class="tape a"></span><span class="tape b"></span><img src="assets/img/kap-logo.png" alt="KAP Edificações" /></div>
+              <div class="slogan" data-words="fim1" data-layout-allow-overflow>
+                <span class="ln">MENOS <span class="boatos">BOATOS.</span></span>
+                <span class="ln orange">MAIS CONTAS</span>
+                <span class="ln script">no papel.</span>
+              </div>
+              <div class="divider"></div>
+              <div class="bubble"><span class="c1">Comente</span><span class="c2">SIMULAR</span></div>
+              <div class="direct">
+                <svg viewBox="0 0 72 72"><path d="M8 34 L64 10 L50 62 L34 44 Z" fill="#D97757" stroke="#1F1E1D" stroke-width="5" stroke-linejoin="round" /><path d="M34 44 L64 10" stroke="#1F1E1D" stroke-width="5" stroke-linecap="round" /></svg>
+                <p data-words="fim2-tail">Receba um diagnóstico real e gratuito no direct.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="vignette"></div>
+
+      <!-- AUDIO:BEGIN (gerado por scripts/build_timeline.py) -->
+      <audio id="sfx-paper-slide-1" src="assets/audio/sfx/paper-slide.wav" data-start="0.120" data-duration="0.700" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-abertura" src="assets/audio/vo/abertura.wav" data-start="0.550" data-duration="2.232" data-track-index="10" data-volume="1.0"></audio>
+      <audio id="sfx-paper-slide-2" src="assets/audio/sfx/paper-slide.wav" data-start="3.632" data-duration="0.700" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-mito1" src="assets/audio/vo/mito1.wav" data-start="4.382" data-duration="2.691" data-track-index="10" data-volume="1.0"></audio>
+      <audio id="sfx-marker-1" src="assets/audio/sfx/marker.wav" data-start="7.193" data-duration="0.500" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-stamp-1" src="assets/audio/sfx/stamp.wav" data-start="7.623" data-duration="0.450" data-track-index="12" data-volume="1.0"></audio>
+      <audio id="sfx-page-flip-1" src="assets/audio/sfx/page-flip.wav" data-start="8.523" data-duration="0.550" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-stamp-2" src="assets/audio/sfx/stamp.wav" data-start="9.323" data-duration="0.450" data-track-index="12" data-volume="0.85"></audio>
+      <audio id="vo-verdade1" src="assets/audio/vo/verdade1.wav" data-start="9.673" data-duration="5.345" data-track-index="10" data-volume="1.0"></audio>
+      <audio id="sfx-paper-slide-3" src="assets/audio/sfx/paper-slide.wav" data-start="16.318" data-duration="0.700" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-mito2" src="assets/audio/vo/mito2.wav" data-start="17.068" data-duration="2.419" data-track-index="10" data-volume="1.0"></audio>
+      <audio id="sfx-marker-2" src="assets/audio/sfx/marker.wav" data-start="19.607" data-duration="0.500" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-stamp-3" src="assets/audio/sfx/stamp.wav" data-start="20.037" data-duration="0.450" data-track-index="12" data-volume="1.0"></audio>
+      <audio id="sfx-page-flip-2" src="assets/audio/sfx/page-flip.wav" data-start="20.937" data-duration="0.550" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-stamp-4" src="assets/audio/sfx/stamp.wav" data-start="21.737" data-duration="0.450" data-track-index="12" data-volume="0.85"></audio>
+      <audio id="vo-verdade2" src="assets/audio/vo/verdade2.wav" data-start="22.087" data-duration="3.077" data-track-index="10" data-volume="1.0"></audio>
+      <audio id="sfx-paper-slide-4" src="assets/audio/sfx/paper-slide.wav" data-start="26.464" data-duration="0.700" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-mito3" src="assets/audio/vo/mito3.wav" data-start="27.214" data-duration="2.418" data-track-index="10" data-volume="1.0"></audio>
+      <audio id="sfx-marker-3" src="assets/audio/sfx/marker.wav" data-start="29.752" data-duration="0.500" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-stamp-5" src="assets/audio/sfx/stamp.wav" data-start="30.182" data-duration="0.450" data-track-index="12" data-volume="1.0"></audio>
+      <audio id="sfx-page-flip-3" src="assets/audio/sfx/page-flip.wav" data-start="31.082" data-duration="0.550" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-stamp-6" src="assets/audio/sfx/stamp.wav" data-start="31.882" data-duration="0.450" data-track-index="12" data-volume="0.85"></audio>
+      <audio id="vo-verdade3" src="assets/audio/vo/verdade3.wav" data-start="32.232" data-duration="3.715" data-track-index="10" data-volume="1.0"></audio>
+      <audio id="sfx-paper-slide-5" src="assets/audio/sfx/paper-slide.wav" data-start="37.247" data-duration="0.700" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-fim1" src="assets/audio/vo/fim1.wav" data-start="38.047" data-duration="2.178" data-track-index="10" data-volume="1.0"></audio>
+      <audio id="sfx-marker-4" src="assets/audio/sfx/marker.wav" data-start="39.037" data-duration="0.500" data-track-index="11" data-volume="0.8"></audio>
+      <audio id="sfx-tick-1" src="assets/audio/sfx/tick.wav" data-start="40.925" data-duration="0.120" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-fim2" src="assets/audio/vo/fim2.wav" data-start="40.975" data-duration="3.995" data-track-index="10" data-volume="1.0"></audio>      <!-- AUDIO:END -->
+    </div>
+
+    <script>
+      (function () {
+        const K = window.KAP;
+        const S = K.scenes;
+        const W = K.words;
+        const $ = (sel, root) => (root || document).querySelector(sel);
+        const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+
+        /* contorno arredondado (adesivo) com text-shadow */
+        function ring(r, color, drop) {
+          const out = [];
+          for (let i = 0; i < 32; i++) {
+            const a = (i / 32) * Math.PI * 2;
+            out.push(`${(Math.cos(a) * r).toFixed(1)}px ${(Math.sin(a) * r).toFixed(1)}px 0 ${color}`);
+          }
+          out.push(`0 ${r + 12}px 0 ${drop}`);
+          return out.join(",");
+        }
+
+        /* separa o texto em palavras (.w); pontuação solta não conta como palavra */
+        function splitWords(el) {
+          const spans = [];
+          const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+          const nodes = [];
+          while (walker.nextNode()) {
+            if (!walker.currentNode.parentElement.closest(".quote")) nodes.push(walker.currentNode);
+          }
+          nodes.forEach((node) => {
+            const frag = document.createDocumentFragment();
+            node.textContent.split(/(\s+)/).forEach((tok) => {
+              if (!tok) return;
+              if (/^\s+$/.test(tok)) return frag.appendChild(document.createTextNode(tok));
+              const s = document.createElement("span");
+              s.className = "w";
+              s.textContent = tok;
+              if (/[\p{L}\p{N}]/u.test(tok)) spans.push(s);
+              else s.dataset.punct = "1";
+              frag.appendChild(s);
+            });
+            node.replaceWith(frag);
+          });
+          spans.all = Array.from(el.querySelectorAll(".w"));
+          return spans;
+        }
+
+        /* início de cada palavra (s) no tempo global */
+        function wordTimes(key, voStart, count, offset) {
+          const list = W[key].slice(offset || 0, (offset || 0) + count);
+          if (list.length !== count) console.warn("palavras divergentes em", key, list.length, count);
+          return list.map((w) => voStart + w.start);
+        }
+
+        function seeded(seed) {
+          let s = seed;
+          return () => ((s = (s * 16807) % 2147483647) / 2147483647);
+        }
+
+        /* risco à mão sobre cada linha do texto */
+        function buildStrike(textEl, spans, seed) {
+          const rand = seeded(seed);
+          const lines = [];
+          spans.forEach((s) => {
+            const top = s.offsetTop;
+            let line = lines.find((l) => Math.abs(l.top - top) < 10);
+            if (!line) lines.push((line = { top, h: s.offsetHeight, x1: Infinity, x2: -Infinity }));
+            line.x1 = Math.min(line.x1, s.offsetLeft);
+            line.x2 = Math.max(line.x2, s.offsetLeft + s.offsetWidth);
+          });
+          const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          svg.setAttribute("class", "strike");
+          const paths = lines.map((l) => {
+            const y = l.top + l.h * 0.56;
+            const x1 = l.x1 - 14, x2 = l.x2 + 14, mid = (x1 + x2) / 2;
+            const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            p.setAttribute("d", `M${x1} ${y + (rand() * 8 - 4)} Q${mid} ${y + (rand() * 16 - 8)} ${x2} ${y + (rand() * 8 - 4)}`);
+            svg.appendChild(p);
+            return p;
+          });
+          textEl.appendChild(svg);
+          paths.forEach((p) => {
+            const len = p.getTotalLength();
+            p.style.strokeDasharray = `${len} ${len * 2 + 40}`;
+            p.style.strokeDashoffset = `${len}`;
+          });
+          return paths;
+        }
+
+        function build() {
+          const tl = gsap.timeline({ paused: true, defaults: { ease: "power2.out" } });
+          const cam = $("#cam");
+          const shake = $("#shake");
+          gsap.set(cam, { transformOrigin: "540px 900px" });
+
+          let camT = 0;
+          function camTo(t, dur, vars, ease) {
+            tl.to(cam, Object.assign({ duration: dur, ease: ease || "sine.inOut" }, vars), t);
+            camT = t + dur;
+          }
+          function impact(t, strength) {
+            const k = strength || 1;
+            tl.to(shake, { keyframes: { x: [0, -6 * k, 5 * k, -3 * k, 1.5 * k, 0], y: [0, 4 * k, -3 * k, 1.5 * k, -0.5 * k, 0] }, duration: 0.24, ease: "none" }, t);
+          }
+          function reveal(spans, times, ghost) {
+            let last = times[0];
+            spans.all.forEach((s) => {
+              const i = spans.indexOf(s);
+              if (i >= 0) last = times[i];
+              tl.fromTo(s, { opacity: ghost, y: i >= 0 ? 10 : 0 }, { opacity: 1, y: 0, duration: 0.24 }, last - 0.05);
+            });
+          }
+          function stampIn(el, t, r0, r1) {
+            tl.fromTo(el, { opacity: 0, scale: 1.8, rotation: r0 }, { opacity: 0.94, scale: 1, rotation: r1, duration: 0.17, ease: "power4.in" }, t - 0.17);
+            tl.to(el, { scale: 1.035, duration: 0.07, yoyo: true, repeat: 1, ease: "power1.out" }, t);
+          }
+
+          /* -------- abertura -------- */
+          const tMitos = $("#tMitos"), tCasa = $("#tCasa");
+          $(".st-o", tMitos).style.textShadow = ring(16, "#F0EEE6", "rgba(0,0,0,.45)");
+          $(".st-o", tCasa).style.textShadow = ring(12, "#F0EEE6", "rgba(0,0,0,.45)");
+          const ow = W.abertura;
+          const o = S.open;
+          tl.fromTo("#loose1", { x: -120, rotation: -16 }, { x: 0, rotation: -9, duration: 1.6, ease: "power2.out" }, 0);
+          tl.fromTo("#loose2", { x: 140, rotation: 14 }, { x: 0, rotation: 8, duration: 1.6, ease: "power2.out" }, 0.05);
+          tl.fromTo("#logoCard", { y: -520, rotation: -9 }, { y: 0, rotation: -2, duration: 0.8, ease: "power3.out" }, 0.1);
+          tl.fromTo(tMitos, { opacity: 0, scale: 0.55, rotation: -10 }, { opacity: 1, scale: 1, rotation: -3, duration: 0.5, ease: "back.out(2.2)" }, o.vo + ow[0].start - 0.08);
+          tl.fromTo("#tBanner", { clipPath: "inset(0% 100% 0% 0%)", rotation: -2 }, { clipPath: "inset(0% 0% 0% 0%)", rotation: -2, duration: 0.42, ease: "power3.out" }, o.vo + ow[2].start - 0.06);
+          tl.fromTo(tCasa, { opacity: 0, clipPath: "inset(-20% 100% -20% -10%)", rotation: -4 }, { opacity: 1, clipPath: "inset(-20% -10% -20% -10%)", rotation: -4, duration: 0.55, ease: "power2.out" }, o.vo + ow[4].start - 0.05);
+          tl.fromTo(cam, { scale: 1.07, y: 0 }, { scale: 1.0, y: 0, duration: o.out, ease: "sine.out" }, 0);
+          tl.to("#open", { y: -260, opacity: 0, duration: 0.7, ease: "power2.in" }, o.out);
+          tl.set("#open", { autoAlpha: 0 }, o.out + 0.75);
+
+          /* -------- mitos e verdades -------- */
+          const pairs = [1, 2, 3].map((n) => ({ n, el: $("#pair" + n), m: S["m" + n] }));
+          const stampRot = [[-4, -11], [3, -8], [-6, -12]];
+
+          pairs.forEach(({ n, el, m }, idx) => {
+            const leaf = $(".leaf", el), front = $(".face.front", el), truth = $(".face.truth", el);
+
+            // entra a folha
+            tl.set(el, { autoAlpha: 0 }, 0);
+            tl.set(el, { autoAlpha: 1 }, m.in);
+            tl.fromTo(el, { y: 1500, rotation: idx % 2 ? -7 : 7 }, { y: 0, rotation: idx % 2 ? 0.6 : -0.6, duration: 0.75, ease: "power3.out" }, m.in);
+            if (idx > 0) {
+              const prev = pairs[idx - 1].el;
+              tl.to(prev, { y: -70, scale: 0.95, rotation: idx % 2 ? 2.5 : -2.5, duration: 0.75, ease: "power2.inOut" }, m.in);
+              tl.to($(".face.truth .dim", prev), { opacity: 0.55, duration: 0.75 }, m.in);
+              tl.set(prev, { autoAlpha: 0 }, m.in + 0.8);
+            }
+
+            // cabeçalho
+            tl.fromTo($$(".head > *", front), { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.35, stagger: 0.08 }, m.in + 0.35);
+            tl.fromTo($(".rule", front), { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power3.inOut" }, m.in + 0.4);
+            tl.fromTo($(".quote", front), { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2)" }, m.vo - 0.25);
+
+            // pergunta (voz masculina)
+            const q = $(".q", front);
+            const qs = splitWords(q);
+            const qt = wordTimes("mito" + n, m.vo, qs.length);
+            reveal(qs, qt, 0.07);
+
+            // ilustração do mito
+            const qw = W["mito" + n];
+            const at = (i) => m.vo + qw[Math.min(i, qw.length - 1)].start;
+            if (n === 1) {
+              $$(".i-bill", front).forEach((b, i) => {
+                const r = parseFloat(b.style.getPropertyValue("--r"));
+                tl.fromTo(b, { y: -260, rotation: r - 20, opacity: 0, svgOrigin: "230 300" }, { y: 0, rotation: r, opacity: 1, duration: 0.45, ease: "power3.out" }, at(2) + i * 0.12);
+              });
+              tl.fromTo($$(".coin", front), { y: -120, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "bounce.out", stagger: 0.09 }, at(4));
+            } else if (n === 2) {
+              $$(".doc", front).forEach((d, i) => {
+                const r = parseFloat(d.style.getPropertyValue("--r"));
+                tl.fromTo(d, { y: -320, rotation: r * 2.5, opacity: 0, svgOrigin: "250 220" }, { y: 0, rotation: r, opacity: 1, duration: 0.4, ease: "power3.out" }, at(2) + i * 0.13);
+              });
+              tl.fromTo($(".i-person", front), { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.4 }, at(5) - 0.1);
+              tl.fromTo($(".i-ask", front), { opacity: 0, scale: 0.3, svgOrigin: "660 160" }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(3)" }, at(5) + 0.15);
+            } else {
+              tl.fromTo($$(".i-beam, .i-panL, .i-panR", front), { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.06 }, m.vo + 0.05);
+              tl.fromTo($(".i-beam", front), { rotation: 0, svgOrigin: "370 116" }, { rotation: -9, duration: 0.7, ease: "back.out(1.6)" }, at(3));
+              tl.to($(".i-panL", front), { y: 34, x: 3, duration: 0.7, ease: "back.out(1.6)" }, at(3));
+              tl.to($(".i-panR", front), { y: -34, x: -3, duration: 0.7, ease: "back.out(1.6)" }, at(3));
+            }
+
+            // risco + carimbo MITO
+            const strikes = buildStrike(q, qs, 101 + n);
+            tl.to(strikes, { strokeDashoffset: 0, duration: 0.2, stagger: 0.14, ease: "power1.inOut" }, m.strike);
+            const ms = $(".stamp.mito", front);
+            tl.set(ms, { opacity: 0 }, 0);
+            stampIn(ms, m.stamp, stampRot[idx][0], stampRot[idx][1]);
+            impact(m.stamp, 1);
+
+            // câmera durante o mito
+            camTo(m.vo - 0.2, m.voEnd - m.vo + 0.5, { scale: 1.035, y: 26 });
+            camTo(m.stamp - 0.02, 0.12, { scale: 1.055 }, "power2.out");
+            camTo(m.turn - 0.45, 0.6, { scale: 0.985, y: 0 }, "power2.inOut");
+
+            // virada de página
+            tl.to(leaf, { rotationY: -180, duration: 1.05, ease: "power2.inOut" }, m.turn);
+            tl.fromTo($(".shade", front), { opacity: 0 }, { opacity: 0.6, duration: 0.52, ease: "power1.in" }, m.turn);
+            tl.fromTo($(".face.back .shade", leaf), { opacity: 0.6 }, { opacity: 0.1, duration: 0.5, ease: "power1.out" }, m.turn + 0.53);
+            tl.fromTo($(".cast", truth), { opacity: 0 }, { opacity: 0.65, duration: 0.45, ease: "power1.in" }, m.turn);
+            tl.to($(".cast", truth), { opacity: 0, duration: 0.5, ease: "power1.out" }, m.turn + 0.5);
+            tl.set(leaf, { autoAlpha: 0 }, m.turn + 1.1);
+
+            // verdade (voz feminina)
+            const vs = $(".stamp.verdade", truth);
+            tl.set(vs, { opacity: 0 }, 0);
+            stampIn(vs, m.truthStamp, 10, 5);
+            impact(m.truthStamp, 0.6);
+            const t = $(".t", truth);
+            const ts = splitWords(t);
+            const tt = wordTimes("verdade" + n, m.truthVo, ts.length);
+            reveal(ts, tt, 0.07);
+            $$(".hl", t).forEach((h) => {
+              const inner = $$(".w", h).filter((s) => !s.dataset.punct);
+              const i0 = ts.indexOf(inner[0]), i1 = ts.indexOf(inner[inner.length - 1]);
+              const t0 = tt[i0], t1 = W["verdade" + n][i1].end + m.truthVo;
+              tl.to(h, { backgroundSize: "100% 100%", duration: Math.max(0.35, t1 - t0), ease: "power1.inOut" }, t0);
+            });
+            camTo(m.turn + 0.9, m.truthVoEnd - m.turn - 0.6, { scale: 1.03, y: 18 });
+
+            const vw = W["verdade" + n];
+            const vt = (i) => m.truthVo + vw[Math.min(i, vw.length - 1)].start;
+            if (n === 1) {
+              tl.fromTo($(".i-card", truth), { opacity: 0, y: 60, rotation: -8, svgOrigin: "185 165" }, { opacity: 1, y: 0, rotation: 0, duration: 0.5, ease: "back.out(1.8)" }, vt(4) - 0.1);
+              tl.fromTo($(".i-card-l", truth), { opacity: 0 }, { opacity: 1, duration: 0.3 }, vt(4) + 0.15);
+              tl.fromTo($(".i-plus", truth), { opacity: 0, scale: 0.2, svgOrigin: "372 165" }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(3)" }, vt(5));
+              tl.fromTo($(".i-people", truth), { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.5, ease: "back.out(1.8)" }, vt(6) - 0.1);
+              tl.fromTo($(".i-people-l", truth), { opacity: 0 }, { opacity: 1, duration: 0.3 }, vt(6) + 0.15);
+            } else if (n === 2) {
+              $$(".draw", truth).forEach((p) => {
+                const len = p.getTotalLength();
+                const dashed = p.getAttribute("stroke-dasharray");
+                if (dashed) {
+                  tl.fromTo(p, { opacity: 0 }, { opacity: 1, duration: 0.4 }, vt(5) + 0.4);
+                } else {
+                  p.style.strokeDasharray = `${len} ${len * 2 + 40}`;
+                  tl.fromTo(p, { strokeDashoffset: len }, { strokeDashoffset: 0, duration: 0.9, ease: "power1.inOut" }, vt(5) - 0.1);
+                }
+              });
+              tl.fromTo($(".i-hat", truth), { opacity: 0, y: -60, rotation: -12, svgOrigin: "612 150" }, { opacity: 1, y: 0, rotation: 0, duration: 0.45, ease: "back.out(2)" }, vt(6));
+              tl.fromTo($(".i-square", truth), { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.4 }, vt(6) + 0.2);
+              tl.fromTo($(".i-check", truth), { opacity: 0, scale: 0.2, svgOrigin: "420 330" }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(3)" }, vt(8));
+            } else {
+              tl.fromTo($(".i-calc", truth), { opacity: 0, y: 50, rotation: -6, svgOrigin: "105 165" }, { opacity: 1, y: 0, rotation: 0, duration: 0.45, ease: "back.out(1.8)" }, vt(0) - 0.1);
+              tl.fromTo($(".i-bar1", truth), { scaleY: 0, svgOrigin: "365 330" }, { scaleY: 1, duration: 0.6, ease: "power3.out" }, vt(1));
+              tl.fromTo($(".i-bar1-l", truth), { opacity: 0 }, { opacity: 1, duration: 0.3 }, vt(1) + 0.2);
+              tl.fromTo($(".i-bar2", truth), { scaleY: 0, svgOrigin: "595 330" }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, vt(4));
+              tl.fromTo($(".i-bar2-l", truth), { opacity: 0 }, { opacity: 1, duration: 0.3 }, vt(4) + 0.2);
+              tl.fromTo($(".i-approx", truth), { opacity: 0, scale: 0.3, svgOrigin: "480 49" }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(3)" }, vt(7));
+              tl.fromTo($(".i-note", truth), { opacity: 0 }, { opacity: 0.55, duration: 0.4 }, vt(7) + 0.3);
+            }
+            [".i-card", ".i-card-l", ".i-plus", ".i-people", ".i-people-l", ".i-hat", ".i-square", ".i-check", ".i-calc", ".i-bar1-l", ".i-bar2-l", ".i-approx", ".i-note"].forEach((sel) => {
+              const e = $(sel, truth);
+              if (e) tl.set(e, { opacity: 0 }, 0);
+            });
+            camTo(m.out - 0.1, 0.6, { scale: 1.0, y: 0 }, "power2.inOut");
+          });
+
+          /* -------- encerramento -------- */
+          const c = S.close;
+          const pc = $("#pairClose");
+          const last = pairs[2].el;
+          tl.set(pc, { autoAlpha: 0 }, 0);
+          tl.set(pc, { autoAlpha: 1 }, c.in);
+          tl.fromTo(pc, { y: 1500, rotation: 6 }, { y: 0, rotation: 0, duration: 0.8, ease: "power3.out" }, c.in);
+          tl.to(last, { y: -70, scale: 0.95, rotation: -2.5, duration: 0.8, ease: "power2.inOut" }, c.in);
+          tl.to($(".face.truth .dim", last), { opacity: 0.55, duration: 0.8 }, c.in);
+          tl.set(last, { autoAlpha: 0 }, c.in + 0.85);
+
+          const slogan = $(".slogan", pc);
+          const lns = $$(".ln", slogan);
+          const fw = W.fim1;
+          tl.fromTo(slogan, { y: 230, scale: 1.18 }, { y: 230, scale: 1.18, duration: 0.01 }, c.in);
+          tl.fromTo(lns[0], { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.35 }, c.vo1 + fw[0].start - 0.06);
+          tl.fromTo(lns[1], { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.35 }, c.vo1 + fw[2].start - 0.06);
+          tl.fromTo(lns[2], { opacity: 0, clipPath: "inset(-30% 100% -30% -10%)" }, { opacity: 1, clipPath: "inset(-30% -10% -30% -10%)", duration: 0.55 }, c.vo1 + fw[4].start - 0.05);
+          const bo = $(".boatos", pc);
+          const bsvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          bsvg.setAttribute("class", "strike");
+          const bp = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          const bw = bo.offsetWidth, bh = bo.offsetHeight;
+          bp.setAttribute("d", `M-10 ${bh * 0.56} Q${bw / 2} ${bh * 0.5} ${bw + 6} ${bh * 0.6}`);
+          bp.style.strokeWidth = "16";
+          bsvg.appendChild(bp);
+          bo.appendChild(bsvg);
+          const bl = bp.getTotalLength();
+          bp.style.strokeDasharray = `${bl} ${bl * 2 + 40}`;
+          tl.fromTo(bp, { strokeDashoffset: bl }, { strokeDashoffset: 0, duration: 0.35, ease: "power1.inOut" }, c.boatosStrike);
+
+          camTo(c.in + 0.6, c.vo1End - c.in - 0.4, { scale: 1.03, y: 10 });
+          // CTA
+          tl.to(slogan, { y: 0, scale: 1, duration: 0.7, ease: "power3.inOut" }, c.cta);
+          tl.fromTo(".close-label", { opacity: 0, y: -60, rotation: -6 }, { opacity: 1, y: 0, rotation: -1.5, duration: 0.6, ease: "back.out(1.6)" }, c.cta + 0.15);
+          tl.fromTo(".divider", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power2.inOut" }, c.cta + 0.25);
+          tl.fromTo(".bubble", { opacity: 0, scale: 0.6, y: 40 }, { opacity: 1, scale: 1, y: 0, duration: 0.55, ease: "back.out(2)" }, c.cta + 0.25);
+          const f2 = W.fim2;
+          tl.fromTo(".bubble .c2", { scale: 1 }, { scale: 1.12, duration: 0.18, yoyo: true, repeat: 1, ease: "power2.out" }, c.vo2 + f2[1].start);
+          const dp = $(".direct p", pc);
+          const ds = splitWords(dp);
+          const dt = wordTimes("fim2", c.vo2, ds.length, 2);
+          tl.fromTo($(".direct svg", pc), { opacity: 0, x: -30, y: 20, rotation: -20 }, { opacity: 1, x: 0, y: 0, rotation: 0, duration: 0.5, ease: "back.out(2)" }, dt[0] - 0.15);
+          reveal(ds, dt, 0.0);
+          camTo(c.cta, 0.8, { scale: 1.0, y: 0 }, "power2.inOut");
+          camTo(c.vo2End + 0.1, K.total - c.vo2End - 0.1, { scale: 1.02 }, "sine.inOut");
+
+          return tl;
+        }
+
+        document.fonts.ready.then(() => {
+          const tl = build();
+          window.__timelines["main"] = tl;
+        });
+      })();
+    </script>
+  </body>
+</html>
