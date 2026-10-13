@@ -59,11 +59,11 @@ window.KAP = {
    {
     "w": "Três",
     "start": 0.0,
-    "end": 0.4
+    "end": 0.32
    },
    {
     "w": "mitos",
-    "start": 0.4,
+    "start": 0.32,
     "end": 0.8
    },
    {
@@ -91,16 +91,16 @@ window.KAP = {
    {
     "w": "Preciso",
     "start": 0.08,
-    "end": 0.48
+    "end": 0.56
    },
    {
     "w": "ter",
-    "start": 0.48,
-    "end": 0.76
+    "start": 0.56,
+    "end": 0.72
    },
    {
     "w": "cem",
-    "start": 0.76,
+    "start": 0.72,
     "end": 1.04
    },
    {
@@ -173,11 +173,11 @@ window.KAP = {
    {
     "w": "renda,",
     "start": 2.56,
-    "end": 3.12
+    "end": 3.2
    },
    {
     "w": "conforme",
-    "start": 3.12,
+    "start": 3.2,
     "end": 3.68
    },
    {
@@ -272,11 +272,11 @@ window.KAP = {
    {
     "w": "da",
     "start": 2.56,
-    "end": 2.64
+    "end": 2.72
    },
    {
     "w": "obra.",
-    "start": 2.64,
+    "start": 2.72,
     "end": 3.077
    }
   ],
@@ -304,11 +304,11 @@ window.KAP = {
    {
     "w": "caro",
     "start": 1.36,
-    "end": 1.76
+    "end": 1.68
    },
    {
     "w": "que",
-    "start": 1.76,
+    "start": 1.68,
     "end": 1.92
    },
    {
@@ -405,11 +405,11 @@ window.KAP = {
    {
     "w": "Comente",
     "start": 0.0,
-    "end": 0.48
+    "end": 0.56
    },
    {
     "w": "SIMULAR.",
-    "start": 0.48,
+    "start": 0.56,
     "end": 1.12
    },
    {

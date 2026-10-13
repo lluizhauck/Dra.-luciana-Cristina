@@ -4,7 +4,7 @@ Vozes:  pm_alex  (masculina) -> abertura + mitos
         pf_dora  (feminina)  -> verdades + encerramento
 
 Saídas:
-  assets/audio/vo/<id>.wav        48 kHz, mono, loudness igualada (-16 LUFS)
+  assets/audio/vo/<id>.wav        48 kHz, mono, volume igualado (-16,5 LUFS)
   assets/data/narration.json      duração de cada fala + tempo de cada palavra
 
 Uso:
@@ -41,7 +41,7 @@ PARAKEET_URL = (
 
 MALE, FEMALE = "pm_alex", "pf_dora"
 SPEED = 1.0  # velocidade natural do modelo, sem aceleração artificial
-TARGET_LUFS = -16.0
+TARGET_LUFS = -16.5
 
 # id, voz, texto exibido/roteiro, texto falado (ajustes de pronúncia)
 LINES = [
@@ -94,17 +94,34 @@ def trim(samples, sr, pad=0.04, thresh_db=-45):
     return out
 
 
-def loudness_match(samples, sr):
+def ffmpeg_filter(samples, sr, chain):
+    """Passa o áudio (float, pode passar de 1.0) por uma cadeia de filtros do ffmpeg."""
+    raw = subprocess.run(
+        ["ffmpeg", "-v", "error", "-f", "f32le", "-ar", str(sr), "-ac", "1", "-i", "-",
+         "-af", chain, "-f", "f32le", "-"],
+        input=samples.astype(np.float32).tobytes(), capture_output=True, check=True,
+    ).stdout
+    return np.frombuffer(raw, dtype=np.float32)[: len(samples)].copy()
+
+
+def voice_chain(samples, sr):
+    """Nivela todas as falas no mesmo volume percebido (TARGET_LUFS).
+
+    A voz do Kokoro tem picos altos em relação ao volume médio; só ganho faria
+    as falas ficarem baixas e desiguais. Cadeia: pré-nível -> compressor suave
+    (3:1) -> ganho até o alvo -> limitador em -2 dBFS.
+    """
     import pyloudnorm as pyln
 
     meter = pyln.Meter(sr)
-    gain_db = TARGET_LUFS - meter.integrated_loudness(samples)
-    out = samples * (10 ** (gain_db / 20))
-    peak = np.max(np.abs(out))
-    ceiling = 10 ** (-1.5 / 20)
-    if peak > ceiling:  # nunca deixar clipar
-        out *= ceiling / peak
-    return out
+    x = samples * 10 ** ((-20.0 - meter.integrated_loudness(samples)) / 20)
+    x = ffmpeg_filter(x, sr, "acompressor=threshold=-26dB:ratio=3:attack=4:release=90:knee=6")
+    for _ in range(3):
+        x = x * 10 ** ((TARGET_LUFS - meter.integrated_loudness(x)) / 20)
+        x = ffmpeg_filter(x, sr, "alimiter=limit=-2dB:attack=3:release=50:level=0")
+        if abs(TARGET_LUFS - meter.integrated_loudness(x)) < 0.2:
+            break
+    return x
 
 
 VOWELS = set("aeiouɐæɛɔʊyɪ")
@@ -277,7 +294,7 @@ def main():
             else:  # estimativa proporcional ao número de letras
                 last_start = duration * (1 - len(text.split()[-1]) / len(text)) - 0.05
             samples, entry["question_intonation"] = question_intonation(samples, sr, last_start, ph.split()[-1])
-        samples = loudness_match(samples, sr)
+        samples = voice_chain(samples, sr)
         sf.write(tmp, samples, sr, subtype="FLOAT")
         dst = VO_DIR / f"{line_id}.wav"
         to_48k(tmp, dst)

@@ -1,7 +1,7 @@
 """Efeitos sonoros discretos, sintetizados (sem bancos de som de terceiros).
 
 Saídas em assets/audio/sfx/*.wav (48 kHz, mono). Cada efeito já sai no volume
-final, entre 11 e 17 LU abaixo da narração (-16 LUFS), para ficar discreto.
+final, bem abaixo da narração (-16,5 LUFS), para ficar discreto.
 Semente fixa: o resultado é sempre o mesmo.
 
 Uso: python scripts/sfx.py
@@ -125,11 +125,11 @@ def loudness(x):
     return pyln.Meter(SR).integrated_loudness(pad)
 
 
-# alvo de loudness (janela de 1 s): narração fica em -16 LUFS
+# alvo de loudness (janela de 1 s): narração fica em -16,5 LUFS
 EFFECTS = {
-    "page-flip": (page_flip, -30.0),
+    "page-flip": (page_flip, -31.0),
     "paper-slide": (paper_slide, -32.0),
-    "stamp": (stamp, -27.0),
+    "stamp": (stamp, -29.0),
     "marker": (marker, -33.0),
     "tick": (tick, -33.0),
 }
