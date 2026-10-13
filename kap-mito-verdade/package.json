@@ -7,7 +7,7 @@
     "check": "npx --yes hyperframes@0.8.150 check",
     "audio": "node tools/audio/render-audio.mjs",
     "textures": "python3 -I tools/make-textures.py",
-    "render": "npx --yes hyperframes@0.8.150 render --fps 60 --quality high -o renders/kap-mito-verdade.mp4",
+    "render": "npx --yes hyperframes@0.8.150 render --fps 60 --crf 18 -o renders/kap-mito-verdade.mp4",
     "publish": "npx --yes hyperframes@0.8.150 publish"
   },
   "devDependencies": {

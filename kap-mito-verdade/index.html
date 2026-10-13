@@ -44,8 +44,8 @@
         --clay: #d97757;
         --desk: #e2ddd0;
         --paper-back: #e7e3d8;
-        --serif: "Fraunces", Georgia, serif;
-        --sans: "Instrument Sans", Arial, sans-serif;
+        --serif: "Fraunces", serif;
+        --sans: "Instrument Sans", sans-serif;
         --mono: "JetBrains Mono", monospace;
         --hand: "Caveat", cursive;
       }
@@ -1709,7 +1709,7 @@
           draw(tl, $(".papel-under path"), E.underline, 0.5);
           tl.fromTo(".comente", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, E.comente);
           slam(tl, $(".stamp--simular"), E.simular, { from: 2.4, travel: 0.2 });
-          tl.fromTo(".simular-ring", { opacity: 0.9, scale: 1 }, { opacity: 0, scale: 1.35, duration: 0.6, ease: "power2.out" }, E.simular);
+          tl.fromTo(".simular-ring", { opacity: 0.9, scale: 1 }, { opacity: 0, scale: 1.35, duration: 0.6, ease: "power2.out", immediateRender: false }, E.simular);
           tl.to(".end-wrap", { keyframes: { y: [0, 8, -3, 1, 0], easeEach: "sine.inOut" }, duration: 0.3 }, E.simular);
           tl.fromTo(".end-comp", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, E.complement);
           tl.fromTo(".end-lines, .cta", { scale: 1 }, { scale: 1.015, duration: 30 - E.start, ease: "sine.inOut" }, E.start);

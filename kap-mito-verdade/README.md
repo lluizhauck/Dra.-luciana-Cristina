@@ -96,3 +96,34 @@ tools/make-textures.py     gerador das texturas
 tools/audio/               síntese da trilha (Web Audio API) e script de render
 renders/                   MP4 final
 ```
+
+## Verificação do arquivo entregue
+
+`renders/kap-mito-verdade.mp4` — H.264 High, 1080 × 1920, 60/1 fps constante,
+1800 quadros, 30,000 s; áudio AAC-LC 48 kHz estéreo; −13,8 LUFS integrados, pico
+real −1,7 dBTP; 31,7 MB (CRF 18). `npm run check`: 0 erros de lint, runtime e motion.
+
+Avisos conhecidos e aceitos:
+
+- **Estrutura**: o lint sugere dividir as cenas em sub-composições. Mantive uma
+  composição única de propósito: as folhas formam uma pilha compartilhada entre as
+  cenas (viradas, sombras projetadas e transições dependem de estarem no mesmo
+  contexto).
+- **Sobreposição de texto (~0,25 s)**: enquanto a verdade 1 é puxada para cima e o
+  mito 3 cai por cima da verdade 2, a auditoria vê caixas de texto sobrepostas; na
+  imagem, a folha de cima é opaca e cobre a de baixo.
+- **Contraste do "3" da abertura**: laranja `#D97757` sobre creme dá 2,48:1 (a
+  auditoria pede 3:1 para texto grande). Mantive a cor exata da marca; é um numeral
+  de 340 px.
+
+## Limitações do ambiente de produção
+
+- Renderizado sem GPU (Chrome headless com SwiftShader, captura `beginframe`). As
+  transformações 3D e os filtros SVG renderizam corretamente, só que mais devagar
+  (~3 min para os 1800 quadros).
+- A trilha foi validada por métricas (loudness, pico, espectrograma e forma de onda
+  alinhada às deixas), não por audição humana: vale ouvir antes de publicar.
+- A logo recebida é um PNG com fundo branco; por isso ela aparece sobre uma etiqueta
+  branca. Um SVG ou PNG transparente permitiria aplicá-la diretamente no fundo escuro.
+- As fontes oficiais da marca não foram informadas; usei Fraunces, Instrument Sans,
+  Caveat e JetBrains Mono (licença OFL).
