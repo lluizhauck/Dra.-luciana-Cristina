@@ -1,0 +1,1722 @@
+<!doctype html>
+<html lang="pt-BR" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>KAP Edificações — Mito x Verdade</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <script src="cues.js"></script>
+    <style>
+      @font-face {
+        font-family: "Fraunces";
+        src: url("assets/fonts/fraunces-var.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: "Fraunces";
+        src: url("assets/fonts/fraunces-var-italic.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: italic;
+      }
+      @font-face {
+        font-family: "Instrument Sans";
+        src: url("assets/fonts/instrument-sans-var.woff2") format("woff2");
+        font-weight: 400 700;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: "Caveat";
+        src: url("assets/fonts/caveat-600.woff2") format("woff2");
+        font-weight: 600;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: "JetBrains Mono";
+        src: url("assets/fonts/jetbrains-mono-500.woff2") format("woff2");
+        font-weight: 500;
+        font-style: normal;
+      }
+
+      :root {
+        --cream: #f0eee6;
+        --ink: #1f1e1d;
+        --clay: #d97757;
+        --desk: #e2ddd0;
+        --paper-back: #e7e3d8;
+        --serif: "Fraunces", Georgia, serif;
+        --sans: "Instrument Sans", Arial, sans-serif;
+        --mono: "JetBrains Mono", monospace;
+        --hand: "Caveat", cursive;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--ink);
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: var(--sans);
+        color: var(--ink);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+        font-optical-sizing: auto;
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+      .defs {
+        position: absolute;
+        width: 0;
+        height: 0;
+      }
+
+      /* ---------- mesa ---------- */
+      #desk {
+        position: absolute;
+        inset: 0;
+        background: var(--desk);
+      }
+      #desk .grain,
+      #desk .vignette {
+        position: absolute;
+        inset: 0;
+      }
+      #desk .grain {
+        background: url("assets/textures/paper-grain.png");
+        background-size: 512px;
+        opacity: 0.2;
+      }
+      #desk .vignette {
+        background: radial-gradient(120% 85% at 50% 46%, rgba(31, 30, 29, 0) 52%, rgba(31, 30, 29, 0.26) 100%);
+      }
+      #stage {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 48%;
+      }
+
+      /* folhas de baixo (pilha) */
+      .under {
+        position: absolute;
+        left: 70px;
+        top: 150px;
+        width: 940px;
+        height: 1560px;
+        background: #ebe8df;
+        box-shadow: 0 1px 2px rgba(31, 30, 29, 0.1), 0 16px 34px -14px rgba(31, 30, 29, 0.3);
+      }
+      .under.u1 {
+        transform: rotate(-1.6deg) translate(-6px, 10px);
+      }
+      .under.u2 {
+        transform: rotate(1.15deg) translate(8px, 4px);
+        background: #eeebe3;
+      }
+
+      /* ---------- folha ---------- */
+      .sheet .body {
+        position: absolute;
+        left: 70px;
+        top: 150px;
+        width: 940px;
+        height: 1560px;
+        perspective: 3200px;
+        perspective-origin: 50% 50%;
+      }
+      .flat {
+        position: absolute;
+        inset: 0;
+        box-shadow: 0 1px 2px rgba(31, 30, 29, 0.14), 0 24px 46px -16px rgba(31, 30, 29, 0.4);
+      }
+      .paper {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 940px;
+        height: 1560px;
+        background-color: var(--cream);
+        overflow: hidden;
+      }
+      .paper::before,
+      .paper::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      .paper::before {
+        background: url("assets/textures/paper-mottle.png");
+        background-size: 1024px;
+        opacity: 0.08;
+      }
+      .paper::after {
+        background: url("assets/textures/paper-grain.png");
+        background-size: 512px;
+        opacity: 0.12;
+        z-index: 20;
+      }
+      .paper--ruled {
+        background-image: repeating-linear-gradient(
+          180deg,
+          rgba(31, 30, 29, 0) 0 66px,
+          rgba(31, 30, 29, 0.075) 66px 68px
+        );
+        background-position: 0 30px;
+      }
+      .paper--grid {
+        background-image: linear-gradient(rgba(31, 30, 29, 0.055) 1.5px, rgba(31, 30, 29, 0) 1.5px),
+          linear-gradient(90deg, rgba(31, 30, 29, 0.055) 1.5px, rgba(31, 30, 29, 0) 1.5px);
+        background-size: 40px 40px;
+        background-position: 10px 10px;
+      }
+      .margin-line {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 46px;
+        width: 2px;
+        background: var(--clay);
+        opacity: 0.5;
+      }
+      .crop {
+        position: absolute;
+        width: 34px;
+        height: 34px;
+        border-color: rgba(31, 30, 29, 0.45);
+        border-style: solid;
+        border-width: 0;
+      }
+      .crop.tl {
+        left: 22px;
+        top: 22px;
+        border-left-width: 2px;
+        border-top-width: 2px;
+      }
+      .crop.tr {
+        right: 22px;
+        top: 22px;
+        border-right-width: 2px;
+        border-top-width: 2px;
+      }
+      .crop.bl {
+        left: 22px;
+        bottom: 22px;
+        border-left-width: 2px;
+        border-bottom-width: 2px;
+      }
+      .crop.br {
+        right: 22px;
+        bottom: 22px;
+        border-right-width: 2px;
+        border-bottom-width: 2px;
+      }
+
+      .p-head,
+      .p-foot {
+        position: absolute;
+        left: 72px;
+        right: 72px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: var(--mono);
+        font-weight: 500;
+        font-size: 25px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(31, 30, 29, 0.78);
+      }
+      .p-head {
+        top: 54px;
+        height: 56px;
+      }
+      .p-foot {
+        bottom: 50px;
+        height: 60px;
+      }
+      .rule {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: rgba(31, 30, 29, 0.82);
+        transform-origin: 0 50%;
+      }
+      .p-head .rule {
+        bottom: 0;
+      }
+      .p-foot .rule {
+        top: 0;
+      }
+
+      /* máscara para revelar linhas de texto */
+      .mask {
+        display: block;
+        overflow: hidden;
+        padding: 0.04em 0.08em 0.16em;
+        margin: -0.04em -0.08em -0.16em;
+      }
+      .mask > span {
+        display: block;
+      }
+
+      /* ---------- carimbos ---------- */
+      .stamp-pos {
+        position: absolute;
+      }
+      .stamp {
+        position: relative;
+        display: block;
+        font-family: var(--sans);
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        border: 11px solid currentColor;
+        border-radius: 20px;
+        filter: url(#ink);
+        white-space: nowrap;
+      }
+      .stamp::after {
+        content: "";
+        position: absolute;
+        inset: 9px;
+        border: 3px solid currentColor;
+        border-radius: 10px;
+      }
+      .stamp--mito {
+        color: var(--clay);
+        font-size: 196px;
+        padding: 30px 46px 22px 56px;
+      }
+      .stamp--verdade {
+        color: var(--ink);
+        font-size: 62px;
+        border-width: 7px;
+        border-radius: 14px;
+        padding: 20px 26px 14px 32px;
+      }
+      .stamp--verdade::after {
+        inset: 6px;
+        border-width: 2px;
+        border-radius: 8px;
+      }
+
+      /* ---------- traços à mão ---------- */
+      .ink-path {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 1 2;
+        stroke-dashoffset: 0;
+      }
+      .hand {
+        display: inline-block;
+        font-family: var(--hand);
+        font-weight: 600;
+        color: var(--ink);
+        white-space: nowrap;
+      }
+
+      /* ---------- abertura ---------- */
+      .logo-card {
+        position: absolute;
+        left: 74px;
+        top: 160px;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 22px 26px;
+        box-shadow: 0 1px 2px rgba(31, 30, 29, 0.16), 0 12px 26px -10px rgba(31, 30, 29, 0.38);
+      }
+      .logo-card img {
+        display: block;
+        width: 520px;
+        height: auto;
+      }
+      .tape-pos {
+        position: absolute;
+        width: 150px;
+        height: 44px;
+      }
+      .tape {
+        width: 100%;
+        height: 100%;
+        background: rgba(233, 226, 205, 0.82);
+        box-shadow: 0 1px 1px rgba(31, 30, 29, 0.12);
+        clip-path: polygon(0 8%, 4% 0, 9% 10%, 14% 0, 100% 4%, 96% 50%, 100% 96%, 6% 100%, 2% 88%, 5% 50%);
+        transform-origin: 0 50%;
+      }
+      .title {
+        position: absolute;
+        left: 74px;
+        top: 500px;
+        width: 800px;
+        font-family: var(--serif);
+      }
+      .t-row1 {
+        position: relative;
+        height: 290px;
+      }
+      .t3 {
+        position: absolute;
+        left: -6px;
+        top: -10px;
+        font-weight: 560;
+        font-size: 340px;
+        line-height: 1;
+        color: var(--clay);
+        transform-origin: 30% 85%;
+      }
+      .t-mitos {
+        position: absolute;
+        left: 236px;
+        top: 60px;
+        font-size: 176px;
+        font-weight: 400;
+        line-height: 1;
+        letter-spacing: -0.02em;
+      }
+      .t-row2 {
+        font-size: 92px;
+        line-height: 1.05;
+        letter-spacing: -0.01em;
+        margin-top: 8px;
+      }
+      .t-row3 {
+        position: relative;
+        width: max-content;
+        font-size: 156px;
+        font-style: italic;
+        font-weight: 470;
+        line-height: 1.04;
+        letter-spacing: -0.02em;
+        margin-top: 2px;
+      }
+      .t-under {
+        position: absolute;
+        left: -10px;
+        width: calc(100% + 34px);
+        bottom: -8px;
+        height: 40px;
+        overflow: visible;
+      }
+      .sumario {
+        position: absolute;
+        left: 72px;
+        right: 72px;
+        top: 1108px;
+      }
+      .sumario .lbl {
+        font-family: var(--mono);
+        font-size: 24px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: rgba(31, 30, 29, 0.74);
+        margin-bottom: 18px;
+      }
+      .sumario .row {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        height: 88px;
+      }
+      .sumario .row .rule {
+        top: 0;
+        background: rgba(31, 30, 29, 0.16);
+      }
+      .sumario .n {
+        font-family: var(--mono);
+        font-size: 28px;
+        color: rgba(31, 30, 29, 0.7);
+      }
+      .sumario .w {
+        font-family: var(--serif);
+        font-size: 56px;
+        line-height: 1;
+      }
+      .sumario .lead {
+        flex: 1;
+        height: 4px;
+        background-image: radial-gradient(circle, rgba(31, 30, 29, 0.42) 1.6px, rgba(31, 30, 29, 0) 2px);
+        background-size: 14px 4px;
+        transform-origin: 0 50%;
+      }
+      .sumario .arrow {
+        font-family: var(--sans);
+        font-size: 40px;
+        color: var(--ink);
+      }
+      .hint {
+        font-size: 50px;
+        letter-spacing: 0;
+        text-transform: none;
+        color: var(--ink);
+      }
+
+      /* ---------- mitos ---------- */
+      .qglyph {
+        position: absolute;
+        left: 60px;
+        top: 120px;
+        font-family: var(--serif);
+        font-weight: 500;
+        font-size: 420px;
+        line-height: 1;
+        color: var(--clay);
+      }
+      .note-pos {
+        position: absolute;
+        left: 330px;
+        top: 300px;
+        transform: rotate(-4deg);
+      }
+      .note-pos .hand {
+        font-size: 66px;
+      }
+      .quote {
+        position: absolute;
+        left: 82px;
+        top: 470px;
+        font-family: var(--serif);
+        font-weight: 380;
+        font-size: 112px;
+        line-height: 1.13;
+        letter-spacing: -0.014em;
+      }
+      .quote .ln {
+        position: relative;
+        display: block;
+        width: max-content;
+      }
+      .strike {
+        position: absolute;
+        left: -16px;
+        width: calc(100% + 32px);
+        top: 44%;
+        height: 30px;
+        overflow: visible;
+      }
+      .strike .ink-path {
+        stroke: var(--clay);
+        stroke-width: 13px;
+        opacity: 0.94;
+      }
+      .word-mark {
+        position: relative;
+        display: inline-block;
+      }
+      .circle-mark {
+        position: absolute;
+        left: -34px;
+        top: -18px;
+        width: calc(100% + 68px);
+        height: calc(100% + 30px);
+        overflow: visible;
+      }
+      .circle-mark .ink-path {
+        stroke: var(--clay);
+        stroke-width: 7px;
+      }
+
+      /* documentos (mito 2 / verdade 2) */
+      .doc {
+        position: absolute;
+        width: 236px;
+        height: 310px;
+        background: #f8f6f0;
+        border: 2px solid rgba(31, 30, 29, 0.2);
+        box-shadow: 0 2px 3px rgba(31, 30, 29, 0.12), 0 12px 22px -10px rgba(31, 30, 29, 0.34);
+      }
+      .doc svg.art {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .doc .tab {
+        position: absolute;
+        left: 12px;
+        top: -42px;
+        height: 42px;
+        padding: 0 14px;
+        background: var(--ink);
+        color: var(--cream);
+        font-family: var(--mono);
+        font-size: 21px;
+        letter-spacing: 0.08em;
+        line-height: 44px;
+        border-radius: 8px 8px 0 0;
+      }
+      .doc .chk {
+        position: absolute;
+        right: -26px;
+        top: -26px;
+        width: 70px;
+        height: 70px;
+        overflow: visible;
+      }
+
+      /* ---------- verdades ---------- */
+      .verdade-pos {
+        left: 74px;
+        top: 150px;
+        transform: rotate(-4deg);
+      }
+      .fgts {
+        position: absolute;
+        left: 70px;
+        top: 300px;
+        font-family: var(--serif);
+        font-weight: 620;
+        font-size: 250px;
+        line-height: 1;
+        letter-spacing: -0.03em;
+      }
+      .plus-row {
+        position: absolute;
+        left: 84px;
+        top: 586px;
+        display: flex;
+        align-items: center;
+        gap: 46px;
+      }
+      .plus {
+        position: relative;
+        width: 132px;
+        height: 132px;
+      }
+      .plus::before,
+      .plus::after {
+        content: "";
+        position: absolute;
+        background: var(--clay);
+        border-radius: 4px;
+      }
+      .plus::before {
+        left: 0;
+        right: 0;
+        top: 54px;
+        height: 24px;
+      }
+      .plus::after {
+        top: 0;
+        bottom: 0;
+        left: 54px;
+        width: 24px;
+      }
+      .venn {
+        width: 300px;
+        height: 170px;
+        overflow: visible;
+      }
+      .renda {
+        position: absolute;
+        left: 76px;
+        top: 790px;
+        font-family: var(--serif);
+        font-style: italic;
+        font-weight: 470;
+        font-size: 128px;
+        line-height: 1.06;
+        letter-spacing: -0.015em;
+      }
+      .t-comp {
+        position: absolute;
+        left: 82px;
+        top: 1130px;
+        width: 770px;
+        font-family: var(--sans);
+        font-size: 48px;
+        line-height: 1.3;
+        color: rgba(31, 30, 29, 0.9);
+      }
+      .t-comp .rule {
+        position: absolute;
+        top: -44px;
+        left: 0;
+        width: 120px;
+        height: 4px;
+        background: var(--clay);
+      }
+      .t2-head {
+        position: absolute;
+        left: 80px;
+        top: 318px;
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: 88px;
+        line-height: 1.12;
+        letter-spacing: -0.012em;
+      }
+      .hl {
+        position: relative;
+        display: inline-block;
+        isolation: isolate;
+      }
+      .hl > i {
+        position: absolute;
+        left: -8px;
+        right: -8px;
+        bottom: 10px;
+        height: 36px;
+        background: var(--clay);
+        opacity: 0.34;
+        transform-origin: 0 50%;
+      }
+      .hl > span {
+        position: relative;
+      }
+      .t3-head {
+        position: absolute;
+        left: 76px;
+        top: 284px;
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: 134px;
+        line-height: 1.02;
+        letter-spacing: -0.02em;
+      }
+      .t3-head em {
+        font-style: italic;
+        font-weight: 470;
+      }
+      .scale {
+        position: absolute;
+        left: 60px;
+        top: 590px;
+        width: 820px;
+        height: 540px;
+        overflow: visible;
+      }
+      .t3-comp {
+        position: absolute;
+        left: 80px;
+        top: 1150px;
+        width: 800px;
+        font-family: var(--serif);
+        font-style: italic;
+        font-weight: 420;
+        font-size: 66px;
+        line-height: 1.14;
+      }
+      .t3-comp .near {
+        position: relative;
+        display: inline-block;
+      }
+      .near-under {
+        position: absolute;
+        left: -6px;
+        width: calc(100% + 16px);
+        bottom: -4px;
+        height: 26px;
+        overflow: visible;
+      }
+
+      /* ---------- curvatura da virada (tiras 3D) ---------- */
+      .cast {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+      }
+      .cast > i {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 380px;
+        height: 100%;
+        background: linear-gradient(90deg, rgba(31, 30, 29, 0.42), rgba(31, 30, 29, 0.12) 35%, rgba(31, 30, 29, 0));
+        opacity: 0;
+      }
+      .curl {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 940px;
+        height: 1560px;
+        transform-style: preserve-3d;
+        visibility: hidden;
+        opacity: 0;
+      }
+      .seg {
+        position: absolute;
+        top: 0;
+        width: 47px;
+        height: 1560px;
+        transform-style: preserve-3d;
+        transform-origin: 0 50%;
+      }
+      .face {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 48px;
+        height: 1560px;
+        overflow: hidden;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+      }
+      .face.back {
+        transform: rotateY(180deg);
+      }
+      .face .pc {
+        position: absolute;
+        top: 0;
+      }
+      .face .shade {
+        position: absolute;
+        inset: 0;
+        --a: 0;
+        --b: 0;
+        background: linear-gradient(90deg, rgb(31 30 29 / calc(var(--a) * 0.5)), rgb(31 30 29 / calc(var(--b) * 0.5)));
+      }
+      .paperback {
+        position: absolute;
+        inset: 0;
+        background: var(--paper-back);
+      }
+      .paperback::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: url("assets/textures/paper-grain.png");
+        background-size: 512px;
+        opacity: 0.12;
+      }
+      .coverface {
+        position: absolute;
+        inset: 0;
+        background: var(--ink);
+      }
+      .coverface.inside {
+        background: #2a2826;
+      }
+
+      /* ---------- encerramento ---------- */
+      #s-end {
+        z-index: 100;
+      }
+      .end-bg {
+        position: absolute;
+        inset: 0;
+        background: var(--ink);
+      }
+      .end-bg::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: url("assets/textures/paper-grain.png");
+        background-size: 512px;
+        filter: invert(1);
+        opacity: 0.05;
+      }
+      .end-glow {
+        position: absolute;
+        left: 90px;
+        top: 260px;
+        width: 900px;
+        height: 900px;
+        background: radial-gradient(closest-side, rgba(217, 119, 87, 0.13), rgba(217, 119, 87, 0));
+      }
+      .end-wrap {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 250px;
+        color: var(--cream);
+        text-align: center;
+      }
+      .end-logo {
+        position: relative;
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 22px 28px;
+        box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.7);
+      }
+      .end-logo img {
+        display: block;
+        width: 540px;
+        height: auto;
+      }
+      .end-lines {
+        margin-top: 96px;
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: 112px;
+        line-height: 1.08;
+        letter-spacing: -0.018em;
+      }
+      .end-lines .it {
+        font-style: italic;
+        font-weight: 460;
+      }
+      .end-lines .papel {
+        position: relative;
+        display: inline-block;
+      }
+      .papel-under {
+        position: absolute;
+        left: -8px;
+        width: calc(100% + 20px);
+        bottom: -10px;
+        height: 34px;
+        overflow: visible;
+      }
+      .cta {
+        margin-top: 76px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .comente {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        font-family: var(--sans);
+        font-size: 58px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+      }
+      .comente svg {
+        width: 60px;
+        height: 60px;
+      }
+      .simular-pos {
+        position: relative;
+        margin-top: 18px;
+        transform: rotate(-3deg);
+      }
+      .stamp--simular {
+        color: var(--clay);
+        font-size: 142px;
+        padding: 26px 44px 20px 54px;
+      }
+      .simular-ring {
+        position: absolute;
+        inset: -6px;
+        border: 4px solid var(--clay);
+        border-radius: 24px;
+        opacity: 0;
+      }
+      .end-comp {
+        margin-top: 52px;
+        width: 800px;
+        font-family: var(--sans);
+        font-size: 46px;
+        line-height: 1.3;
+        color: rgba(240, 238, 230, 0.9);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="30"
+      data-width="1080"
+      data-height="1920"
+    >
+      <!-- filtros globais: textura de tinta dos carimbos -->
+      <svg class="defs" aria-hidden="true">
+        <defs>
+          <filter id="ink" x="-4%" y="-4%" width="108%" height="108%" color-interpolation-filters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="11" result="noise" />
+            <feColorMatrix
+              in="noise"
+              type="matrix"
+              values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  4.6 0 0 0 -1.15"
+              result="speck"
+            />
+            <feComposite in="SourceGraphic" in2="speck" operator="in" result="inked" />
+            <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="4" result="warp" />
+            <feDisplacementMap in="inked" in2="warp" scale="7" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      </svg>
+
+      <div id="desk"><div class="grain"></div><div class="vignette"></div></div>
+
+      <div id="stage">
+        <!-- pilha de folhas por baixo -->
+        <div id="understack" class="clip" data-start="0" data-duration="22.75" data-track-index="0">
+          <div class="stack"><div class="under u1"></div><div class="under u2"></div></div>
+        </div>
+
+        <!-- ===== ABERTURA ===== -->
+        <section id="s-open" class="clip sheet" data-start="0" data-duration="4.15" data-track-index="1" style="z-index: 60">
+          <div class="body">
+            <div class="cast"><i></i></div>
+            <div class="flat">
+              <div class="paper">
+                <i class="crop tl"></i><i class="crop tr"></i><i class="crop bl"></i><i class="crop br"></i>
+                <header class="p-head"><span>Mito × Verdade</span><span>Financiamento</span><i class="rule"></i></header>
+                <div class="logo-card">
+                  <img src="assets/kap-logo.png" alt="KAP Edificações" />
+                  <div class="tape-pos" style="left: -52px; top: -14px; transform: rotate(-32deg)"><div class="tape"></div></div>
+                  <div class="tape-pos" style="right: -58px; bottom: -6px; transform: rotate(-28deg)"><div class="tape"></div></div>
+                </div>
+                <div class="title">
+                  <div class="t-row1">
+                    <span class="t3">3</span>
+                    <span class="t-mitos mask"><span>mitos</span></span>
+                  </div>
+                  <div class="t-row2 mask"><span>sobre financiar</span></div>
+                  <div class="t-row3">
+                    <span class="mask"><span>sua casa</span></span>
+                    <svg class="t-under" viewBox="0 0 100 40" preserveAspectRatio="none">
+                      <path
+                        class="ink-path"
+                        pathLength="1"
+                        d="M2 26 C 20 18, 46 15, 70 18 S 94 22, 98 12"
+                        style="stroke: var(--clay); stroke-width: 11px"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <div class="sumario">
+                  <div class="lbl">Sumário</div>
+                  <div class="row"><i class="rule"></i><span class="n">01</span><span class="w">Entrada</span><span class="lead"></span><span class="arrow">→</span></div>
+                  <div class="row"><i class="rule"></i><span class="n">02</span><span class="w">Burocracia</span><span class="lead"></span><span class="arrow">→</span></div>
+                  <div class="row"><i class="rule"></i><span class="n">03</span><span class="w">Parcelas</span><span class="lead"></span><span class="arrow">→</span></div>
+                </div>
+                <footer class="p-foot"><i class="rule"></i><span>KAP Edificações</span><span class="hand hint">vire a página →</span></footer>
+              </div>
+            </div>
+            <div class="curl" data-layout-ignore></div>
+          </div>
+        </section>
+
+        <!-- ===== MITO 1 ===== -->
+        <section id="s-m1" class="clip sheet" data-start="3.3" data-duration="4.05" data-track-index="2" style="z-index: 50">
+          <div class="body">
+            <div class="cast"><i></i></div>
+            <div class="flat">
+              <div class="paper paper--ruled">
+                <i class="margin-line"></i>
+                <header class="p-head"><span>Mito nº 1</span><span>Entrada</span><i class="rule"></i></header>
+                <div class="qglyph">“</div>
+                <div class="note-pos"><span class="hand">você já ouviu essa?</span></div>
+                <div class="quote">
+                  <span class="ln">Preciso ter<svg class="strike" viewBox="0 0 100 30" preserveAspectRatio="none"><path class="ink-path" pathLength="1" d="M1 17 C 24 12, 52 19, 99 11" /></svg></span>
+                  <span class="ln">R$ 100 mil para<svg class="strike" viewBox="0 0 100 30" preserveAspectRatio="none"><path class="ink-path" pathLength="1" d="M1 14 C 30 19, 60 10, 99 16" /></svg></span>
+                  <span class="ln">dar de entrada.”<svg class="strike" viewBox="0 0 100 30" preserveAspectRatio="none"><path class="ink-path" pathLength="1" d="M1 16 C 28 11, 66 18, 99 12" /></svg></span>
+                </div>
+                <div class="stamp-pos" style="left: 160px; top: 930px; transform: rotate(-10deg)"><div class="stamp stamp--mito" data-layout-allow-overlap>Mito</div></div>
+                <footer class="p-foot"><i class="rule"></i><span>KAP Edificações</span><span>01 / 03</span></footer>
+              </div>
+            </div>
+            <div class="curl" data-layout-ignore></div>
+          </div>
+        </section>
+
+        <!-- ===== VERDADE 1 ===== -->
+        <section id="s-t1" class="clip sheet" data-start="6.5" data-duration="3.55" data-track-index="3" style="z-index: 45">
+          <div class="body">
+            <div class="flat">
+              <div class="paper paper--grid">
+                <header class="p-head"><span>Verdade nº 1</span><span>Entrada</span><i class="rule"></i></header>
+                <div class="stamp-pos verdade-pos"><div class="stamp stamp--verdade">Verdade</div></div>
+                <div class="fgts mask"><span>FGTS</span></div>
+                <div class="plus-row">
+                  <span class="plus" aria-label="mais"></span>
+                  <svg class="venn" viewBox="0 0 300 170">
+                    <defs>
+                      <clipPath id="venn-clip"><circle cx="112" cy="85" r="76" /></clipPath>
+                    </defs>
+                    <circle class="venn-lens" cx="188" cy="85" r="76" clip-path="url(#venn-clip)" fill="#D97757" />
+                    <circle class="venn-a" cx="112" cy="85" r="76" fill="none" stroke="#1F1E1D" stroke-width="6" />
+                    <circle class="venn-b" cx="188" cy="85" r="76" fill="none" stroke="#1F1E1D" stroke-width="6" />
+                  </svg>
+                </div>
+                <div class="renda">
+                  <div class="mask"><span>composição</span></div>
+                  <div class="mask"><span>de renda</span></div>
+                </div>
+                <p class="t-comp"><i class="rule"></i>Existem alternativas, dependendo das condições do financiamento.</p>
+                <footer class="p-foot"><i class="rule"></i><span>KAP Edificações</span><span>01 / 03</span></footer>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== MITO 2 ===== -->
+        <section id="s-m2" class="clip sheet" data-start="9.5" data-duration="3.85" data-track-index="4" style="z-index: 40">
+          <div class="body">
+            <div class="cast"><i></i></div>
+            <div class="flat">
+              <div class="paper paper--ruled">
+                <i class="margin-line"></i>
+                <header class="p-head"><span>Mito nº 2</span><span>Burocracia</span><i class="rule"></i></header>
+                <div class="qglyph">“</div>
+                <div class="note-pos"><span class="hand">ou então essa…</span></div>
+                <div class="quote">
+                  <span class="ln">Vou resolver</span>
+                  <span class="ln">toda a burocracia</span>
+                  <span class="ln">sozinho.”</span>
+                </div>
+                <div class="doc" data-doc="planta" style="left: 96px; top: 1040px; transform: rotate(-12deg)"></div>
+                <div class="doc" data-doc="projeto" style="left: 598px; top: 990px; transform: rotate(10deg)"></div>
+                <div class="doc" data-doc="docs" style="left: 352px; top: 1110px; transform: rotate(-3deg)"></div>
+                <div class="stamp-pos" style="left: 170px; top: 690px; transform: rotate(-8deg)"><div class="stamp stamp--mito" data-layout-allow-overlap>Mito</div></div>
+                <footer class="p-foot"><i class="rule"></i><span>KAP Edificações</span><span>02 / 03</span></footer>
+              </div>
+            </div>
+            <div class="curl" data-layout-ignore></div>
+          </div>
+        </section>
+
+        <!-- ===== VERDADE 2 ===== -->
+        <section id="s-t2" class="clip sheet" data-start="12.5" data-duration="3.55" data-track-index="5" style="z-index: 35">
+          <div class="body">
+            <div class="flat">
+              <div class="paper paper--grid">
+                <header class="p-head"><span>Verdade nº 2</span><span>Burocracia</span><i class="rule"></i></header>
+                <div class="stamp-pos verdade-pos"><div class="stamp stamp--verdade">Verdade</div></div>
+                <div class="t2-head">
+                  <div class="mask"><span>A KAP auxilia com</span></div>
+                  <div class="mask"><span>a <span class="hl"><i></i><span>documentação</span></span></span></div>
+                  <div class="mask"><span><span class="hl"><i></i><span>técnica</span></span> da obra.</span></div>
+                </div>
+                <div class="doc" data-doc="planta" data-chk style="left: 80px; top: 880px"></div>
+                <div class="doc" data-doc="projeto" data-chk style="left: 352px; top: 880px"></div>
+                <div class="doc" data-doc="docs" data-chk style="left: 624px; top: 880px"></div>
+                <footer class="p-foot"><i class="rule"></i><span>KAP Edificações</span><span>02 / 03</span></footer>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== MITO 3 ===== -->
+        <section id="s-m3" class="clip sheet" data-start="15.45" data-duration="3.9" data-track-index="6" style="z-index: 70">
+          <div class="body">
+            <div class="cast"><i></i></div>
+            <div class="flat">
+              <div class="paper paper--ruled">
+                <i class="margin-line"></i>
+                <header class="p-head"><span>Mito nº 3</span><span>Parcelas</span><i class="rule"></i></header>
+                <div class="qglyph">“</div>
+                <div class="note-pos"><span class="hand">e a clássica:</span></div>
+                <div class="quote">
+                  <span class="ln">Financiar é<svg class="strike" viewBox="0 0 100 30" preserveAspectRatio="none"><path class="ink-path" pathLength="1" d="M1 16 C 26 11, 60 19, 99 12" /></svg></span>
+                  <span class="ln"><span class="word-mark">sempre<svg class="circle-mark" viewBox="0 0 100 60" preserveAspectRatio="none"><path class="ink-path" pathLength="1" d="M58 4 C 30 2, 4 10, 3 30 C 2 52, 40 58, 66 55 C 92 52, 99 36, 96 22 C 93 8, 70 3, 44 6" /></svg></span> mais caro<svg class="strike" viewBox="0 0 100 30" preserveAspectRatio="none"><path class="ink-path" pathLength="1" d="M1 13 C 32 18, 62 10, 99 15" /></svg></span>
+                  <span class="ln">que alugar.”<svg class="strike" viewBox="0 0 100 30" preserveAspectRatio="none"><path class="ink-path" pathLength="1" d="M1 15 C 30 11, 64 19, 99 12" /></svg></span>
+                </div>
+                <div class="note-pos note-sempre" style="left: 640px; top: 862px; transform: rotate(-7deg)"><span class="hand">sempre?</span></div>
+                <div class="stamp-pos" style="left: 150px; top: 1000px; transform: rotate(-9deg)"><div class="stamp stamp--mito" data-layout-allow-overlap>Mito</div></div>
+                <footer class="p-foot"><i class="rule"></i><span>KAP Edificações</span><span>03 / 03</span></footer>
+              </div>
+            </div>
+            <div class="curl" data-layout-ignore></div>
+          </div>
+        </section>
+
+        <!-- ===== VERDADE 3 ===== -->
+        <section id="s-t3" class="clip sheet" data-start="18.5" data-duration="4.25" data-track-index="7" style="z-index: 65">
+          <div class="body">
+            <div class="flat">
+              <div class="paper paper--grid">
+                <header class="p-head"><span>Verdade nº 3</span><span>Parcelas</span><i class="rule"></i></header>
+                <div class="stamp-pos verdade-pos"><div class="stamp stamp--verdade">Verdade</div></div>
+                <div class="t3-head">
+                  <div class="mask"><span>Compare</span></div>
+                  <div class="mask"><span>os <em>números.</em></span></div>
+                </div>
+                <svg class="scale" viewBox="0 0 820 540">
+                  <g class="scale-stand" fill="#1F1E1D">
+                    <rect x="403" y="112" width="14" height="380" rx="4" />
+                    <path d="M300 528 L520 528 L486 492 L334 492 Z" />
+                    <circle cx="410" cy="110" r="17" />
+                  </g>
+                  <g class="pan pan-l">
+                    <path d="M110 120 L22 330 M110 120 L198 330" stroke="#1F1E1D" stroke-width="3" fill="none" />
+                    <g class="tag" transform="translate(10 214)">
+                      <rect width="200" height="104" rx="6" fill="#F8F6F0" stroke="#1F1E1D" stroke-opacity="0.25" stroke-width="2" />
+                      <text x="100" y="38" text-anchor="middle" font-family="JetBrains Mono" font-weight="500" font-size="22" letter-spacing="2.6" fill="#1F1E1D" fill-opacity="0.8">ALUGUEL</text>
+                      <text x="100" y="86" text-anchor="middle" font-family="Fraunces" font-size="40" fill="#1F1E1D">R$ ____</text>
+                    </g>
+                    <path d="M4 330 L216 330 Q 206 372 110 374 Q 14 372 4 330 Z" fill="#1F1E1D" />
+                  </g>
+                  <g class="pan pan-r">
+                    <path d="M710 120 L622 330 M710 120 L798 330" stroke="#1F1E1D" stroke-width="3" fill="none" />
+                    <g class="tag" transform="translate(610 214)">
+                      <rect width="200" height="104" rx="6" fill="#F8F6F0" stroke="#1F1E1D" stroke-opacity="0.25" stroke-width="2" />
+                      <text x="100" y="38" text-anchor="middle" font-family="JetBrains Mono" font-weight="500" font-size="22" letter-spacing="2.6" fill="#1F1E1D" fill-opacity="0.8">PRESTAÇÃO</text>
+                      <text x="100" y="86" text-anchor="middle" font-family="Fraunces" font-size="40" fill="#1F1E1D">R$ ____</text>
+                    </g>
+                    <path d="M604 330 L816 330 Q 806 372 710 374 Q 614 372 604 330 Z" fill="#D97757" />
+                  </g>
+                  <g class="beam">
+                    <rect x="104" y="103" width="612" height="15" rx="7.5" fill="#1F1E1D" />
+                    <circle cx="110" cy="120" r="8" fill="#1F1E1D" />
+                    <circle cx="710" cy="120" r="8" fill="#1F1E1D" />
+                    <path d="M410 103 L410 70" stroke="#D97757" stroke-width="5" stroke-linecap="round" />
+                  </g>
+                </svg>
+                <div class="t3-comp">
+                  <div class="mask"><span>Sua casa pode estar</span></div>
+                  <div class="mask"><span><span class="near">mais perto<svg class="near-under" viewBox="0 0 100 26" preserveAspectRatio="none"><path class="ink-path" pathLength="1" d="M2 15 C 30 9, 62 18, 98 10" style="stroke: var(--clay); stroke-width: 8px" /></svg></span> do que</span></div>
+                  <div class="mask"><span>você imagina.</span></div>
+                </div>
+                <footer class="p-foot"><i class="rule"></i><span>KAP Edificações</span><span>03 / 03</span></footer>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== CAPA ESCURA QUE FECHA ===== -->
+        <section id="s-cover" class="clip sheet" data-start="21.83" data-duration="0.92" data-track-index="8" style="z-index: 90">
+          <div class="body">
+            <div class="cast"><i></i></div>
+            <div class="curl" data-layout-ignore></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ===== ENCERRAMENTO ===== -->
+      <section id="s-end" class="clip" data-start="22.7" data-duration="7.3" data-track-index="9">
+        <div class="end-bg"></div>
+        <div class="end-glow"></div>
+        <div class="end-wrap">
+          <div class="end-logo">
+            <img src="assets/kap-logo.png" alt="KAP Edificações" />
+            <div class="tape-pos" style="left: -50px; top: -12px; transform: rotate(-30deg)"><div class="tape"></div></div>
+            <div class="tape-pos" style="right: -56px; top: -12px; transform: rotate(30deg)"><div class="tape"></div></div>
+          </div>
+          <div class="end-lines">
+            <div class="mask"><span>Menos boatos.</span></div>
+            <div class="mask"><span class="it">Mais contas</span></div>
+            <div class="mask"><span class="it">no <span class="papel">papel.<svg class="papel-under" viewBox="0 0 100 34" preserveAspectRatio="none"><path class="ink-path" pathLength="1" d="M2 22 C 26 14, 58 12, 80 16 S 96 22, 98 10" style="stroke: var(--clay); stroke-width: 10px" /></svg></span></span></div>
+          </div>
+          <div class="cta">
+            <div class="comente"><svg viewBox="0 0 60 60" aria-hidden="true"><path d="M30 8 C 15 8, 6 17, 6 28 C 6 35, 10 41, 16 44 L 13 54 L 25 47 C 26.6 47.3, 28.3 47.5, 30 47.5 C 45 47.5, 54 38.5, 54 28 C 54 17, 45 8, 30 8 Z" fill="none" stroke="#F0EEE6" stroke-width="4" stroke-linejoin="round"/></svg><span>Comente</span></div>
+            <div class="simular-pos">
+              <i class="simular-ring"></i>
+              <div class="stamp stamp--simular">Simular</div>
+            </div>
+          </div>
+          <p class="end-comp">Receba um diagnóstico real e gratuito no direct.</p>
+        </div>
+      </section>
+
+      <audio id="music" src="assets/audio/trilha.wav" data-start="0" data-duration="30" data-track-index="10" data-volume="1"></audio>
+      <audio id="sfx" src="assets/audio/efeitos.wav" data-start="0" data-duration="30" data-track-index="11" data-volume="1"></audio>
+    </div>
+
+    <script>
+      (function () {
+        "use strict";
+        var C = window.KAP_CUES;
+        var W = 940;
+        var H = 1560;
+        var N = 20; // tiras da virada de página
+        var SW = W / N;
+        var PERSPECTIVE = 3200;
+
+        function $(sel, root) {
+          return (root || document).querySelector(sel);
+        }
+        function $$(sel, root) {
+          return Array.prototype.slice.call((root || document).querySelectorAll(sel));
+        }
+
+        // ------------------------------------------------------------------
+        // Desenhos dos documentos (planta, projeto, documentos)
+        // ------------------------------------------------------------------
+        var TITLE_BLOCK =
+          '<rect x="26" y="262" width="184" height="30" fill="none" stroke="#1F1E1D" stroke-opacity=".5" stroke-width="2"/>' +
+          '<line x1="130" y1="262" x2="130" y2="292" stroke="#1F1E1D" stroke-opacity=".5" stroke-width="2"/>' +
+          '<rect x="36" y="273" width="70" height="7" fill="#1F1E1D" fill-opacity=".35"/>';
+        var DOCS = {
+          planta: {
+            label: "Plantas",
+            svg:
+              '<line x1="26" y1="30" x2="210" y2="30" stroke="#1F1E1D" stroke-opacity=".55" stroke-width="2"/>' +
+              '<line x1="26" y1="24" x2="26" y2="36" stroke="#1F1E1D" stroke-opacity=".55" stroke-width="2"/>' +
+              '<line x1="210" y1="24" x2="210" y2="36" stroke="#1F1E1D" stroke-opacity=".55" stroke-width="2"/>' +
+              '<rect x="122" y="52" width="84" height="88" fill="#D97757" fill-opacity=".28"/>' +
+              '<rect x="28" y="50" width="180" height="196" fill="none" stroke="#1F1E1D" stroke-width="6"/>' +
+              '<path d="M28 142 H86 M106 142 H208 M120 50 V112 M120 136 V246" stroke="#1F1E1D" stroke-width="4" fill="none"/>' +
+              '<path d="M86 142 A20 20 0 0 1 106 122" stroke="#1F1E1D" stroke-width="2" fill="none"/>' +
+              '<path d="M120 112 A24 24 0 0 0 144 136" stroke="#1F1E1D" stroke-width="2" fill="none"/>' +
+              '<path d="M60 246 h40" stroke="#F8F6F0" stroke-width="6"/>' +
+              '<path d="M60 246 h40" stroke="#1F1E1D" stroke-width="2"/>' +
+              TITLE_BLOCK,
+          },
+          projeto: {
+            label: "Projetos",
+            svg:
+              '<path d="M44 126 L118 64 L192 126 Z" fill="#D97757" fill-opacity=".3"/>' +
+              '<path d="M36 130 L118 60 L200 130" stroke="#1F1E1D" stroke-width="6" fill="none" stroke-linejoin="round"/>' +
+              '<rect x="52" y="126" width="132" height="104" fill="none" stroke="#1F1E1D" stroke-width="5"/>' +
+              '<rect x="104" y="170" width="30" height="60" fill="none" stroke="#1F1E1D" stroke-width="4"/>' +
+              '<rect x="66" y="146" width="26" height="24" fill="none" stroke="#1F1E1D" stroke-width="3"/>' +
+              '<rect x="146" y="146" width="26" height="24" fill="none" stroke="#1F1E1D" stroke-width="3"/>' +
+              '<line x1="20" y1="230" x2="216" y2="230" stroke="#1F1E1D" stroke-width="3"/>' +
+              '<path d="M214 60 V230 M208 60 H220 M208 230 H220" stroke="#1F1E1D" stroke-opacity=".55" stroke-width="2"/>' +
+              TITLE_BLOCK,
+          },
+          docs: {
+            label: "Documentos",
+            svg:
+              '<rect x="28" y="34" width="118" height="14" fill="#1F1E1D"/>' +
+              '<rect x="28" y="70" width="180" height="7" fill="#1F1E1D" fill-opacity=".3"/>' +
+              '<rect x="28" y="90" width="166" height="7" fill="#1F1E1D" fill-opacity=".3"/>' +
+              '<rect x="28" y="110" width="180" height="7" fill="#1F1E1D" fill-opacity=".3"/>' +
+              '<rect x="28" y="130" width="120" height="7" fill="#1F1E1D" fill-opacity=".3"/>' +
+              '<rect x="28" y="158" width="180" height="7" fill="#1F1E1D" fill-opacity=".3"/>' +
+              '<rect x="28" y="178" width="150" height="7" fill="#1F1E1D" fill-opacity=".3"/>' +
+              '<path d="M34 238 c 10 -26, 18 8, 28 -8 s 12 16, 26 -2 s 16 10, 34 -16" stroke="#1F1E1D" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+              '<line x1="30" y1="248" x2="130" y2="248" stroke="#1F1E1D" stroke-opacity=".4" stroke-width="2"/>' +
+              '<circle cx="180" cy="232" r="24" fill="none" stroke="#D97757" stroke-width="4"/>' +
+              '<circle cx="180" cy="232" r="15" fill="none" stroke="#D97757" stroke-width="2"/>',
+          },
+        };
+        var CHECK =
+          '<svg class="chk" viewBox="0 0 70 70"><circle class="chk-dot" cx="35" cy="35" r="31" fill="#D97757"/>' +
+          '<path class="ink-path chk-tick" pathLength="1" d="M21 36 L31 46 L50 25" style="stroke:#1F1E1D;stroke-width:7px"/></svg>';
+
+        $$(".doc[data-doc]").forEach(function (el) {
+          var d = DOCS[el.getAttribute("data-doc")];
+          el.innerHTML =
+            '<div class="tab">' + d.label.toUpperCase() + "</div>" +
+            '<svg class="art" viewBox="0 0 236 310">' + d.svg + "</svg>" +
+            (el.hasAttribute("data-chk") ? CHECK : "");
+        });
+
+        // ------------------------------------------------------------------
+        // Virada de página: a folha é fatiada em N tiras aninhadas em 3D.
+        // Cada tira gira um pouco em relação à anterior => a folha "curva".
+        // Tudo vem de funções puras do progresso, usadas como `ease` do GSAP,
+        // então qualquer quadro pode ser buscado (seek) de forma determinística.
+        // ------------------------------------------------------------------
+        var weights = [];
+        (function () {
+          var sum = 0;
+          for (var k = 1; k < N; k++) sum += Math.pow(k, 1.4);
+          weights[0] = 0;
+          for (var j = 1; j < N; j++) weights[j] = Math.pow(j, 1.4) / sum;
+        })();
+        var cumW = weights.map(function (_, k) {
+          var s = 0;
+          for (var j = 1; j <= k; j++) s += weights[j];
+          return s;
+        });
+
+        function timeWarp(t) {
+          return 0.5 - 0.5 * Math.cos(Math.PI * t);
+        }
+        var PROFILES = {
+          // folha vira da direita para a esquerda (borda livre vai na frente)
+          forward: function (p) {
+            var S = 180 * Math.pow(p, 1.8);
+            var E = 180 * (1 - Math.pow(1 - p, 1.8));
+            return { S: S, B: E - S };
+          },
+          // capa escura fecha da esquerda para a direita
+          close: function (p) {
+            var S = 180 * (1 - Math.pow(p, 1.8));
+            var E = 180 * Math.pow(1 - p, 1.8);
+            return { S: S, B: E - S };
+          },
+        };
+        function segAngle(prof, p, k) {
+          var a = prof(p);
+          return a.S + a.B * cumW[k]; // ângulo acumulado (graus, para o leitor)
+        }
+        function frontShade(phi) {
+          var r = (phi * Math.PI) / 180;
+          return Math.min(1, 0.9 * (1 - Math.cos(r)));
+        }
+        function backShade(phi) {
+          var r = (phi * Math.PI) / 180;
+          return Math.min(1, Math.max(0, 0.9 * (1 + Math.cos(r))));
+        }
+        function edgeShade(fn, prof, p, k, side) {
+          var a = segAngle(prof, p, k);
+          var nb = side < 0 ? (k > 0 ? segAngle(prof, p, k - 1) : a) : k < N - 1 ? segAngle(prof, p, k + 1) : a;
+          return fn((a + nb) / 2);
+        }
+        function maxProjectedX(prof, p) {
+          var x = 0, z = 0, best = 0;
+          for (var k = 0; k < N; k++) {
+            var r = (segAngle(prof, p, k) * Math.PI) / 180;
+            x += SW * Math.cos(r);
+            z += SW * Math.sin(r);
+            var px = W / 2 + ((x - W / 2) * PERSPECTIVE) / (PERSPECTIVE - z);
+            if (px > best) best = px;
+          }
+          return best;
+        }
+
+        function buildCurl(sheet, kind) {
+          var curl = $(".curl", sheet);
+          var src = $(".flat .paper", sheet);
+          var parent = curl;
+          for (var i = 0; i < N; i++) {
+            var seg = document.createElement("div");
+            seg.className = "seg";
+            seg.style.left = (i === 0 ? 0 : SW) + "px";
+            var front = document.createElement("div");
+            front.className = "face front";
+            var back = document.createElement("div");
+            back.className = "face back";
+            if (i === N - 1) {
+              front.style.width = SW + "px";
+              back.style.width = SW + "px";
+            }
+            if (kind === "cover") {
+              front.innerHTML = '<div class="coverface"></div>';
+              back.innerHTML = '<div class="coverface inside"></div>';
+            } else {
+              var pc = src.cloneNode(true);
+              pc.classList.add("pc");
+              pc.style.left = -i * SW + "px";
+              pc.removeAttribute("id");
+              $$("[id]", pc).forEach(function (n) { n.removeAttribute("id"); });
+              $$("[data-hf-render-id]", pc).forEach(function (n) { n.removeAttribute("data-hf-render-id"); });
+              front.appendChild(pc);
+              back.innerHTML = '<div class="paperback"></div>';
+            }
+            var fs = document.createElement("div");
+            fs.className = "shade";
+            front.appendChild(fs);
+            var bs = document.createElement("div");
+            bs.className = "shade";
+            back.appendChild(bs);
+            seg.appendChild(front);
+            seg.appendChild(back);
+            parent.appendChild(seg);
+            parent = seg;
+          }
+          return curl;
+        }
+
+        function addTurn(tl, sheetSel, start, dur, kind) {
+          var sheet = $(sheetSel);
+          var prof = kind === "close" ? PROFILES.close : PROFILES.forward;
+          var curl = $(".curl", sheet);
+          var segs = $$(".seg", curl);
+          var flat = $(".flat", sheet);
+          if (flat) tl.set(flat, { autoAlpha: 0 }, start);
+          tl.set(curl, { autoAlpha: 1 }, start);
+
+          var S0 = prof(0).S;
+          var S1 = prof(1).S;
+          segs.forEach(function (seg, k) {
+            if (k === 0) {
+              tl.fromTo(
+                seg,
+                { rotationY: -S0 },
+                {
+                  rotationY: -S1,
+                  duration: dur,
+                  ease: function (t) {
+                    return (prof(timeWarp(t)).S - S0) / (S1 - S0);
+                  },
+                },
+                start
+              );
+            } else {
+              tl.fromTo(
+                seg,
+                { rotationY: 0 },
+                {
+                  rotationY: -100 * weights[k],
+                  duration: dur,
+                  ease: function (t) {
+                    return prof(timeWarp(t)).B / 100;
+                  },
+                },
+                start
+              );
+            }
+            var shades = $$(":scope > .face > .shade", seg);
+            [
+              [shades[0], frontShade],
+              [shades[1], backShade],
+            ].forEach(function (pair) {
+              var el = pair[0], fn = pair[1];
+              tl.fromTo(el, { "--a": 0 }, {
+                "--a": 1, duration: dur,
+                ease: function (t) { return edgeShade(fn, prof, timeWarp(t), k, -1); },
+              }, start);
+              tl.fromTo(el, { "--b": 0 }, {
+                "--b": 1, duration: dur,
+                ease: function (t) { return edgeShade(fn, prof, timeWarp(t), k, 1); },
+              }, start);
+            });
+          });
+
+          // sombra projetada sobre a folha de baixo
+          var cast = $(".cast > i", sheet);
+          tl.fromTo(cast, { x: 0 }, {
+            x: W, duration: dur,
+            ease: function (t) { return Math.max(0, Math.min(W, maxProjectedX(prof, timeWarp(t)))) / W; },
+          }, start);
+          tl.fromTo(cast, { opacity: 0 }, {
+            opacity: 1, duration: dur,
+            ease: function (t) {
+              var p = timeWarp(t);
+              var xm = maxProjectedX(prof, p);
+              var fade = Math.max(0, Math.min(1, xm / 140));
+              return Math.pow(Math.sin(Math.PI * p), 0.7) * fade;
+            },
+          }, start);
+        }
+
+        // Traços à mão: reescreve o path no tamanho real do SVG (px), para que
+        // pathLength=1 + stroke-dashoffset desenhe o traço inteiro sem distorção.
+        function fitInk(svg) {
+          var w = svg.clientWidth;
+          var h = svg.clientHeight;
+          var vb = svg.viewBox.baseVal;
+          if (!w || !h || !vb || !vb.width) return;
+          var sx = w / vb.width;
+          var sy = h / vb.height;
+          $$("path", svg).forEach(function (p) {
+            var i = 0;
+            p.setAttribute(
+              "d",
+              p.getAttribute("d").replace(/-?\d*\.?\d+/g, function (n) {
+                return (parseFloat(n) * (i++ % 2 === 0 ? sx : sy)).toFixed(2);
+              })
+            );
+          });
+          svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+          svg.removeAttribute("preserveAspectRatio");
+        }
+
+        // ------------------------------------------------------------------
+        // Helpers de animação
+        // ------------------------------------------------------------------
+        function draw(tl, sel, at, dur, ease) {
+          var els = typeof sel === "string" ? $$(sel) : [].concat(sel);
+          els.forEach(function (el) {
+            var t = at;
+            tl.fromTo(el, { strokeDashoffset: 1.02 }, { strokeDashoffset: 0, duration: dur, ease: ease || "power2.inOut" }, t);
+            tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.04, ease: "none" }, t);
+          });
+        }
+        function slam(tl, el, impact, opts) {
+          opts = opts || {};
+          var from = opts.from || 2.1;
+          var travel = opts.travel || 0.17;
+          tl.fromTo(el, { scale: from, opacity: 0 }, { scale: 1, opacity: 1, duration: travel, ease: "power3.in" }, impact - travel);
+          tl.to(el, { scale: 1.035, duration: 0.07, ease: "power1.out" }, impact);
+          tl.to(el, { scale: 1, duration: 0.26, ease: "power2.out" }, impact + 0.07);
+        }
+        function shake(tl, el, at, amp) {
+          amp = amp || 1;
+          tl.to(el, { keyframes: { y: [0, 9 * amp, -4 * amp, 1.5 * amp, 0], rotation: [0, 0.32 * amp, -0.18 * amp, 0.06 * amp, 0], easeEach: "sine.inOut" }, duration: 0.34 }, at);
+        }
+        function maskUp(tl, els, at, stagger, dur) {
+          [].concat(els).forEach(function (el, i) {
+            tl.fromTo(el, { yPercent: 110 }, { yPercent: 0, duration: dur || 0.7, ease: "expo.out" }, at + i * (stagger || 0));
+          });
+        }
+        function writeOn(tl, el, at, dur) {
+          tl.fromTo(el, { clipPath: "inset(-20% 100% -30% -5%)" }, { clipPath: "inset(-20% -5% -30% -5%)", duration: dur || 0.6, ease: "power1.inOut" }, at);
+        }
+
+        // ------------------------------------------------------------------
+        // Constrói tudo depois que as fontes carregarem
+        // ------------------------------------------------------------------
+        var FONTS = [
+          '400 100px "Fraunces"',
+          'italic 470 100px "Fraunces"',
+          '500 40px "Instrument Sans"',
+          '600 60px "Caveat"',
+          '500 24px "JetBrains Mono"',
+        ];
+        Promise.all(FONTS.map(function (f) { return document.fonts.load(f); })).then(function () {
+          return document.fonts.ready;
+        }).then(function () {
+          $$("svg").forEach(function (svg) {
+            if ($(".ink-path", svg) && !svg.classList.contains("chk")) fitInk(svg);
+          });
+          ["#s-open", "#s-m1", "#s-m2", "#s-m3"].forEach(function (s) { buildCurl($(s), "page"); });
+          buildCurl($("#s-cover"), "cover");
+
+          var tl = gsap.timeline({ paused: true });
+
+          // câmera: leve aproximação contínua sobre a mesa
+          tl.fromTo("#stage", { scale: 1 }, { scale: 1.03, duration: 22.6, ease: "none" }, 0);
+
+          // ============ ABERTURA (0–4 s) ============
+          var O = C.open;
+          var so = "#s-open .flat ";
+          tl.fromTo("#s-open .body", { y: 1500, rotation: 7 }, { y: 0, rotation: 0, duration: 1.0, ease: "expo.out" }, O.sheetIn);
+          tl.fromTo(so + ".logo-card", { scale: 1.16, opacity: 0, y: -16, rotation: -4 }, { scale: 1, opacity: 1, y: 0, rotation: -1.5, duration: 0.4, ease: "power4.out" }, O.logo);
+          tl.fromTo($$(so + ".logo-card .tape"), { scaleX: 0 }, { scaleX: 1, duration: 0.22, ease: "power2.out", stagger: 0.09 }, O.logo + 0.3);
+          tl.fromTo(so + ".p-head .rule", { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: "power3.inOut" }, O.kicker);
+          $$(so + ".p-head span").forEach(function (el, i) {
+            tl.fromTo(el, { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.45, ease: "steps(13)" }, O.kicker + 0.08 + i * 0.14);
+          });
+          tl.fromTo(so + ".t3", { scale: 0.35, opacity: 0, rotation: -16 }, { scale: 1, opacity: 1, rotation: 0, duration: 0.7, ease: "back.out(1.6)" }, O.title[0]);
+          maskUp(tl, $(so + ".t-mitos > span"), O.title[0] + 0.1);
+          maskUp(tl, $(so + ".t-row2 > span"), O.title[1]);
+          maskUp(tl, $(so + ".t-row3 .mask > span"), O.title[2], 0, 0.8);
+          draw(tl, so + ".t-under path", O.underline, 0.5);
+          tl.fromTo(so + ".sumario .lbl", { opacity: 0 }, { opacity: 1, duration: 0.3 }, O.index[0] - 0.1);
+          $$(so + ".sumario .row").forEach(function (row, i) {
+            var at = O.index[i];
+            tl.fromTo($(".rule", row), { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power3.out" }, at);
+            tl.fromTo([$(".n", row), $(".w", row)], { opacity: 0, x: -22 }, { opacity: 1, x: 0, duration: 0.42, ease: "power3.out" }, at + 0.04);
+            tl.fromTo($(".lead", row), { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "power2.out" }, at + 0.12);
+            tl.fromTo($(".arrow", row), { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, at + 0.3);
+          });
+          tl.fromTo(so + ".p-foot .rule", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power3.inOut" }, O.index[0]);
+          tl.fromTo(so + ".p-foot span:first-of-type", { opacity: 0 }, { opacity: 1, duration: 0.4 }, O.index[0] + 0.2);
+          writeOn(tl, $(so + ".hint"), O.hint, 0.5);
+          tl.to(so + ".hint", { x: 10, duration: 0.25, ease: "sine.inOut", yoyo: true, repeat: 1 }, O.hint + 0.55);
+          addTurn(tl, "#s-open", O.turn, C.TURN, "forward");
+
+          // ============ MITO 1 (4–10 s) ============
+          var M1 = C.m1;
+          var m1 = "#s-m1 .flat ";
+          writeOn(tl, $(m1 + ".note-pos .hand"), O.turn + 0.7, 0.55);
+          $$(m1 + ".strike path").forEach(function (p, i) {
+            draw(tl, p, M1.strike + i * 0.13, 0.3, "power1.inOut");
+          });
+          slam(tl, $(m1 + ".stamp"), M1.stamp);
+          shake(tl, "#s-m1 .body", M1.stamp);
+          addTurn(tl, "#s-m1", M1.turn, C.TURN, "forward");
+
+          // ============ VERDADE 1 ============
+          var T1 = M1.truth;
+          var t1 = "#s-t1 .flat ";
+          slam(tl, $(t1 + ".stamp"), T1, { from: 1.7, travel: 0.14 });
+          maskUp(tl, $(t1 + ".fgts > span"), T1 + 0.12, 0, 0.75);
+          tl.fromTo(t1 + ".plus", { scale: 0, rotation: -90 }, { scale: 1, rotation: 0, duration: 0.55, ease: "back.out(2)" }, T1 + 0.32);
+          tl.fromTo(t1 + ".venn-a", { x: -70, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: "power3.inOut" }, T1 + 0.38);
+          tl.fromTo(t1 + ".venn-b", { x: 70, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: "power3.inOut" }, T1 + 0.38);
+          tl.fromTo(t1 + ".venn-lens", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power1.out" }, T1 + 0.95);
+          maskUp(tl, $$(t1 + ".renda .mask > span"), T1 + 0.45, 0.13, 0.75);
+          tl.fromTo(t1 + ".t-comp .rule", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power3.out" }, T1 + 0.85);
+          tl.fromTo(t1 + ".t-comp", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, T1 + 0.95);
+          // sai puxada para cima, revelando o mito 2
+          tl.to("#s-t1 .body", { y: -2150, x: 240, rotation: 9, duration: 0.55, ease: "power2.in" }, M1.out);
+
+          // ============ MITO 2 (10–16 s) ============
+          var M2 = C.m2;
+          var m2 = "#s-m2 .flat ";
+          writeOn(tl, $(m2 + ".note-pos .hand"), M1.out + 0.62, 0.55);
+          slam(tl, $(m2 + ".stamp"), M2.stamp);
+          shake(tl, "#s-m2 .body", M2.stamp);
+          addTurn(tl, "#s-m2", M2.turn, C.TURN, "forward");
+
+          // ============ VERDADE 2 ============
+          var T2 = M2.truth;
+          var t2 = "#s-t2 .flat ";
+          slam(tl, $(t2 + ".stamp"), T2, { from: 1.7, travel: 0.14 });
+          maskUp(tl, $$(t2 + ".t2-head .mask > span"), T2 + 0.12, 0.14, 0.75);
+          // documentos saem da bagunça (mesmas posições do mito 2) e se organizam
+          var messy = [
+            { x: 96 - 80, y: 1040 - 880, rotation: -12 },
+            { x: 598 - 352, y: 990 - 880, rotation: 10 },
+            { x: 352 - 624, y: 1110 - 880, rotation: -3 },
+          ];
+          $$(t2 + ".doc").forEach(function (d, i) {
+            tl.fromTo(d, messy[i], { x: 0, y: 0, rotation: 0, duration: 0.78, ease: "power3.inOut" }, M2.docs + i * 0.12);
+          });
+          $$(t2 + ".hl > i").forEach(function (h, i) {
+            tl.fromTo(h, { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "power2.inOut" }, T2 + 0.85 + i * 0.3);
+          });
+          $$(t2 + ".doc .chk").forEach(function (c, i) {
+            var at = M2.checks[i];
+            tl.fromTo($(".chk-dot", c), { scale: 0, transformOrigin: "50% 50%" }, { scale: 1, duration: 0.32, ease: "back.out(2.6)" }, at);
+            draw(tl, $(".chk-tick", c), at + 0.08, 0.22, "power2.out");
+          });
+          // mito 3 cai por cima
+          tl.fromTo("#s-m3 .body", { y: 1900, x: -40, rotation: -7 }, { y: 0, x: 0, rotation: 0, duration: 0.55, ease: "power3.out" }, M2.out);
+
+          // ============ MITO 3 (16–22 s) ============
+          var M3 = C.m3;
+          var m3 = "#s-m3 .flat ";
+          writeOn(tl, $(m3 + ".note-pos .hand"), M2.out + 0.65, 0.5);
+          draw(tl, $(m3 + ".circle-mark path"), M3.circle, 0.5, "power1.inOut");
+          writeOn(tl, $(m3 + ".note-sempre .hand"), M3.circle + 0.3, 0.35);
+          $$(m3 + ".strike path").forEach(function (p, i) {
+            draw(tl, p, M3.strike + i * 0.13, 0.3, "power1.inOut");
+          });
+          slam(tl, $(m3 + ".stamp"), M3.stamp);
+          shake(tl, "#s-m3 .body", M3.stamp);
+          addTurn(tl, "#s-m3", M3.turn, C.TURN, "forward");
+
+          // ============ VERDADE 3 ============
+          var T3 = M3.truth;
+          var t3 = "#s-t3 .flat ";
+          slam(tl, $(t3 + ".stamp"), T3, { from: 1.7, travel: 0.14 });
+          maskUp(tl, $$(t3 + ".t3-head .mask > span"), T3 + 0.1, 0.14, 0.75);
+          tl.fromTo(t3 + ".scale", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, M3.scale - 0.3);
+          // balança: começa pendendo para a prestação e se equilibra (sem valores)
+          var THETA0 = 12;
+          var SETTLE = 2.1;
+          function theta(t) {
+            var s = t * SETTLE;
+            return THETA0 * Math.exp(-2.1 * s) * Math.cos(2 * Math.PI * 0.85 * s);
+          }
+          tl.fromTo(t3 + ".beam", { rotation: THETA0, svgOrigin: "410 110" }, {
+            rotation: 0, svgOrigin: "410 110", duration: SETTLE,
+            ease: function (t) { return 1 - theta(t) / THETA0; },
+          }, M3.scale);
+          [
+            [t3 + ".pan-l", -1],
+            [t3 + ".pan-r", 1],
+          ].forEach(function (pair) {
+            var sgn = pair[1];
+            function dx(t) { var r = (theta(t) * Math.PI) / 180; return -sgn * (300 - 300 * Math.cos(r)); }
+            function dy(t) { var r = (theta(t) * Math.PI) / 180; return sgn * 300 * Math.sin(r); }
+            var x0 = dx(0), y0 = dy(0);
+            tl.fromTo(pair[0], { x: x0, y: y0 }, {
+              x: 0, y: 0, duration: SETTLE,
+              ease: function (t) { return 1 - dy(t) / y0; },
+            }, M3.scale);
+          });
+          maskUp(tl, $$(t3 + ".t3-comp .mask > span"), T3 + 0.7, 0.12, 0.7);
+          draw(tl, $(t3 + ".near-under path"), T3 + 1.35, 0.45);
+
+          // ============ CAPA FECHA (21,85 s) ============
+          addTurn(tl, "#s-cover", M3.out, C.TURN, "close");
+          tl.to("#desk", { backgroundColor: "#1F1E1D", duration: 0.6, ease: "power2.inOut" }, M3.out + 0.15);
+          tl.to("#desk .grain, #desk .vignette", { opacity: 0, duration: 0.5 }, M3.out + 0.15);
+          tl.to("#understack .stack", { opacity: 0, duration: 0.45 }, M3.out + 0.1);
+
+          // ============ ENCERRAMENTO (22–30 s) ============
+          var E = C.end;
+          tl.fromTo(".end-glow", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 1.6, ease: "power2.out" }, E.start);
+          tl.fromTo(".end-logo", { opacity: 0, y: -34, scale: 1.08, rotation: -5 }, { opacity: 1, y: 0, scale: 1, rotation: -1.5, duration: 0.55, ease: "power3.out" }, E.logo);
+          tl.fromTo($$(".end-logo .tape"), { scaleX: 0 }, { scaleX: 1, duration: 0.22, ease: "power2.out", stagger: 0.1 }, E.logo + 0.35);
+          $$(".end-lines .mask > span").forEach(function (el, i) {
+            maskUp(tl, el, E.lines[i], 0, 0.8);
+          });
+          draw(tl, $(".papel-under path"), E.underline, 0.5);
+          tl.fromTo(".comente", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, E.comente);
+          slam(tl, $(".stamp--simular"), E.simular, { from: 2.4, travel: 0.2 });
+          tl.fromTo(".simular-ring", { opacity: 0.9, scale: 1 }, { opacity: 0, scale: 1.35, duration: 0.6, ease: "power2.out" }, E.simular);
+          tl.to(".end-wrap", { keyframes: { y: [0, 8, -3, 1, 0], easeEach: "sine.inOut" }, duration: 0.3 }, E.simular);
+          tl.fromTo(".end-comp", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, E.complement);
+          tl.fromTo(".end-lines, .cta", { scale: 1 }, { scale: 1.015, duration: 30 - E.start, ease: "sine.inOut" }, E.start);
+
+          window.__timelines["main"] = tl;
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "kap-mito-verdade",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.8.150 preview",
+    "check": "npx --yes hyperframes@0.8.150 check",
+    "audio": "node tools/audio/render-audio.mjs",
+    "textures": "python3 -I tools/make-textures.py",
+    "render": "npx --yes hyperframes@0.8.150 render --fps 60 --quality high -o renders/kap-mito-verdade.mp4",
+    "publish": "npx --yes hyperframes@0.8.150 publish"
+  },
+  "devDependencies": {
+    "puppeteer-core": "25.13.0"
+  }
+}
