@@ -7,7 +7,7 @@ const PAUSA_INATIVO = 30;   // segundos sem tocar → o cronômetro pausa
 
 const Relatorio = (() => {
   const CHAVE_R = 'mohamed.relatorio.v1';
-  const novo = () => ({ segundos: 0, acertos: 0, erros: 0, erradas: {}, dia: null, licao: '', fila: [], ranking: [], rankingEm: 0 });
+  const novo = () => ({ segundos: 0, acertos: 0, erros: 0, erradas: {}, monstros: 0, dano: 0, temas: {}, dia: null, licao: '', fila: [], ranking: [], rankingEm: 0 });
   let R = ler(), ultimo = 0, enviando = false; // só conta depois do 1º toque
 
   function ler() {
@@ -23,6 +23,8 @@ const Relatorio = (() => {
   const ativo = () => !document.hidden && Date.now() - ultimo < PAUSA_INATIVO * 1000;
   const top3 = () => Object.entries(R.erradas).sort((a, b) => b[1] - a[1]).slice(0, 3);
   const falta = () => Math.max(0, MINUTOS_MINIMOS * 60 - R.segundos);
+  // acertos e erros por tema da masmorra: "Natural 5✔ 1✘ · Negativo 3✔ 2✘"
+  const porTema = () => Object.entries(R.temas).map(([t, v]) => `${t} ${v.a}✔ ${v.e}✘`).join(' · ');
   const novoId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   // fetch com limite de tempo: uma rede travada não prende a fila
   const comTempo = (url, op = {}, ms = 15000) => {
@@ -61,7 +63,8 @@ const Relatorio = (() => {
   // tela do relatório (chamada por irPara em app.js)
   function tela() {
     id('rel-licao').textContent = R.dia ? `📍 Dia ${R.dia} · ${R.licao}` : '📍 Comece uma lição';
-    id('rel-stats').innerHTML = `<div class="stat">✅ ${R.acertos}<small>acertos</small></div>` +
+    id('rel-stats').innerHTML = `<div class="stat">👾 ${R.monstros}<small>monstros</small></div><div class="stat">💥 ${R.dano}<small>dano</small></div>` +
+      `<div class="stat">✅ ${R.acertos}<small>acertos</small></div>` +
       `<div class="stat">❌ ${R.erros}<small>erros</small></div><div class="stat">⚡ ${estado.xp}<small>XP</small></div>`;
     const t = top3();
     id('rel-erradas').innerHTML = t.length
@@ -71,7 +74,12 @@ const Relatorio = (() => {
   }
 
   // acertos, erros e as contas mais erradas
-  function registrar(certo, conta) {
+  function registrar(certo, conta, tema) {
+    if (tema) {
+      const t = (R.temas[tema] = R.temas[tema] || { a: 0, e: 0 });
+      if (certo) t.a++;
+      else t.e++;
+    }
     if (certo) R.acertos++;
     else {
       R.erros++;
@@ -96,10 +104,14 @@ const Relatorio = (() => {
       tempoAtivo: relogio(R.segundos), segundos: R.segundos,
       dia: R.dia || '', licao: R.licao || '',
       acertos: R.acertos, erros: R.erros, xp: estado.xp,
-      maisErradas: top3().map(([c, n]) => `${c} (${n}×)`).join(' | ')
+      maisErradas: top3().map(([c, n]) => `${c} (${n}×)`).join(' | '),
+      monstros: R.monstros, dano: R.dano, porTema: porTema()
     };
   }
-  const zerar = () => { Object.assign(R, { segundos: 0, acertos: 0, erros: 0, erradas: {} }); gravar(); };
+  const zerar = () => { Object.assign(R, { segundos: 0, acertos: 0, erros: 0, erradas: {}, monstros: 0, dano: 0, temas: {} }); gravar(); };
+  // masmorra: dano causado e monstros derrotados
+  const golpe = dano => { R.dano += dano; gravar(); };
+  const monstro = () => { R.monstros++; gravar(); };
   const MSG = { ok: '✅ Enviado ao professor', offline: '📶 Sem internet: envio depois', config: '⚙️ Falta a URL no relatorio.js', fila: '📮 Na fila, enviando…' };
 
   // botão "Finalizar e enviar": põe na fila, zera a sessão e tenta enviar
@@ -180,5 +192,5 @@ const Relatorio = (() => {
     pintar();
   }
 
-  return { iniciar, registrar, licao, tela, enviarFinal, placar, atualizarRanking, ranking: () => R.ranking };
+  return { iniciar, registrar, golpe, monstro, licao, tela, enviarFinal, placar, atualizarRanking, ranking: () => R.ranking };
 })();

@@ -16,7 +16,7 @@
 const ABA = 'Relatórios';
 const COLUNAS = [
   'Recebido (servidor)', 'Tipo', 'Nome', 'Apelido', 'Turma', 'Data/hora (aparelho)', 'Tempo ativo', 'Segundos',
-  'Dia', 'Lição', 'Acertos', 'Erros', 'XP', '3 mais erradas', 'ID'
+  'Dia', 'Lição', 'Acertos', 'Erros', 'XP', '3 mais erradas', 'Monstros derrotados', 'Dano causado', 'Acertos e erros por tema', 'ID'
 ];
 const ABA_RANK = 'Ranking';
 const COLUNAS_RANK = ['Turma', 'Apelido', 'XP', 'Dia', 'Atualizado (servidor)'];
@@ -39,7 +39,7 @@ function doPost(e) {
     aba.appendRow([
       new Date(), // horário do servidor
       d.tipo || 'relatorio', d.nome, d.apelido, d.turma, d.dataHora, d.tempoAtivo, d.segundos,
-      d.dia, d.licao, d.acertos, d.erros, d.xp, d.maisErradas, d.id
+      d.dia, d.licao, d.acertos, d.erros, d.xp, d.maisErradas, d.monstros, d.dano, d.porTema, d.id
     ].map(limpar_));
     if (d.apelido) salvarPlacar_(d);
     return resposta_('ok');
@@ -88,6 +88,9 @@ function pegarAba_(nome, colunas) {
     aba.setFrozenRows(1);
     aba.getRange(1, 1, 1, colunas.length).setFontWeight('bold');
   }
+  // colunas novas numa planilha antiga: atualiza o cabeçalho
+  const cab = aba.getRange(1, 1, 1, colunas.length);
+  if (cab.getValues()[0].join('|') !== colunas.join('|')) cab.setValues([colunas]).setFontWeight('bold');
   return aba;
 }
 

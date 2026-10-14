@@ -80,79 +80,9 @@ svg{display:block}
 .pulso{transform-box:fill-box;transform-origin:center;animation:pulso 1.6s ease-out infinite}
 .heroi-mapa{animation:flutua 1.8s ease-in-out infinite}
 
-/* ---------- dia ---------- */
-.trilha-dia{display:flex;flex-direction:column;align-items:center;gap:22px;padding:12px 0}
-.licao-no{position:relative;width:80px;height:80px;border-radius:50%;display:grid;place-items:center;font-size:34px;background:var(--acc);box-shadow:0 7px 0 var(--acc-esc)}
-.licao-no.feita{background:var(--ouro);box-shadow:0 7px 0 var(--ouro-esc)}
-.licao-no.bloq{background:var(--cinza);box-shadow:0 7px 0 var(--cinza-esc);font-size:26px;cursor:default}
-.licao-no.atual{animation:pula 1.3s ease-in-out infinite}
-.licao-no.chefao{width:100px;height:100px;font-size:46px}
-.licao-no:not(:disabled):active{transform:translateY(5px);box-shadow:none}
-.em-breve{font-size:88px}
-
-/* ---------- lição ---------- */
-#t-licao{height:100dvh;padding:10px 12px calc(12px + env(safe-area-inset-bottom));gap:10px}
-.licao-topo{display:flex;align-items:center;gap:10px}
-.licao-topo .btn-ico{width:44px;height:44px;font-size:20px}
-#trilha{flex:1;position:relative;height:48px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 2px 6px}
-.bola{width:12px;height:12px;border-radius:50%;background:var(--cinza);transition:background .3s}
-.bola.feita{background:var(--ok)}
-.bandeira{font-size:22px;line-height:1;margin-bottom:-4px}
-.trilha-heroi{position:absolute;bottom:14px;width:24px;height:32px;transform:translateX(-50%);transition:left .6s cubic-bezier(.3,1.5,.6,1)}
-.trilha-heroi svg{width:100%;height:100%}
-#vidas{display:flex;font-size:15px}
-#vidas .perde{animation:treme .5s}
-#cena{position:relative;flex:1;min-height:200px;border-radius:28px;overflow:hidden}
-.pergunta{min-height:70px;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;font-size:26px;font-weight:900;padding:0 6px}
-.pergunta.entra{animation:entra .3s ease-out}
-.tag{background:var(--acc);color:#fff;border-radius:999px;padding:2px 12px;font-size:20px}
-#teclado{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-.tecla{height:52px;border-radius:16px;background:#F3F0FA;font-size:24px;font-weight:900;box-shadow:0 4px 0 var(--cinza)}
-.tecla:active{transform:translateY(3px);box-shadow:none}
-#teclado .btn{grid-column:1/-1;min-height:56px}
-.folha{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:22px 20px calc(20px + env(safe-area-inset-bottom));border-radius:28px 28px 0 0;transform:translateY(110%);transition:transform .25s ease-out;z-index:20}
-.folha.aberta{transform:none}
-.folha.ok{background:var(--ok-cl);color:var(--ok-esc)}
-.folha.erro{background:var(--erro-cl);color:var(--erro-esc)}
-.folha-titulo{display:flex;align-items:center;gap:10px;font-size:26px;font-weight:900}
-.folha-titulo .xp{margin-left:auto;font-size:22px}
-.dica{margin-top:10px;font-size:20px;font-weight:800;color:var(--tx)}
+/* ---------- dica visual (batalha) ---------- */
 .visual{margin-top:10px;display:flex;justify-content:center}
 .visual svg{width:100%;max-height:72px}
-.folha .btn{margin-top:16px}
-
-/* ---------- cena lateral (jogo.js) ---------- */
-.cena{position:absolute;inset:0;overflow:hidden}
-.cena.m4::before{content:"";position:absolute;inset:0;background-image:radial-gradient(2px 2px at 12% 18%,#fff,transparent),radial-gradient(2px 2px at 38% 8%,#fff,transparent),radial-gradient(3px 3px at 64% 22%,#fff,transparent),radial-gradient(2px 2px at 86% 12%,#fff,transparent),radial-gradient(2px 2px at 52% 36%,#fff,transparent)}
-.camada,.chao{position:absolute;left:0;right:0;background-repeat:repeat-x;animation:linear infinite}
-.c-longe{bottom:22%;height:52%;background-size:480px 100%;animation-name:rolaLonge;animation-duration:30s}
-.c-perto{bottom:22%;height:26%;background-size:320px 100%;animation-name:rolaPerto;animation-duration:6s}
-.chao{bottom:0;height:22%;background-size:64px 100%;animation-name:rolaChao;animation-duration:.8s}
-.cena.parada .camada,.cena.parada .chao{animation-play-state:paused}
-.heroi{position:absolute;left:4%;bottom:21%;width:70px;height:92px;z-index:3;transform-origin:50% 90%}
-.heroi svg{width:100%;height:100%;overflow:visible}
-.heroi.corre svg{animation:galopa .3s ease-in-out infinite}
-.corre .perna-a,.corre .perna-b{transform-box:fill-box;transform-origin:50% 0;animation:perna .3s ease-in-out infinite alternate}
-.corre .perna-b{animation-direction:alternate-reverse}
-.heroi.brilho{filter:drop-shadow(0 0 6px #fff) drop-shadow(0 0 12px var(--ouro))}
-.combo-tag{position:absolute;top:10px;left:10px;z-index:4;padding:4px 12px;border-radius:999px;background:#fff;color:var(--acc);font-weight:900;font-size:18px}
-.combo-tag.pop{animation:pop .4s cubic-bezier(.3,1.6,.6,1)}
-.blocos{position:absolute;left:26%;right:2%;top:10%;display:flex;justify-content:space-around;gap:8px;z-index:2}
-.bloco{position:relative;min-width:64px;height:64px;padding:0 10px;border-radius:16px;background:var(--ouro);color:#6B3E00;font-size:26px;font-weight:900;display:grid;place-items:center;white-space:nowrap;border:3px solid #FFE48A;box-shadow:inset 0 -6px 0 #0000001f,0 5px 0 #00000026;animation:surge .4s cubic-bezier(.3,1.6,.6,1) backwards,boia 1.8s ease-in-out infinite}
-.bloco::after{content:"?";position:absolute;top:-10px;right:-8px;width:24px;height:24px;border-radius:50%;background:#fff;color:var(--acc);font-size:15px;display:grid;place-items:center;box-shadow:0 2px 0 #0002}
-.bloco.longo{font-size:19px}
-.bloco.vf-v{color:var(--ok-esc)}
-.bloco.vf-f{color:var(--erro-esc)}
-.bloco.bate{animation:bate .3s ease-out}
-.bloco.certo{background:var(--ok);border-color:#8EF0B9;color:#fff}
-.bloco.errado{background:var(--erro);border-color:#FFB3BB;color:#fff;animation:bate .3s ease-out,treme .4s .1s}
-.blocos.some .bloco{opacity:0;transition:opacity .3s}
-.moeda{position:absolute;z-index:4;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFF6C2,var(--ouro) 55%,#E09B00);box-shadow:inset 0 0 0 3px #E09B00;animation:moeda .7s ease-in forwards}
-.balao{position:absolute;z-index:5;padding:6px 14px;border-radius:16px;background:#fff;color:var(--tx);font-weight:900;font-size:20px;white-space:nowrap;box-shadow:0 3px 0 #0002;animation:balao 1.1s ease-out forwards}
-.balao::after{content:"";position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);border:8px solid transparent;border-top-color:#fff;border-bottom:0}
-.aviso{position:absolute;left:50%;top:45%;z-index:6;padding:12px 22px;border-radius:999px;background:var(--acc);color:#fff;font-weight:900;font-size:24px;white-space:nowrap;animation:aviso 1.4s ease-out forwards}
-
-.aviso,.balao,.moeda,.bolinha,.combo-tag,.relogio{pointer-events:none} /* enfeites não roubam o toque */
 
 /* ---------- resultado ---------- */
 .trofeu{font-size:96px;line-height:1;animation:surge .5s cubic-bezier(.3,1.6,.6,1)}
@@ -175,7 +105,7 @@ svg{display:block}
 .carta.falta{background:var(--cinza);color:var(--cinza-esc);box-shadow:0 6px 0 var(--cinza-esc)}
 .carta.falta .em{font-size:60px;font-weight:900}
 .carta.grande{width:190px}
-.carta.vira{animation:vira .7s ease-out}
+.carta.vira{animation:vira .5s ease-out}
 .frases{display:flex;flex-direction:column;gap:10px}
 .frases p{padding:14px 18px;border-radius:20px;background:var(--acc-cl);font-weight:800;font-size:18px}
 
@@ -194,9 +124,8 @@ svg{display:block}
 .confete{position:fixed;inset:0;pointer-events:none;z-index:70;overflow:hidden}
 .confete i{position:absolute;top:-16px;width:10px;height:14px;border-radius:3px;animation:cai 1.6s ease-in forwards}
 
-/* ---------- painéis sobre o cenário (conjunto, ligar, ordenar, reta, padrão, grade, tabuleiro) ---------- */
+/* ---------- painéis dos desafios (arrastar, ligar, ordenar, reta) ---------- */
 .painel{position:absolute;left:27%;right:3%;top:7%;bottom:25%;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:20px;background:#ffffffeb;box-shadow:0 5px 0 #0000001f;animation:surge .35s cubic-bezier(.3,1.6,.6,1);overflow:hidden}
-.painel.travado,.blocos.travado{pointer-events:none}
 .fichas{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
 .ficha{position:relative;min-width:44px;height:38px;padding:0 8px;border-radius:12px;background:var(--ouro);color:#6B3E00;font-size:19px;font-weight:900;white-space:nowrap;box-shadow:0 3px 0 #0000002a;touch-action:none;transition:background .2s,opacity .2s}
 .ficha.sel{background:var(--acc);color:#fff}
@@ -221,26 +150,6 @@ svg{display:block}
 .vaga.cheia{border:3px solid var(--ok);background:var(--ok-cl);color:var(--ok-esc)}
 .sinal{font-weight:900;color:var(--tx2)}
 .p-reta svg{width:100%;height:auto;cursor:pointer}
-.p-padrao p{font-size:20px;font-weight:800;color:var(--tx2)}
-.p-padrao .ultima{font-size:22px;color:var(--tx)}
-.slot{display:inline-block;min-width:44px;padding:0 6px;border-radius:10px;background:var(--acc-cl);color:var(--acc);font-style:normal;text-align:center}
-.pontos{display:grid;gap:3px}
-.pontos i{width:var(--t);height:var(--t);border-radius:50%;background:var(--acc);transition:opacity .6s,transform .6s}
-.pontos.some i{opacity:0;transform:scale(.3)}
-.p-grade p{font-size:22px;font-weight:900}
-.tab{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;width:100%}
-.tab span{display:flex;flex-direction:column;align-items:center;padding:3px 0;border-radius:10px;background:#F3F0FA;font-size:12px;font-weight:800;color:var(--tx2)}
-.tab b{min-height:22px;font-size:17px;color:var(--tx)}
-.tab .cheia{background:var(--ok-cl)}
-.tab .atual{background:var(--acc-cl);outline:3px solid var(--acc)}
-.tab .slot{min-width:0;padding:0 2px;background:none}
-.p-dica{z-index:7;cursor:pointer}
-.p-dica svg{width:100%;height:auto}
-.p-dica p{font-size:15px;font-weight:800;color:var(--tx2)}
-.power{position:absolute;top:8px;right:8px;z-index:5;padding:4px 10px;border-radius:999px;background:#fff;font-size:22px;box-shadow:0 3px 0 #0002;animation:pula 1.2s ease-in-out infinite}
-.power small{margin-left:2px;font-size:14px;font-weight:900;color:var(--acc)}
-.relogio{position:absolute;left:12px;right:12px;bottom:8px;z-index:6;height:8px;border-radius:99px;background:#ffffff99;overflow:hidden}
-.relogio i{display:block;height:100%;background:var(--erro);transform-origin:left;animation:relogio linear forwards}
 
 /* ---------- tempo ativo e relatório ---------- */
 .tempo{font-variant-numeric:tabular-nums;transition:opacity .3s}
@@ -256,44 +165,13 @@ svg{display:block}
 .btn.duas{flex-direction:column;gap:0;padding:8px 20px;font-size:19px;line-height:1.15}
 .btn small{display:block;font-size:15px;opacity:.85}
 
-/* ---------- Extra A: casas no chão · Extra B: ponte · Extra C: monstro ---------- */
-.casas{position:absolute;left:2%;right:2%;bottom:3%;height:16%;z-index:2;display:flex;gap:2px;align-items:flex-start}
-.casas.travado{pointer-events:none}
-.casa{flex:1;min-width:0;height:100%;border-radius:8px 8px 4px 4px;background:#ffffffde;color:var(--tx);font-size:13px;font-weight:900;box-shadow:inset 0 -4px 0 #0002;transform:translateY(calc(var(--d) * 5px));transition:background .2s}
-.casa.neg{background:#DCE8FF;color:#1D4ED8}
-.casa.zero{background:var(--ouro)}
-.casa.saida{outline:3px solid var(--acc);outline-offset:-3px}
-.casa.certo{background:var(--ok);color:#fff}
-.casa.errado{background:var(--erro);color:#fff}
-.casa.certa{outline:3px dashed var(--ok);outline-offset:-3px}
-.buraco{position:absolute;left:44%;width:24%;bottom:0;height:23%;z-index:1;overflow:hidden;border-radius:12px 12px 0 0;background:linear-gradient(#1E1240,#000)}
-.buraco.chega{animation:chega .6s ease-out}
-.buraco .tabuas{position:absolute;left:-2px;right:-2px;top:0;height:30%;background:repeating-linear-gradient(90deg,#A0642C 0 14px,#6B3E1A 14px 17px);transform:scaleX(0);transform-origin:left;transition:transform .45s cubic-bezier(.3,1.4,.6,1)}
-.buraco.ponte .tabuas{transform:scaleX(1)}
-.cena.chefe .blocos,.cena.chefe .painel{right:25%}
-.monstro{position:absolute;right:3%;bottom:20%;z-index:3;width:68px;height:68px;transform:translateX(var(--x,0));transition:transform .4s cubic-bezier(.3,1.6,.6,1)}
-.monstro svg{width:100%;height:100%;animation:flutua 1.4s ease-in-out infinite}
-.monstro.pisa svg{animation:pisa .4s}
-.monstro svg.treme{animation:treme .4s;filter:brightness(1.5)}
-.monstro.derrotado svg{animation:derrota .9s forwards}
-.monstro .vida{position:absolute;top:-14px;left:4px;right:4px;height:9px;border-radius:99px;background:#fff;box-shadow:0 2px 0 #0002;overflow:hidden}
-.monstro .vida i{display:block;width:100%;height:100%;background:var(--erro);transition:width .4s}
-.bolinha{position:absolute;z-index:6;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,var(--acc));box-shadow:0 0 10px var(--acc)}
-
-/* ---------- fila das operações e repartir ---------- */
+/* ---------- fila das operações ---------- */
 .expr{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px;font-size:21px;font-weight:900}
 .expr .op{position:relative;min-width:34px;height:36px;padding:0 6px;border-radius:10px;background:var(--ouro);color:#6B3E00;font-size:21px;font-weight:900;box-shadow:0 3px 0 #0000002a}
 .expr .op.feita{background:var(--ok);color:#fff}
 .expr .op.feita::after{content:attr(data-n);position:absolute;top:-9px;right:-7px;width:20px;height:20px;border-radius:50%;background:var(--acc);color:#fff;font-size:12px;display:grid;place-items:center}
 .expr .op.treme{animation:treme .4s}
 .p-fila .vaga{min-width:56px;font-size:13px}
-.amigos{display:flex;flex-direction:column;gap:3px;width:100%}
-.amigo{display:flex;align-items:center;gap:2px;min-height:calc(var(--t) + 2px)}
-.amigo b{margin-right:4px;font-size:calc(var(--t) + 4px)}
-.amigo i,.sobra i{width:var(--t);height:var(--t);border-radius:50%;background:var(--acc);animation:surge .3s backwards}
-.sobra{--t:12px;display:flex;gap:2px;padding:3px 6px;border-radius:99px;background:var(--erro-cl)}
-.sobra i{background:var(--erro)}
-.p-repartir p{font-size:20px;font-weight:900}
 
 /* ---------- streak e ranking no mapa ---------- */
 .faixa{display:flex;gap:8px;overflow-x:auto;padding:10px 16px;scrollbar-width:none}
@@ -344,7 +222,7 @@ svg{display:block}
 .b-arte-m.desmaia,.b-arte-h.desmaia{animation:desmaia .5s ease-in forwards}
 .b-arte-h.ataca{animation:ataca .35s ease-in-out}
 .b-dano{position:absolute;z-index:3;right:6%;top:46%;font-size:22px;font-weight:900;white-space:nowrap;text-shadow:0 2px 0 #1E1240,0 0 8px #1E1240;opacity:0;pointer-events:none}
-.b-dano.pop{animation:dano .9s ease-out}
+.b-dano.pop{animation:dano .5s ease-out}
 .b-texto{position:relative;min-height:92px;padding:14px 16px;border-radius:20px;background:#fff;color:var(--tx);box-shadow:inset 0 0 0 4px var(--acc);font-size:21px;font-weight:900}
 .b-dica{margin-top:6px;font-size:16px;font-weight:800;color:var(--tx2)}
 .b-dica .visual svg{max-height:60px}
@@ -367,6 +245,48 @@ svg{display:block}
 .des-pergunta{font-size:22px;font-weight:900;text-align:center}
 .des-palco{display:flex;min-height:250px}
 .painel.solto{position:relative;inset:auto;flex:1;min-height:250px;box-shadow:none;background:#F6F4FB;animation:none}
+
+/* ---------- chefão, poderes e melhorias ---------- */
+.arena.chefe{background:linear-gradient(#2A2463,var(--a1))}
+.arena.escurece::after{content:"";position:absolute;inset:0;z-index:5;background:#000;pointer-events:none;animation:escurece .5s ease-out forwards}
+.b-arte-m.grande{right:6%;top:6%;width:140px;height:160px}
+.b-arte-m.desce{animation:desce .5s cubic-bezier(.3,1.4,.6,1)}
+.b-arte-m.fase2 svg{filter:hue-rotate(40deg) saturate(1.3)}
+.b-arte-m.fase3 svg{filter:hue-rotate(-60deg) saturate(1.6) drop-shadow(0 0 10px #FF4B5C)}
+.b-banner{position:absolute;left:50%;top:46%;z-index:6;padding:10px 20px;border-radius:999px;background:#1E1240E6;color:#FFC531;font-size:24px;font-weight:900;white-space:nowrap;opacity:0;pointer-events:none;transform:translate(-50%,-50%)}
+.b-banner.mostra{animation:banner 1.2s ease-out}
+.b-efeitos{position:absolute;left:6%;bottom:calc(7% + 140px);z-index:3;font-size:18px;font-weight:900;color:#fff;text-shadow:0 2px 0 #1E1240}
+.b-poderes{display:grid;gap:8px}
+.b-poder{display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:10px;padding:10px 14px;border-radius:16px;background:#fff;color:var(--tx);text-align:left;animation:surge .25s ease-out}
+.b-poder span{grid-row:span 2;font-size:28px}
+.b-poder b{font-size:17px}
+.b-poder small{font-size:13px;font-weight:800;color:var(--tx2)}
+.b-poder:disabled{opacity:.4}
+.b-resp.fora{opacity:.2;text-decoration:line-through}
+.melhoria{position:absolute;inset:0;z-index:36;display:grid;place-items:center;padding:16px;background:#140F2ECC;animation:fade .2s}
+.mel-caixa{width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.mel-caixa .titulo{color:#fff}
+.mel-opcoes{width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.mel{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px;border-radius:22px;background:#fff;color:var(--tx);box-shadow:0 6px 0 var(--acc-esc);animation:surge .35s cubic-bezier(.3,1.6,.6,1) backwards}
+.mel:nth-child(2){animation-delay:.08s}
+.mel:nth-child(3){animation-delay:.16s}
+.mel span{font-size:40px}
+.mel b{font-size:16px}
+
+/* ---------- aldeia ---------- */
+.ald-grade{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px;padding:12px;border-radius:24px;background:linear-gradient(#9BE8BC,#5FD08F)}
+.lote{aspect-ratio:1;border-radius:16px;background:#FFFFFF40;box-shadow:inset 0 0 0 2px #FFFFFF66;font-size:34px;display:grid;place-items:center}
+.lote.cheio{background:#FFFFFF8C;box-shadow:0 4px 0 #0000001F}
+.lote.surge{animation:pop .4s cubic-bezier(.3,1.6,.6,1)}
+.obras{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px;scrollbar-width:none}
+.obra{flex:0 0 auto;width:104px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:18px;background:var(--acc-cl);color:var(--tx);text-align:center;transition:transform .1s}
+.obra span{font-size:32px}
+.obra b{display:grid;place-items:center;min-height:28px;font-size:13px;line-height:1.1}
+.obra small{font-size:13px;font-weight:900;color:var(--acc)}
+.obra.mini{width:70px}
+.obra.trava{background:var(--cinza);color:var(--cinza-esc)}
+.obra:active{transform:scale(.95)}
+.faixa .aldeia{background:#FFF3C4;color:#9A6B00}
 
 /* ---------- animações ---------- */
 @keyframes entra{from{opacity:0;transform:translateY(12px)}}
@@ -396,6 +316,9 @@ svg{display:block}
 @keyframes derrota{to{transform:translateY(30px) rotate(25deg) scale(.4);opacity:0}}
 @keyframes holo{50%{background-position:100% 100%}}
 @keyframes balanca{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+@keyframes escurece{0%{opacity:0}40%{opacity:.7}100%{opacity:0}}
+@keyframes desce{from{transform:translateY(-120px) scale(.6);opacity:0}}
+@keyframes banner{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}25%,75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.1)}}
 @keyframes ataca{50%{transform:translate(70px,-50px) scale(1.06)}}
 @keyframes investe{50%{transform:translate(-60px,50px) scale(1.1)}}
 @keyframes desmaia{to{transform:translateY(20px) scale(.5);opacity:0}}
@@ -444,36 +367,6 @@ svg{display:block}
   <div class="mapa-rolagem" id="mapa"></div>
 </section>
 
-<!-- Lições do dia -->
-<section class="tela" id="t-dia">
-  <div class="topo"><button class="btn-ico" data-ir="t-mapa" aria-label="Mapa">←</button><span class="espaco"></span><span class="chip tempo"></span></div>
-  <div class="centro">
-    <p class="sub" id="dia-mundo"></p>
-    <h2 class="titulo" id="dia-titulo"></h2>
-    <div class="trilha-dia" id="dia-licoes"></div>
-    <p class="sub" id="dia-prox"></p>
-  </div>
-</section>
-
-<!-- 4. Lição -->
-<section class="tela" id="t-licao">
-  <div class="licao-topo">
-    <button class="btn-ico" id="bt-sair" aria-label="Sair">✕</button>
-    <div id="trilha"></div>
-    <div class="lado"><div id="vidas"></div><span class="tempo mini"></span></div>
-  </div>
-  <div id="cena"></div>
-  <div class="pergunta" id="pergunta"></div>
-  <div id="teclado" hidden></div>
-  <div class="folha" id="folha"></div>
-</section>
-
-<!-- 5. Resultado -->
-<section class="tela" id="t-resultado">
-  <div class="centro" id="res-conteudo"></div>
-  <div class="rodape" id="res-acoes"></div>
-</section>
-
 <!-- 6. Álbum de cartas -->
 <section class="tela" id="t-album">
   <div class="topo">
@@ -485,6 +378,21 @@ svg{display:block}
   <div class="secao">🏅 Medalhas</div>
   <div class="medalhas" id="album-medalhas"></div>
   <div id="album-cartas"></div>
+</section>
+
+<!-- Aldeia: cada carta desbloqueia uma construção -->
+<section class="tela" id="t-aldeia">
+  <div class="topo">
+    <button class="btn-ico" data-ir="t-mapa" aria-label="Mapa">←</button>
+    <h2 class="titulo" style="font-size:28px">🏘️ Aldeia</h2>
+    <span class="espaco"></span>
+    <span class="chip" id="ald-moedas">🪙 0</span>
+  </div>
+  <div class="ald-grade" id="ald-grade"></div>
+  <div class="secao">🏗️ Construir</div>
+  <div class="obras" id="ald-construir"></div>
+  <div class="secao">🌷 Enfeitar</div>
+  <div class="obras" id="ald-enfeitar"></div>
 </section>
 
 <!-- Masmorra do dia: só a sala, o personagem, os corações, o mini mapa e o joystick -->
@@ -506,8 +414,11 @@ svg{display:block}
       <i class="b-chao b-chao-h"></i><div class="b-arte-h" id="b-heroi"></div>
       <div class="b-info b-info-h" id="b-vidas"></div>
       <div class="b-dano" id="b-dano"></div>
+      <div class="b-efeitos" id="b-efeitos"></div>
+      <div class="b-banner" id="b-banner"></div>
     </div>
     <div class="b-texto"><p id="b-fala"></p><div class="b-dica" id="b-dica"></div><button class="b-segue" id="b-segue" hidden aria-label="Continuar">▶</button></div>
+    <div class="b-poderes" id="b-poderes" hidden></div>
     <div class="b-respostas" id="b-respostas"></div>
     <div class="b-acoes"><button class="b-acao" id="b-poder">⚡ Poder</button><button class="b-acao" id="b-dicabt">💡 Dica</button></div>
   </div>
@@ -519,6 +430,11 @@ svg{display:block}
       <p class="des-pergunta" id="des-pergunta"></p>
       <div class="des-palco" id="des-palco"></div>
     </div>
+  </div>
+
+  <!-- entre as salas: escolha 1 de 3 melhorias -->
+  <div class="melhoria" id="melhoria" hidden>
+    <div class="mel-caixa"><h2 class="titulo">✨ Escolha 1</h2><div class="mel-opcoes" id="mel-opcoes"></div></div>
   </div>
 </section>
 

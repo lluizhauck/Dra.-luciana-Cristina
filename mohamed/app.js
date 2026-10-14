@@ -43,7 +43,7 @@ const novoEstado = () => ({
   xp: 0, diaAtual: 1, diasConcluidos: [], licoes: {},
   cartas: [], medalhas: [], erros: [], seguidos: 0,
   itens: { cores: [], acessorios: [] }, frases: [], andar: null,
-  revisao: [], streak: { dias: 0, ultimo: '' }, moedas: 0, masmorras: {}
+  revisao: [], streak: { dias: 0, ultimo: '' }, moedas: 0, masmorras: {}, aldeia: { lotes: [] }
 });
 let estado = carregar();
 function carregar() {
@@ -70,13 +70,14 @@ let audio = null;
 const SONS = {
   ok: [[660, .09], [990, .16]], erro: [[220, .12], [160, .22]], moeda: [[988, .06], [1319, .18]],
   pulo: [[330, .05], [560, .1]], clique: [[620, .03]], vitoria: [[523, .1], [659, .1], [784, .1], [1047, .3]],
-  bau: [[392, .07], [523, .07], [659, .07], [1047, .25]]
+  bau: [[392, .07], [523, .07], [659, .07], [1047, .25]],
+  chefe: [[147, .16], [123, .16], [98, .32]]
 };
 function som(tipo) {
   try {
     audio = audio || new (window.AudioContext || window.webkitAudioContext)();
     if (audio.state === 'suspended') audio.resume();
-    const onda = tipo === 'erro' ? 'sawtooth' : tipo === 'moeda' ? 'square' : 'triangle';
+    const onda = tipo === 'erro' || tipo === 'chefe' ? 'sawtooth' : tipo === 'moeda' ? 'square' : 'triangle';
     let t = audio.currentTime;
     for (const [f, d] of SONS[tipo]) {
       const o = audio.createOscillator(), g = audio.createGain();
@@ -156,7 +157,7 @@ function desenharPersonagem(p = {}, pose = 'parado', dir = 'baixo') {
 }
 
 // ---------- navegação ----------
-const TELAS = { 't-inicio': telaInicio, 't-personagem': telaPersonagem, 't-mapa': telaMapa, 't-dia': telaDia, 't-album': telaAlbum, 't-relatorio': () => Relatorio.tela(), 't-masmorra': telaMasmorra };
+const TELAS = { 't-inicio': telaInicio, 't-personagem': telaPersonagem, 't-mapa': telaMapa, 't-aldeia': telaAldeia, 't-album': telaAlbum, 't-relatorio': () => Relatorio.tela(), 't-masmorra': telaMasmorra };
 function irPara(id) {
   $$('.tela').forEach(t => t.classList.toggle('ativa', t.id === id));
   window.scrollTo(0, 0);
@@ -290,7 +291,7 @@ function pintarRanking() {
   const faixa = $('#faixa'), colegas = $('#colegas');
   if (!faixa || !colegas) return;
   const top = Relatorio.ranking(), s = streakAtivo();
-  faixa.innerHTML = (s ? `<span class="chip fogo">🔥 ${s} ${s > 1 ? 'dias' : 'dia'}</span>` : '') +
+  faixa.innerHTML = `<button class="chip aldeia" data-ir="t-aldeia">🏘️ 🪙 ${estado.moedas}</button>` + (s ? `<span class="chip fogo">🔥 ${s} ${s > 1 ? 'dias' : 'dia'}</span>` : '') +
     (estado.apelido ? '' : '<button class="chip" data-ir="t-inicio">🦸 Apelido</button>') +
     top.map((p, i) => `<span class="chip${p.apelido === estado.apelido ? ' eu' : ''}">${['🥇', '🥈', '🥉'][i] || `${i + 1}º`} ${esc(p.apelido)} · ${p.xp}</span>`).join('');
   const porDia = {};
@@ -301,7 +302,7 @@ function pintarRanking() {
 }
 
 // ---------- masmorra do dia (jogo.js) ----------
-// Ajuste fácil: dano, vida dos monstros e prêmios
+// Ajuste fácil: dano, vida dos monstros e do chefão, prêmios
 const CONFIG_BATALHA = {
   danoBase: 10,            // dano de cada acerto
   bonusSeguido: 5,         // + por acerto seguido…
@@ -309,55 +310,113 @@ const CONFIG_BATALHA = {
   bonusRapido: 5,          // + se responder em até…
   segundosRapido: 5,       // …estes segundos
   vidaMonstro: [30, 60],   // sorteada de 5 em 5 (3 a 5 acertos)
+  vidaChefe: 150,          // 3 fases de 50
   coracoes: 5,
+  coracoesUltimaFase: 2,   // na última fase o chefão tira 2 corações
+  melhoriaDano: 5,         // + de dano base por melhoria
   recompensa: { moedas: 3, xp: 15 },
-  custoDica: 2             // moedas por dica
+  recompensaChefe: { moedas: 15, xp: 60 },
+  custoDica: 2             // moedas por dica (as grátis vêm das melhorias)
 };
 // tema do monstro → dias de onde saem as perguntas (conteudo.js)
 const DIAS_DO_TEMA = { Natural: [1, 2, 3], Negativo: [4, 5, 6, 7, 8], Tabuada: [9, 10, 11, 12, 13, 14], 'Divisão': [15, 16, 17] };
+// chefão: cada fase usa um tipo de pergunta; a última bate mais forte
+const FASES_CHEFE = [
+  { rotulo: '✔✘', tipos: ['vf'] },
+  { rotulo: '🔢', tipos: ['escolha'] },
+  { rotulo: '✏️', tipos: ['digitar', 'padrao', 'grade', 'tabuleiro', 'repartir'] }
+];
+// cartas viram poderes: a posição da lição no dia escolhe o poder (até 3 de cada por dia)
+const PODERES = {
+  nove: { icone: '⚡', nome: 'Poder do 9', efeito: 'Dano em dobro por 3 acertos' },
+  escudo: { icone: '🛡️', nome: 'Escudo', efeito: 'Perdoa 1 erro' },
+  dica: { icone: '💡', nome: 'Dica', efeito: 'Tira 1 resposta errada' }
+};
+const poderDaCarta = id => (/boss|prova/.test(id) ? 'nove' : ['dica', 'escudo', 'nove', 'dica', 'escudo'][(+((id.match(/l(\d+)$/) || [0, 1])[1]) - 1) % 5]);
+// melhorias entre as salas
+const MELHORIAS = [
+  { id: 'dano', icone: '⚔️', txt: `+${CONFIG_BATALHA.melhoriaDano} de dano` },
+  { id: 'coracoes', icone: '❤️', txt: '+1 coração' },
+  { id: 'dicas', icone: '💡', txt: 'Dica grátis' }
+];
+
+let RUN = null; // progresso do dia na masmorra: salas, melhorias e poderes usados
+function cargas() {
+  const total = { nove: 0, escudo: 0, dica: 0 };
+  estado.cartas.forEach(id => total[poderDaCarta(id)]++);
+  return Object.fromEntries(Object.keys(total).map(k => [k, Math.max(0, Math.min(3, total[k]) - (RUN.usados[k] || 0))]));
+}
 
 function telaMasmorra() {
   const d = DIAS[diaAberto - 1];
-  const progresso = (estado.masmorras[d.n] = estado.masmorras[d.n] || { pegos: [], visitadas: [] });
+  const p = (estado.masmorras[d.n] = estado.masmorras[d.n] || { pegos: [], visitadas: [] });
+  p.melhorias = p.melhorias || { dano: 0, coracoes: 0, dicas: 0 };
+  p.usados = p.usados || { nove: 0, escudo: 0, dica: 0, dicasGratis: 0 };
+  RUN = p;
   B = null;
   Batalha.fechar();
   $('#desafio').hidden = true;
+  $('#melhoria').hidden = true;
   Relatorio.licao(d.n, '🏰 Masmorra');
+  toast(`${MUNDOS[d.mundo].emoji} Dia ${d.n} · ${d.titulo}`);
   Masmorra.abrir({
-    mundo: d.mundo, personagem: estado.personagem, progresso, vidas: CONFIG_BATALHA.coracoes,
+    mundo: d.mundo, personagem: estado.personagem, progresso: p, vidas: CONFIG_BATALHA.coracoes + p.melhorias.coracoes,
     aoMoeda: n => { estado.moedas += n; salvar(); },
     aoSalvar: salvar,
     aoBatalha: batalhar,
     aoDesafio: desafio,
-    aoSalaLimpa: (i, semErro) => salaLimpa(d, i, semErro),
+    aoSalaLimpa: (i, semErro, chefe) => salaLimpa(d, i, semErro, chefe),
     aoSaida: () => concluirMasmorra(d)
   });
 }
 
-// sala sem monstros: a carta da lição daquela sala vira do aluno
-function salaLimpa(d, i, semErro) {
-  const lic = d.licoes[i];
-  if (lic && !lic.chefao) {
+// sala sem monstros: a carta da lição daquela sala; a sala do chefão dá as cartas finais e conclui o dia
+function salaLimpa(d, i, semErro, chefe) {
+  const lics = chefe ? d.licoes.filter((l, k) => k >= i || l.chefao) : [d.licoes[i]];
+  for (const lic of lics) {
+    if (!lic || (lic.chefao && !chefe)) continue;
     estado.licoes[lic.id] = true;
-    if (!estado.cartas.includes(lic.id)) { estado.cartas.push(lic.id); toast(`🃏 ${lic.carta.titulo}`); confete(); }
+    if (!estado.cartas.includes(lic.id)) { estado.cartas.push(lic.id); toast(`${lic.carta.rara ? '✨' : '🃏'} ${lic.carta.titulo}`); }
   }
   if (semErro) ganharMedalha('perfeita');
   salvar();
   Relatorio.placar();
+  if (chefe) setTimeout(() => concluirMasmorra(d), 400);
+  else escolherMelhoria();
 }
 
-// saída: conclui o dia, libera o próximo nó do mapa e dá o baú (na parte 3, o chefão faz isso)
+// entre as salas: 1 de 3 melhorias para o resto do dia
+function escolherMelhoria() {
+  const caixa = $('#melhoria');
+  Masmorra.pausar(true);
+  caixa.hidden = false;
+  $('#mel-opcoes').innerHTML = MELHORIAS.map(m => `<button class="mel" data-m="${m.id}"><span>${m.icone}</span><b>${m.txt}</b></button>`).join('');
+  $('#mel-opcoes').onclick = e => {
+    const b = e.target.closest('.mel');
+    if (!b) return;
+    RUN.melhorias[b.dataset.m]++;
+    if (b.dataset.m === 'coracoes') Masmorra.coracao();
+    salvar();
+    som('bau');
+    caixa.hidden = true;
+    Masmorra.pausar(false);
+  };
+}
+
+// chefão vencido (ou saída): conclui o dia, libera o próximo nó do mapa e dá o baú
 function concluirMasmorra(d) {
   const novo = !estado.diasConcluidos.includes(d.n);
   if (novo) {
     estado.diasConcluidos.push(d.n);
     if (d.n === estado.diaAtual) { estado.andar = d.n; estado.diaAtual = d.n + 1; }
     ganharMedalha('dia');
+    if (d.n === 20) { ganharMedalha('mestre'); Relatorio.enviarFinal(); }
   }
-  if (d.n === 20) { ganharMedalha('mestre'); Relatorio.enviarFinal(); }
   salvar();
   Relatorio.placar();
-  if (novo) abrirBau();
+  confete();
+  som('vitoria');
+  if (novo) { toast('🏆 Dia concluído!'); setTimeout(abrirBau, 700); }
   else { toast('🏁 Masmorra concluída!'); irPara('t-mapa'); }
 }
 
@@ -384,19 +443,22 @@ function paraBatalha(ex) {
   return { ...base, opcoes: lista, certa: lista.findIndex(o => norm(o) === norm(certo)) };
 }
 
-// perguntas do monstro: o tema escolhe os dias; a sala puxa a lição do dia; erros antigos voltam às vezes
-function geradorDoMonstro(tema, d, sala) {
-  const lic = d.licoes[sala], dias = DIAS_DO_TEMA[tema].filter(n => n <= d.n);
+// perguntas do monstro: o tema escolhe os dias; a sala puxa a lição do dia (o chefão, o dia todo);
+// "tipos" filtra o tipo de pergunta (fases do chefão); erros antigos voltam às vezes
+function geradorDoMonstro(tema, d, sala, tipos) {
+  const lic = sala === null ? null : d.licoes[sala], dias = DIAS_DO_TEMA[tema].filter(n => n <= d.n);
   const doDia = DIAS_DO_TEMA[tema].includes(d.n) || d.mundo === 4 ? (lic && lic.modelos) || modelosDos([d.n]) : [];
   const doTema = modelosDos(dias.length ? dias : [DIAS_DO_TEMA[tema][0]]), vistas = new Set();
+  const serve = q => q && (!tipos || tipos.includes(q.ex.tipo));
   return () => {
     const volta = Math.random() < .2 && errosParaRevisar(DIAS_DO_TEMA[tema], 1)[0];
     const qv = volta && paraBatalha(volta);
-    if (qv) return qv;
-    for (let t = 0; t < 40; t++) {
+    if (serve(qv)) return qv;
+    for (let t = 0; t < 60; t++) {
       const pool = doDia.length && Math.random() < .7 ? doDia : doTema;
       const q = paraBatalha(sortear(pool)());
-      if (q && (!vistas.has(q.texto) || t > 30)) { vistas.add(q.texto); return q; }
+      if (!q || (t < 45 && !serve(q))) continue;
+      if (!vistas.has(q.texto) || t > 50) { vistas.add(q.texto); return q; }
     }
     return paraBatalha(digitar('2 + 2 = ?', 4, '2 + 2 = 4'));
   };
@@ -404,18 +466,36 @@ function geradorDoMonstro(tema, d, sala) {
 
 // ---------- batalha por turnos: a matemática vira dano ----------
 let B = null;
-function batalhar(mon, vidas, fim) {
+function batalhar(mon, coracoes, fim) {
   const d = DIAS[diaAberto - 1];
-  B = { mon, vidas, fim, seguidos: 0, erros: 0, q: null, t0: 0, travado: true, dica: false, gerar: geradorDoMonstro(mon.tema, d, mon.sala) };
-  Batalha.abrir({ monstro: mon, personagem: estado.personagem, vidas, maxVidas: CONFIG_BATALHA.coracoes, aoResponder: responderBatalha, aoDica: dicaBatalha, aoPoder: null });
-  setTimeout(proximaBatalha, 500);
+  B = { mon, vidas: coracoes.vidas, max: coracoes.max, fim, seguidos: 0, erros: 0, q: null, t0: 0, travado: true, dica: false, fora: [], dobro: 0, escudo: false, fase: 0, gerar: mon.chefe ? null : geradorDoMonstro(mon.tema, d, mon.sala) };
+  Batalha.abrir({ monstro: mon, personagem: estado.personagem, vidas: B.vidas, maxVidas: B.max, aoResponder: responderBatalha, aoDica: dicaBatalha, aoPoder: abrirPoderes });
+  efeitos();
+  setTimeout(proximaBatalha, mon.chefe ? 1500 : 500);
 }
 
+// chefão: a fase muda com a vida (150 → 100 → 50) e traz outro tipo de pergunta
 function proximaBatalha() {
+  if (!B) return;
+  if (B.mon.chefe) {
+    const f = B.mon.vida > (B.mon.max * 2) / 3 ? 1 : B.mon.vida > B.mon.max / 3 ? 2 : 3;
+    if (f !== B.fase) {
+      B.fase = f;
+      B.gerar = geradorDoMonstro(B.mon.tema, DIAS[diaAberto - 1], null, FASES_CHEFE[f - 1].tipos);
+      Batalha.fase(f, FASES_CHEFE[f - 1].rotulo);
+      if (f > 1) som('chefe');
+      return setTimeout(perguntarBatalha, 700);
+    }
+  }
+  perguntarBatalha();
+}
+
+function perguntarBatalha() {
   if (!B) return;
   B.q = B.gerar();
   B.travado = false;
   B.dica = false;
+  B.fora = [];
   B.t0 = Infinity; // o relógio do "rápido" começa quando a pergunta termina de aparecer
   Batalha.perguntar(B.q, () => { if (B) B.t0 = performance.now(); });
 }
@@ -424,35 +504,43 @@ function responderBatalha(i) {
   if (!B || B.travado) return;
   B.travado = true;
   const C = CONFIG_BATALHA, q = B.q, d = DIAS[diaAberto - 1], certo = i === q.certa;
-  Relatorio.registrar(certo, q.conta);
+  Relatorio.registrar(certo, q.conta, B.mon.tema);
   if (certo) {
     const rapido = performance.now() - B.t0 <= C.segundosRapido * 1000;
-    const dano = C.danoBase + Math.min(C.bonusSeguidoMax, C.bonusSeguido * B.seguidos) + (rapido ? C.bonusRapido : 0);
+    let dano = C.danoBase + C.melhoriaDano * RUN.melhorias.dano + Math.min(C.bonusSeguidoMax, C.bonusSeguido * B.seguidos) + (rapido ? C.bonusRapido : 0);
+    if (B.dobro > 0) { dano *= 2; B.dobro--; } // Poder do 9
     B.seguidos++;
     estado.seguidos++;
     if (q.ex.revisao) acertouRevisao(q.ex);
     if (estado.seguidos >= 10) ganharMedalha('seq10');
     B.mon.vida = Math.max(0, B.mon.vida - dano);
+    Relatorio.golpe(dano);
     salvar();
+    efeitos();
     Batalha.acerto(i, dano, B.mon.vida, B.mon.max, rapido, () => (B.mon.vida > 0 ? proximaBatalha() : vencerBatalha()));
   } else {
-    B.seguidos = 0;
+    // escudo perdoa o erro; na última fase do chefão o golpe tira 2 corações
+    const perde = B.escudo ? 0 : B.mon.chefe && B.fase === 3 ? C.coracoesUltimaFase : 1;
+    if (B.escudo) B.escudo = false;
+    else B.seguidos = 0;
     B.erros++;
-    B.vidas--;
+    B.vidas = Math.max(0, B.vidas - perde);
     estado.seguidos = 0;
     estado.erros = [...estado.erros, { dia: d.n, licao: 'masmorra', pergunta: q.texto, dada: q.opcoes[i], certa: q.opcoes[q.certa], quando: Date.now() }].slice(-200);
     guardarErro(q.ex, q.ex.diaOrigem || d.n);
     salvar();
-    Batalha.erro(i, q.certa, q, B.vidas, () => (B.vidas > 0 ? proximaBatalha() : Batalha.derrota(() => terminarBatalha(false))));
+    efeitos();
+    Batalha.erro(i, q.certa, q, B.vidas, perde ? `−${perde} ❤️` : '🛡️ Defendido!', () => (B.vidas > 0 ? proximaBatalha() : Batalha.derrota(() => terminarBatalha(false))));
   }
 }
 
 function vencerBatalha() {
-  const P = CONFIG_BATALHA.recompensa, bonus = marcarStreak();
+  const P = B.mon.chefe ? CONFIG_BATALHA.recompensaChefe : CONFIG_BATALHA.recompensa, bonus = marcarStreak();
   estado.moedas += P.moedas;
   estado.xp += P.xp + bonus;
+  Relatorio.monstro();
   salvar();
-  Batalha.vitoria(`🎉 +${P.moedas} 🪙 +${P.xp + bonus} ⚡`, () => terminarBatalha(true));
+  Batalha.vitoria(`🎉 +${P.moedas} 🪙 +${P.xp + bonus} ⚡`, () => terminarBatalha(true), B.mon.chefe);
 }
 
 function terminarBatalha(venceu) {
@@ -462,15 +550,53 @@ function terminarBatalha(venceu) {
   b.fim({ venceu, vidas: b.vidas, erros: b.erros });
 }
 
-// dica paga com moedas: mostra a dica visual da pergunta
+// selos dos poderes ativos e rótulos dos botões
+function efeitos() {
+  if (!B) return;
+  const gratis = RUN.melhorias.dicas - RUN.usados.dicasGratis, c = cargas();
+  Batalha.efeitos([B.dobro ? `⚡×2 · ${B.dobro}` : '', B.escudo ? '🛡️' : ''].filter(Boolean).join('  '),
+    gratis > 0 ? `💡 Dica · grátis ${gratis}` : `💡 Dica · ${CONFIG_BATALHA.custoDica}🪙`, `⚡ Poder · ${c.nove + c.escudo + c.dica}`);
+}
+
+// dica: mostra a dica visual (grátis pelas melhorias ou paga com moedas)
 function dicaBatalha() {
   if (!B || B.travado || B.dica) return;
-  if (estado.moedas < CONFIG_BATALHA.custoDica) { toast(`🪙 A dica custa ${CONFIG_BATALHA.custoDica}`); return; }
-  estado.moedas -= CONFIG_BATALHA.custoDica;
+  if (RUN.melhorias.dicas > RUN.usados.dicasGratis) RUN.usados.dicasGratis++;
+  else if (estado.moedas >= CONFIG_BATALHA.custoDica) estado.moedas -= CONFIG_BATALHA.custoDica;
+  else { toast(`🪙 A dica custa ${CONFIG_BATALHA.custoDica}`); return; }
   B.dica = true;
   salvar();
   som('clique');
   Batalha.dica(B.q.dica, B.q.visual);
+  efeitos();
+}
+
+// poderes das cartas
+function abrirPoderes() {
+  if (!B || B.travado) return;
+  const c = cargas();
+  som('clique');
+  Batalha.poderes(Object.entries(PODERES).map(([id, p]) => ({ id, ...p, qtd: c[id] })), usarPoder);
+}
+
+function usarPoder(id) {
+  if (!B || B.travado || cargas()[id] <= 0) return;
+  if (id === 'dica') {
+    const erradas = B.q.opcoes.map((_, k) => k).filter(k => k !== B.q.certa && !B.fora.includes(k));
+    if (B.q.opcoes.length - B.fora.length <= 2 || !erradas.length) { toast('💡 Já está fácil!'); return; }
+    const k = sortear(erradas);
+    B.fora.push(k);
+    Batalha.eliminar(k);
+  } else if (id === 'nove') B.dobro = 3;
+  else {
+    if (B.escudo) { toast('🛡️ Escudo já está ativo'); return; }
+    B.escudo = true;
+  }
+  RUN.usados[id]++;
+  salvar();
+  som('bau');
+  vibrar(30);
+  efeitos();
 }
 
 // ---------- baús e portas trancadas: arrastar para ℕ ou ℤ, ligar pares, reta… ----------
@@ -502,34 +628,13 @@ function desafio(tipo, fim) {
   }, ok => { som(ok ? 'moeda' : 'erro'); vibrar(ok ? 20 : 60); });
 }
 
-// ---------- lições do dia ----------
 let diaAberto = 1;
-function telaDia() {
-  const d = DIAS[diaAberto - 1], m = MUNDOS[d.mundo], box = $('#dia-licoes');
-  $('#dia-mundo').textContent = `${m.emoji} Dia ${d.n}`;
-  $('#dia-titulo').textContent = d.titulo;
-  if (!d.licoes) {
-    box.innerHTML = '<div class="em-breve">🚧</div>';
-    $('#dia-prox').textContent = 'Em breve!';
-    return;
-  }
-  const ZIG = [0, 50, 70, 30, -30, 0];
-  const iAtual = d.licoes.findIndex(l => !estado.licoes[l.id]);
-  box.innerHTML = d.licoes.map((l, i) => {
-    const cls = estado.licoes[l.id] ? 'feita' : i === iAtual ? 'atual' : 'bloq';
-    return `<button class="licao-no ${cls}${l.chefao ? ' chefao' : ''}" data-i="${i}" style="left:${ZIG[i % 6]}px"${cls === 'bloq' ? ' disabled' : ''}>${cls === 'bloq' ? '🔒' : cls === 'feita' ? '⭐' : l.icone}</button>`;
-  }).join('');
-  $('#dia-prox').textContent = iAtual >= 0 ? `▶ ${d.licoes[iAtual].titulo}` : '⭐ Tudo feito!';
-}
-
-// ---------- motor da lição ----------
-let L = null; // lição em andamento
 const norm = v => {
   const s = String(v).replace(/−/g, '-').replace(/\s/g, '').toLowerCase();
   return /^-?\d+$/.test(s) ? String(Number(s)) : s; // "−0" = "0", "07" = "7"
 };
 
-// ---------- lista de erros: revisão (dia 19) e reforço nas lições ----------
+// ---------- lista de erros: revisão (dia 19) e reforço nas batalhas ----------
 const chaveEx = ex => ex.pergunta + JSON.stringify(ex.pares || ex.itens || ex.linhas || ex.tokens || [ex.a, ex.b, ex.n, ex.atual, ex.de, ex.resposta]);
 function guardarErro(ex, dia) {
   const chave = ex.revisao || chaveEx(ex), item = estado.revisao.find(r => r.chave === chave);
@@ -553,177 +658,6 @@ function errosParaRevisar(dias, qtd) {
   }
   return lista;
 }
-// reforço: até 2 contas erradas deste dia voltam na lição
-function reforcar(exs, dia) {
-  errosParaRevisar([dia.n], 2).forEach(r => {
-    const livres = exs.map((e, i) => (e.surpresa || e.revisao ? -1 : i)).filter(i => i >= 0);
-    if (livres.length) exs[sortear(livres)] = r;
-  });
-  return exs;
-}
-
-function iniciarLicao(dia, idx) {
-  const lic = dia.licoes[idx];
-  L = { dia, idx, lic, exs: lic.semReforco ? lic.gerar() : reforcar(lic.gerar(), dia), i: 0, vidas: 5, xp: 0, combo: 0, maxCombo: 0, acertos: 0, erros: 0, entrada: '', travado: false, power: 3 };
-  Relatorio.licao(dia.n, lic.titulo);
-  irPara('t-licao');
-  $('#folha').className = 'folha';
-  Jogo.iniciar($('#cena'), { personagem: estado.personagem, mundo: dia.mundo, total: L.exs.length, chefe: !!lic.chefao });
-  // chefão: o monstro cai com (questões − 4) acertos
-  L.monstro = lic.chefao ? { max: L.exs.length - 4, vida: L.exs.length - 4 } : null;
-  desenharVidas();
-  proximo();
-}
-
-function desenharVidas(perdeu) {
-  $('#vidas').innerHTML = [0, 1, 2, 3, 4]
-    .map(k => `<span class="${perdeu && k === L.vidas ? 'perde' : ''}">${k < L.vidas ? '❤️' : '🤍'}</span>`).join('');
-}
-
-// tipos de exercício: blocos "?" (bater), teclado e painéis sobre o cenário
-const BLOCOS = ['escolha', 'vf', 'digitar'];
-const TECLADO = ['digitar', 'padrao', 'grade', 'tabuleiro', 'repartir'];
-
-function proximo() {
-  if (L.vidas <= 0) return fimLicao(false);
-  if ((L.monstro && L.monstro.vida <= 0) || L.i >= L.exs.length) return fimLicao(true);
-  const ex = L.exs[L.i], p = $('#pergunta'), atual = L;
-  L.entrada = '';
-  L.travado = false;
-  Jogo.trilha(L.i, L.exs.length);
-  p.innerHTML = (ex.surpresa ? '<span class="tag">⚡</span>' : '') + ex.pergunta;
-  p.classList.remove('entra');
-  void p.offsetWidth;
-  p.classList.add('entra');
-  L.ponte = !L.monstro && BLOCOS.includes(ex.tipo) && !ex.limite && Math.random() < .25; // Extra B
-  Jogo.pergunta(ex, responder, (certo, det) => avaliar(certo, det.dada, det.conta, fim => (det.animado ? Jogo.fechar : Jogo.reagir)(certo, fim)), { ponte: L.ponte });
-  $('#teclado').hidden = !TECLADO.includes(ex.tipo);
-  if (ex.surpresa) { Jogo.aviso('⚡ Surpresa!'); som('bau'); }
-  if (ex.dedos && L.power > 0) Jogo.powerup('🖐️', L.power, () => { L.power--; return dedos(ex.dedos); });
-  else if (ex.sinais && L.power > 0 && estado.cartas.includes(CARTA_SINAIS)) Jogo.powerup('🌟', L.power, () => { L.power--; return cartaSinais(); });
-  if (ex.limite) Jogo.relogio(ex.limite, () => { if (L === atual) avaliar(false, '⏰', null, fim => Jogo.reagir(false, fim)); });
-}
-
-// resposta dos blocos e do teclado
-function responder(v, i = 0) {
-  if (!L || L.travado) return;
-  const ex = L.exs[L.i];
-  const certo = ex.tipo === 'vf' ? v === ex.resposta : norm(v) === norm(ex.resposta);
-  const dada = ex.tipo === 'vf' ? (v ? 'V' : 'F') : String(v);
-  avaliar(certo, dada, null, fim => (L.ponte ? Jogo.ponte(i, certo, fim) : BLOCOS.includes(ex.tipo) ? Jogo.bater(i, certo, fim) : Jogo.reagir(certo, fim)));
-}
-
-// pontua qualquer tipo de exercício, anima a cena e abre o feedback
-function avaliar(certo, dada, conta, animar) {
-  if (!L || L.travado) return;
-  L.travado = true;
-  Jogo.pararRelogio();
-  const ex = L.exs[L.i], atual = L;
-  let ganho = 0;
-  if (certo) {
-    L.combo++;
-    L.acertos++;
-    estado.seguidos++;
-    L.maxCombo = Math.max(L.maxCombo, L.combo);
-    ganho = 10 * (L.combo >= 5 ? 3 : L.combo >= 3 ? 2 : 1) * (ex.surpresa ? 2 : 1);
-    L.xp += ganho;
-    if (ex.revisao) acertouRevisao(ex);
-  } else {
-    L.combo = 0;
-    L.vidas--;
-    L.erros++;
-    estado.seguidos = 0;
-    estado.erros = [...estado.erros, {
-      dia: L.dia.n, licao: L.lic.id, pergunta: ex.pergunta,
-      dada, certa: gabarito(ex) || '', quando: Date.now()
-    }].slice(-200);
-    guardarErro(ex, ex.diaOrigem || L.dia.n);
-  }
-  Relatorio.registrar(certo, conta || ex.conta || ex.pergunta);
-  salvar();
-  $('#teclado').hidden = true;
-  animar(() => {
-    if (L !== atual) return;
-    if (!certo) desenharVidas(true);
-    if (L.monstro) {
-      if (certo) Jogo.monstroDano(--L.monstro.vida, L.monstro.max);
-      else Jogo.monstroAvanca();
-    }
-    Jogo.combo(L.combo, L.combo >= 5 ? 3 : 2);
-    if (estado.seguidos >= 10) ganharMedalha('seq10');
-    mostrarFolha(certo, ex, ganho);
-  });
-}
-
-function gabarito(ex) {
-  if (ex.gabarito) return ex.gabarito;
-  if (ex.tipo === 'vf') return ex.resposta ? '✔' : '✘';
-  if (ex.resposta === undefined) return null;
-  return typeof ex.resposta === 'number' ? fmt(ex.resposta) : String(ex.resposta);
-}
-
-// feedback: verde com XP, ou vermelho com a dica visual
-function mostrarFolha(certo, ex, ganho) {
-  const f = $('#folha'), resp = gabarito(ex);
-  f.innerHTML = (certo
-    ? `<div class="folha-titulo">✅ ${sortear(['Mandou bem!', 'Certinho!', 'Arrasou!', 'Perfeito!'])}<span class="xp">+${ganho} ⚡</span></div>`
-    : `<div class="folha-titulo">❌ ${resp === null ? 'Quase!' : 'Era ' + resp}</div><div class="dica">💡 ${ex.dica || 'Olhe com calma'}${ex.visual ? `<div class="visual">${ex.visual}</div>` : ''}</div>`)
-    + `<button class="btn ${certo ? 'ok' : 'erro'}" id="bt-continuar">Continuar ▶</button>`;
-  f.className = `folha aberta ${certo ? 'ok' : 'erro'}`;
-  som(certo ? 'ok' : 'erro');
-  $('#bt-continuar').onclick = e => {
-    e.currentTarget.onclick = null; // duplo toque não pula questão
-    som('clique');
-    f.className = 'folha';
-    L.i++;
-    setTimeout(proximo, 180);
-  };
-}
-
-function montarTeclado() {
-  const t = $('#teclado');
-  t.innerHTML = ['1', '2', '3', '4', '5', '⌫', '6', '7', '8', '9', '0', '−']
-    .map(k => `<button class="tecla" data-k="${k}">${k}</button>`).join('') + '<button class="btn" data-k="ok">✔</button>';
-  t.onclick = e => {
-    const b = e.target.closest('[data-k]');
-    if (!b || !L || L.travado || Jogo.ocupado()) return;
-    const k = b.dataset.k;
-    if (k === 'ok') { if (L.entrada.replace('−', '')) responder(L.entrada, 0); return; }
-    if (k === '⌫') L.entrada = L.entrada.slice(0, -1);
-    else if (k === '−') L.entrada = L.entrada.startsWith('−') ? L.entrada.slice(1) : '−' + L.entrada;
-    else if (L.entrada.replace('−', '').length < 4) L.entrada += k;
-    som('clique');
-    Jogo.escrever(L.entrada);
-  };
-}
-
-function fimLicao(venceu) {
-  if (L.acabou) return; // trava: a lição só termina uma vez
-  L.acabou = true;
-  Jogo.parar();
-  const { dia, lic } = L;
-  let carta = null, diaFeito = false;
-  L.bonus = 0;
-  if (venceu) {
-    if (estado.licoes[lic.id]) L.xp = Math.round(L.xp / 2); // lição refeita vale metade do XP
-    L.bonus = marcarStreak();
-    estado.xp += L.xp + L.bonus;
-    estado.licoes[lic.id] = true;
-    if (!estado.cartas.includes(lic.id)) { estado.cartas.push(lic.id); carta = lic.carta; }
-    if (L.erros === 0) ganharMedalha('perfeita');
-    if (lic.chefao && !estado.diasConcluidos.includes(dia.n)) {
-      estado.diasConcluidos.push(dia.n);
-      diaFeito = true;
-      if (dia.n === estado.diaAtual) { estado.andar = dia.n; estado.diaAtual = dia.n + 1; }
-      ganharMedalha('dia');
-    }
-    salvar();
-    if (lic.prova) { ganharMedalha('mestre'); Relatorio.enviarFinal(); }
-    Relatorio.placar();
-  }
-  telaResultado(venceu, carta, diaFeito);
-}
-
 // streak diário: bônus de 10 XP por dia seguido (máx. 70), no 1º acerto do dia
 const diaTxt = d => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 function marcarStreak() {
@@ -751,41 +685,12 @@ function ganharMedalha(id) {
   som('vitoria');
 }
 
-// ---------- resultado ----------
+// ---------- cartas ----------
 function cartaHTML(l, mundo, tem, extra = '') {
   const rara = l.carta.rara;
   if (!tem) return `<div class="carta falta${rara ? ' rara-falta' : ''}"><span class="em">?</span></div>`;
   const [c1, c2] = rara ? ['#FFD54A', '#FF4FD8'] : l.chefao ? ['#FFD54A', '#FF9F1C'] : [MUNDOS[mundo].cor, '#7B2FF7'];
   return `<div class="carta${rara ? ' rara' : ''}${extra}" style="--c1:${c1};--c2:${c2}">${rara ? '<small class="selo">✨ RARA</small>' : ''}<span class="em">${l.carta.emoji}</span><b>${l.carta.titulo}</b><p>${l.carta.regra}</p></div>`;
-}
-
-function telaResultado(venceu, carta, diaFeito) {
-  irPara('t-resultado');
-  const c = $('#res-conteudo'), a = $('#res-acoes');
-  if (!venceu) {
-    c.innerHTML = '<div class="trofeu">💔</div><h2 class="titulo">Sem corações!</h2><p class="sub">Bora de novo? 💪</p>';
-    a.innerHTML = '<button class="btn" id="bt-denovo">↻ Tentar de novo</button><button class="btn claro" data-ir="t-dia">🗺️ Voltar</button>';
-    $('#bt-denovo').onclick = () => { som('clique'); iniciarLicao(L.dia, L.idx); };
-    som('erro');
-    return;
-  }
-  c.innerHTML = `<div class="trofeu">${L.lic.prova ? '🎓' : diaFeito ? '🏆' : L.erros ? '🎉' : '💎'}</div>
-    <h2 class="titulo">${L.lic.prova ? 'Mestre Mohamed!' : diaFeito ? 'Dia concluído!' : 'Lição completa!'}</h2>
-    <div class="stats">
-      <div class="stat">⚡ ${L.xp}<small>XP</small></div>
-      <div class="stat">🎯 ${L.acertos}/${L.exs.length}<small>acertos</small></div>
-      <div class="stat">🔥 ${L.maxCombo}<small>combo</small></div>
-      ${L.bonus ? `<div class="stat">📅 ${estado.streak.dias}<small>+${L.bonus} ⚡</small></div>` : ''}
-    </div>
-    ${carta ? `<p class="sub">${carta.rara ? '✨ Carta rara!' : '🃏 Carta nova!'}</p>${cartaHTML(L.lic, L.dia.mundo, true, ' vira grande')}` : ''}`;
-  if (diaFeito) {
-    a.innerHTML = '<button class="btn" id="bt-bau">🎁 Abrir baú</button>';
-    $('#bt-bau').onclick = abrirBau;
-  } else {
-    a.innerHTML = '<button class="btn" data-ir="t-dia">Continuar ▶</button>';
-  }
-  som('vitoria');
-  if (carta || diaFeito || L.lic.chefao) confete(); // chefão vencido: festa
 }
 
 // ---------- baú surpresa (fim do dia) ----------
@@ -834,6 +739,47 @@ function revelar(s) {
   s.querySelector('#bt-oba').onclick = () => { som('clique'); s.remove(); irPara('t-mapa'); };
 }
 
+// ---------- aldeia: cada carta desbloqueia uma construção; moedas constroem e enfeitam ----------
+const PREDIOS = ['🏠', '🏡', '🏰', '⛲', '🗼', '🏯', '🛖', '🎪', '🏛️', '🗿', '🎡', '🌉'];
+const ENFEITES = ['🌷', '🌳', '🏮', '🌻', '🪨', '🍄'];
+const CUSTO_ENFEITE = 3;
+const predioDaCarta = id => PREDIOS[[...id].reduce((t, ch) => t + ch.charCodeAt(0), 0) % PREDIOS.length];
+const custoPredio = id => 6 + 2 * Math.ceil(+(id.match(/^d(\d+)/) || [0, 1])[1] / 2);
+function cartaPorId(id) {
+  for (const d of DIAS) for (const l of d.licoes || []) if (l.id === id) return l;
+  return null;
+}
+
+function telaAldeia() {
+  const lotes = estado.aldeia.lotes, feitos = new Set(lotes.map(l => l.c).filter(Boolean));
+  const total = Math.max(16, Math.ceil((lotes.length + 1) / 4) * 4);
+  const livres = estado.cartas.filter(id => !feitos.has(id));
+  const travadas = DIAS.reduce((t, d) => t + (d.licoes || []).length, 0) - estado.cartas.length;
+  $('#ald-moedas').textContent = `🪙 ${estado.moedas}`;
+  $('#ald-grade').innerHTML = Array.from({ length: total }, (_, i) => {
+    const l = lotes[i];
+    return `<button class="lote${l ? ' cheio' : ''}" data-i="${i}">${l ? (l.c ? predioDaCarta(l.c) : l.e) : ''}</button>`;
+  }).join('');
+  $('#ald-construir').innerHTML = livres.map(id => {
+    const l = cartaPorId(id);
+    return `<button class="obra" data-c="${id}"><span>${predioDaCarta(id)}</span><b>${esc(l ? l.carta.titulo : id)}</b><small>🪙 ${custoPredio(id)}</small></button>`;
+  }).join('') + (travadas > 0 ? `<div class="obra trava"><span>🔒</span><b>+${travadas}</b><small>🃏</small></div>` : '');
+  $('#ald-enfeitar').innerHTML = ENFEITES.map(e => `<button class="obra mini" data-e="${e}"><span>${e}</span><small>🪙 ${CUSTO_ENFEITE}</small></button>`).join('');
+}
+
+function construir(item, custo) {
+  if (estado.moedas < custo) { toast(`🪙 Faltam ${custo - estado.moedas}`); vibrar(60); return; }
+  estado.moedas -= custo;
+  estado.aldeia.lotes.push(item);
+  salvar();
+  som('bau');
+  vibrar(30);
+  telaAldeia();
+  const novo = $(`#ald-grade .lote[data-i="${estado.aldeia.lotes.length - 1}"]`);
+  if (novo) novo.classList.add('surge');
+  if (item.c) confete(30);
+}
+
 // ---------- álbum de cartas e medalhas ----------
 function telaAlbum() {
   const dias = DIAS.filter(d => d.licoes);
@@ -850,7 +796,6 @@ function telaAlbum() {
 
 // ---------- início do app ----------
 function iniciarApp() {
-  montarTeclado();
   Relatorio.iniciar();
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-ir]');
@@ -881,27 +826,17 @@ function iniciarApp() {
     diaAberto = +g.dataset.dia;
     irPara('t-masmorra'); // o mapa abre a masmorra do dia
   };
-  $('#dia-licoes').onclick = e => {
-    const b = e.target.closest('.licao-no');
-    if (!b || b.disabled) return;
-    som('clique');
-    iniciarLicao(DIAS[diaAberto - 1], +b.dataset.i);
+  $('#ald-construir').onclick = e => { const b = e.target.closest('[data-c]'); if (b) construir({ c: b.dataset.c }, custoPredio(b.dataset.c)); };
+  $('#ald-enfeitar').onclick = e => { const b = e.target.closest('[data-e]'); if (b) construir({ e: b.dataset.e }, CUSTO_ENFEITE); };
+  $('#ald-grade').onclick = e => {
+    const b = e.target.closest('.lote.cheio');
+    if (!b) return;
+    const l = estado.aldeia.lotes[+b.dataset.i], c = l.c && cartaPorId(l.c);
+    toast(c ? `${predioDaCarta(l.c)} ${c.carta.titulo}` : l.e);
+    b.classList.remove('surge');
+    void b.offsetWidth;
+    b.classList.add('surge');
   };
-  $('#bt-sair').onclick = () => {
-    som('clique');
-    Jogo.parar();
-    $('#folha').className = 'folha';
-    L = null;
-    irPara('t-dia');
-  };
-  // teclado físico na lição
-  document.addEventListener('keydown', e => {
-    if (e.repeat || !L || !$('#t-licao').classList.contains('ativa')) return; // Enter segurado não repete
-    if (e.key === 'Enter' && $('#folha').classList.contains('aberta')) return $('#bt-continuar').click();
-    if ($('#teclado').hidden) return;
-    const k = /^[0-9]$/.test(e.key) ? e.key : { Backspace: '⌫', '-': '−', Enter: 'ok' }[e.key];
-    if (k) $(`#teclado [data-k="${k}"]`).click();
-  });
   irPara(!estado.nome ? 't-inicio' : estado.criado ? 't-mapa' : 't-personagem');
 }
 iniciarApp();

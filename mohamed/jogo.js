@@ -1,4 +1,4 @@
-// Mohamed — jogo.js: cena lateral 2D da lição (só CSS, SVG e animações leves)
+// Mohamed — jogo.js: masmorra vista de cima (Canvas), batalha por turnos e desafios de baús e portas
 
 // confete das conquistas (também usado em app.js)
 function confete(qtd = 70) {
@@ -14,216 +14,19 @@ function confete(qtd = 70) {
   setTimeout(() => caixa.remove(), 2600);
 }
 
+// =====================================================================
+// DESAFIOS de baús e portas: arrastar para ℕ ou ℤ, ligar, ordenar, reta e fila
+// =====================================================================
 const Jogo = (() => {
-  // cenário por mundo: céu, morros (longe), arbustos (perto), chão e borda do chão
-  const TEMAS = [
-    { ceu: ['#8FE3FF', '#E8FFF2'], longe: '#9BE8BC', perto: '#2FBF71', chao: '#A0642C', borda: '#3DDC6E' },
-    { ceu: ['#B8DBFF', '#F3F9FF'], longe: '#DDEBFF', perto: '#8EC5FF', chao: '#6FA8DC', borda: '#F5FBFF' },
-    { ceu: ['#FFC999', '#FFF1E0'], longe: '#F9A66C', perto: '#E2552B', chao: '#6B2510', borda: '#FF8A3D' },
-    { ceu: ['#9FF0FA', '#EFFEFF'], longe: '#5EE1F0', perto: '#0EA5B7', chao: '#F5CF7A', borda: '#FFE7A8' },
-    { ceu: ['#1E1B4B', '#4C1D95'], longe: '#5B21B6', perto: '#8B5CF6', chao: '#2E1065', borda: '#C084FC' }
-  ];
-  const SVG = (vb, corpo) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" preserveAspectRatio="none">${corpo}</svg>`)}")`;
-  const longe = c => SVG('0 0 480 160', `<path d="M0 160V95Q60 25 120 80T240 70Q300 15 360 75T480 95V160Z" fill="${c}"/>`);
-  const perto = c => SVG('0 0 320 90', `<g fill="${c}"><circle cx="40" cy="72" r="26"/><circle cx="72" cy="64" r="32"/><circle cx="104" cy="76" r="20"/><rect x="196" y="40" width="10" height="50"/><circle cx="201" cy="36" r="24"/><circle cx="276" cy="80" r="16"/></g>`);
-  const chao = (c, b) => SVG('0 0 64 100', `<rect width="64" height="100" fill="${c}"/><rect width="64" height="16" fill="${b}"/><rect x="6" y="42" width="22" height="8" rx="4" fill="#00000022"/><rect x="38" y="72" width="16" height="8" rx="4" fill="#00000022"/>`);
-
-  let el = {}, ocupado = false, geracao = 0;
-  const esperar = ms => new Promise(r => setTimeout(r, ms));
-  const animar = (alvo, kf, ms, easing = 'ease-out') =>
-    new Promise(r => { alvo.animate(kf, { duration: ms, easing, fill: 'forwards' }).onfinish = r; });
+  let el = {}, ocupado = false;
   const tremer = x => { x.classList.remove('treme'); void x.offsetWidth; x.classList.add('treme'); };
-
-  function iniciar(caixa, { personagem, mundo = 0, total = 8, chefe = false }) {
-    const t = TEMAS[mundo] || TEMAS[0];
-    geracao++;
-    ocupado = false;
-    caixa.innerHTML = `<div class="cena m${mundo}"><div class="camada c-longe"></div><div class="camada c-perto"></div><div class="chao"></div><div class="combo-tag" hidden></div><div class="blocos"></div><div class="heroi"></div></div>`;
-    const q = s => caixa.querySelector(s);
-    el = { cena: q('.cena'), blocos: q('.blocos'), heroi: q('.heroi'), combo: q('.combo-tag'), painel: null, p: personagem, brilho: false };
-    el.cena.style.background = `linear-gradient(${t.ceu[0]}, ${t.ceu[1]})`;
-    q('.c-longe').style.backgroundImage = longe(t.longe);
-    q('.c-perto').style.backgroundImage = perto(t.perto);
-    q('.chao').style.backgroundImage = chao(t.chao, t.borda);
-    pose('corre');
-    document.getElementById('trilha').dataset.n = '';
-    trilha(0, total);
-    if (chefe) criarMonstro();
-  }
-
-  // poses: corre, pula, tombo
-  function pose(p) {
-    el.heroi.className = `heroi ${p}${el.brilho ? ' brilho' : ''}`;
-    el.heroi.innerHTML = desenharPersonagem(el.p, p);
-  }
-
-  // trilha curta no topo: 8 a 10 bolinhas até a bandeira
-  function trilha(feitos, total) {
-    const tr = document.getElementById('trilha');
-    const n = Math.min(10, Math.max(8, total));
-    if (tr.dataset.n != n) {
-      tr.dataset.n = n;
-      tr.innerHTML = '<i class="bola"></i>'.repeat(n) + '<span class="bandeira">🏁</span><div class="trilha-heroi"></div>';
-      tr.querySelector('.trilha-heroi').innerHTML = desenharPersonagem(el.p);
-    }
-    const pct = feitos / total;
-    tr.querySelectorAll('.bola').forEach((b, k) => b.classList.toggle('feita', k < Math.round(pct * n)));
-    tr.querySelector('.trilha-heroi').style.left = `calc(${pct} * (100% - 28px) + 6px)`;
-  }
-
-  // ---------- pergunta: blocos "?" ou painel sobre o cenário ----------
-  function limpar() {
-    pararRelogio();
-    el.cena.querySelectorAll('.painel,.power,.relogio,.casas,.buraco').forEach(x => x.remove());
-    el.cena.classList.remove('parada');
-    el.heroi.getAnimations().forEach(a => a.cancel());
-    if (!el.heroi.classList.contains('corre')) pose('corre');
-    el.painel = null;
-    el.blocos.className = 'blocos';
-    el.blocos.innerHTML = '';
-  }
-
-  function pergunta(ex, aoTocar, aoPainel, op = {}) {
-    limpar();
-    if (PAINEIS[ex.tipo]) return PAINEIS[ex.tipo](ex, aoPainel);
-    if (op.ponte) abrirBuraco();
-    const ops = ex.tipo === 'vf' ? [[true, '✔'], [false, '✘']]
-      : ex.tipo === 'digitar' ? [[null, '?']]
-      : ex.opcoes.map(o => [o, typeof o === 'number' ? fmt(o) : String(o)]);
-    ops.forEach(([v, t], i) => {
-      const b = document.createElement('button'), s = document.createElement('span');
-      b.className = 'bloco' + (t.length > 3 ? ' longo' : '') + (ex.tipo === 'vf' ? (v ? ' vf-v' : ' vf-f') : '');
-      b.style.animationDelay = `${i * .08}s, ${.4 + i * .3}s`;
-      s.textContent = t;
-      b.appendChild(s);
-      if (ex.tipo !== 'digitar') b.onclick = () => { if (!ocupado) aoTocar(v, i); };
-      el.blocos.appendChild(b);
-    });
-  }
-
-  // texto do teclado: vai para o espaço "?" do painel ou do bloco
-  function escrever(txt) {
-    const slot = el.painel && el.painel.querySelector('.slot');
-    if (slot) { slot.textContent = txt || '?'; return; }
-    const s = el.blocos.querySelector('span');
-    if (!s) return;
-    s.textContent = txt || '?';
-    s.parentNode.classList.toggle('longo', (txt || '').length > 3);
-  }
-
-  function travar() {
-    if (el.cena) el.cena.querySelectorAll('.power').forEach(x => x.remove()); // power-up não gasta depois da resposta
-    if (el.blocos) el.blocos.classList.add('travado');
-    if (el.painel) el.painel.classList.add('travado');
-  }
-
-  // personagem pula e bate no bloco: acerto solta moeda, erro dá tombo
-  async function bater(i, certo, fim) {
-    const g = geracao, b = el.blocos.children[i], h = el.heroi;
-    if (!b) return reagir(certo, fim);
-    ocupado = true;
-    travar();
-    const rb = b.getBoundingClientRect(), rh = h.getBoundingClientRect();
-    const dx = rb.left + rb.width / 2 - (rh.left + rh.width / 2);
-    const dy = Math.max(16, rh.top - rb.bottom + 8);
-    const topo = `translate(${dx}px,${-dy}px)`, queda = `translate(${dx}px,0) rotate(-85deg)`;
-    pose('pula');
-    som('pulo');
-    await animar(h, [{ transform: 'none' }, { transform: topo }], 320, 'cubic-bezier(.2,.9,.4,1)');
-    if (g !== geracao) return;
-    b.classList.add('bate', certo ? 'certo' : 'errado');
-    vibrar(certo ? 25 : [70, 40, 70]);
-    if (certo) {
-      moeda(rb, rh);
-      som('moeda');
-      await animar(h, [{ transform: topo }, { transform: 'none' }], 380, 'ease-in');
-      el.blocos.classList.add('some');
-    } else {
-      pose('tombo');
-      await animar(h, [{ transform: topo }, { transform: queda }], 360, 'ease-in');
-      await esperar(450);
-      if (g !== geracao) return;
-      await animar(h, [{ transform: queda }, { transform: 'none' }], 380);
-    }
-    terminar(g, certo, fim);
-  }
-
-  // reação sem bloco (painéis, teclado e tempo esgotado)
-  async function reagir(certo, fim) {
-    const g = geracao, h = el.heroi;
-    ocupado = true;
-    travar();
-    if (certo) {
-      pose('pula');
-      som('pulo');
-      await animar(h, [{ transform: 'none' }, { transform: 'translateY(-44px)', offset: .5 }, { transform: 'none' }], 560);
-      if (g !== geracao) return;
-      const rh = h.getBoundingClientRect();
-      moeda({ left: rh.left, width: rh.width, top: rh.top - 70, height: 34 }, rh);
-      som('moeda');
-      vibrar(25);
-    } else {
-      pose('tombo');
-      vibrar([70, 40, 70]);
-      await animar(h, [{ transform: 'none' }, { transform: 'rotate(-85deg)' }], 320, 'ease-in');
-      await esperar(450);
-      if (g !== geracao) return;
-      await animar(h, [{ transform: 'rotate(-85deg)' }, { transform: 'none' }], 320);
-    }
-    terminar(g, certo, fim);
-  }
-
-  function terminar(g, certo, fim) {
-    if (g !== geracao) return;
-    el.heroi.getAnimations().forEach(a => a.cancel());
-    pose('corre');
-    balao(certo ? sortear(['Boa!', 'Isso!', 'Uau!', 'Show!']) : sortear(['Quase!', 'Ops!', 'Eita!']));
-    ocupado = false;
-    if (fim) fim();
-  }
-
-  // reação curta a cada passo de um painel
-  function pulinho(ok) {
-    if (el.reagir) return el.reagir(ok); // desafio solto: quem chamou decide a reação
-    const h = el.heroi;
-    if (ok) {
-      h.animate([{ transform: 'none' }, { transform: 'translateY(-20px)' }, { transform: 'none' }], { duration: 320, easing: 'ease-out' });
-      som('moeda');
-    } else {
-      h.animate([{ transform: 'none' }, { transform: 'translateX(-8px) rotate(-8deg)' }, { transform: 'translateX(8px) rotate(8deg)' }, { transform: 'none' }], { duration: 360 });
-      som('erro');
-      vibrar(60);
-    }
-    balao(ok ? sortear(['Boa!', 'Isso!', 'Show!']) : sortear(['Ops!', 'Quase!']));
-  }
-
-  function moeda(rb, rh) {
-    const c = el.cena.getBoundingClientRect(), m = document.createElement('div');
-    const x = rb.left - c.left + rb.width / 2 - 17, y = rb.top - c.top + rb.height / 2 - 17;
-    m.className = 'moeda';
-    m.style.cssText = `left:${x}px;top:${y}px;--hx:${rh.left - c.left + rh.width / 2 - 17 - x}px;--hy:${rh.top - c.top + 20 - y}px`;
-    el.cena.appendChild(m);
-    setTimeout(() => m.remove(), 800);
-  }
-
-  // balão de uma palavra acima do personagem
-  function balao(txt) {
-    el.cena.querySelectorAll('.balao').forEach(b => b.remove());
-    const c = el.cena.getBoundingClientRect(), r = el.heroi.getBoundingClientRect(), d = document.createElement('div');
-    d.className = 'balao';
-    d.textContent = txt;
-    d.style.left = r.left - c.left + r.width / 2 + 'px';
-    d.style.top = r.top - c.top - 4 + 'px';
-    el.cena.appendChild(d);
-    setTimeout(() => d.remove(), 1100);
-  }
 
   // ---------- painéis ----------
   function abrirPainel(cls, html) {
     const p = document.createElement('div');
     p.className = 'painel ' + cls;
     p.innerHTML = html;
-    (el.palco || el.cena).appendChild(p);
+    el.palco.appendChild(p);
     el.painel = p;
     return p;
   }
@@ -232,8 +35,8 @@ const Jogo = (() => {
   function passos(total, fim) {
     let restam = total, errou = false, conta = null;
     return {
-      certo() { pulinho(true); if (--restam === 0) fim(!errou, { dada: errou ? conta : 'ok', conta }); },
-      errado(c, ...fichas) { errou = true; conta = conta || c; fichas.forEach(tremer); pulinho(false); }
+      certo() { el.reagir(true); if (--restam === 0) fim(!errou, { dada: errou ? conta : 'ok', conta }); },
+      errado(c, ...fichas) { errou = true; conta = conta || c; fichas.forEach(tremer); el.reagir(false); }
     };
   }
 
@@ -372,30 +175,6 @@ const Jogo = (() => {
     };
   }
 
-  // (etapa 10) completar o padrão: a última linha recebe o teclado
-  function pPadrao(ex) {
-    const ultima = ex.ultima.includes('?') ? ex.ultima.replace('?', '<b class="slot">?</b>') : `${ex.ultima} <b class="slot">?</b>`;
-    abrirPainel('p-padrao', ex.linhas.map(l => `<p>${l}</p>`).join('') + `<p class="ultima">${ultima}</p>`);
-  }
-
-  // tabuada: grade de bolinhas que some depois de alguns segundos
-  function pGrade(ex) {
-    const t = Math.max(6, Math.min(16, Math.floor(190 / ex.b), Math.floor(84 / ex.a)));
-    const p = abrirPainel('p-grade',
-      `<div class="pontos" style="--t:${t}px;grid-template-columns:repeat(${ex.b},${t}px)">${'<i></i>'.repeat(ex.a * ex.b)}</div>` +
-      `<p>${ex.a} × ${ex.b} = <b class="slot">?</b></p>`);
-    setTimeout(() => { if (el.painel === p) p.querySelector('.pontos').classList.add('some'); }, ex.mostrar || 2500);
-  }
-
-  // tabuada: tabuleiro que se preenche a cada conta
-  function pTabuleiro(ex) {
-    const casas = Array.from({ length: 10 }, (_, i) => {
-      const k = i + 1, atual = k === ex.atual, feita = ex.feitos.includes(k);
-      return `<span class="${atual ? 'atual' : feita ? 'cheia' : ''}">${ex.n}×${k}<b>${atual ? '<i class="slot">?</i>' : feita ? ex.n * k : ''}</b></span>`;
-    });
-    abrirPainel('p-tabuleiro', `<div class="tab">${casas.join('')}</div>`);
-  }
-
   // ordem das operações: toque nas operações na ordem em que são feitas
   function pFila(ex, fim) {
     const toks = ex.tokens.map(t => (t.op ? `<button class="op" data-id="${t.id}">${t.op}</button>` : `<span>${t.t}</span>`)).join('');
@@ -416,254 +195,18 @@ const Jogo = (() => {
     };
   }
 
-  // divisão: bolinhas repartidas entre amigos; as que sobram ficam de lado
-  function pRepartir(ex) {
-    const { n, k } = ex, q = Math.floor(n / k), r = n % k;
-    const t = Math.max(7, Math.min(14, Math.floor(150 / Math.max(q, 1)), Math.floor(100 / k) - 4));
-    let html = `<div class="amigos" style="--t:${t}px">`;
-    for (let i = 0; i < k; i++) html += `<div class="amigo"><b>🙂</b>${Array.from({ length: q }, (_, j) => `<i style="animation-delay:${(j * k + i) * .06}s"></i>`).join('')}</div>`;
-    html += '</div>' + (r ? `<div class="sobra">${'<i></i>'.repeat(r)}</div>` : '') + `<p>${ex.rotulo || `${n} ÷ ${k} =`} <b class="slot">?</b></p>`;
-    abrirPainel('p-repartir', html);
-  }
+  const PAINEIS = { conjunto: pConjunto, ligar: pLigar, ordenar: pOrdenar, reta: pReta, fila: pFila };
 
-  // Extra A: o chão vira reta numérica com casas; o personagem pula até a casa tocada
-  async function pCasas(ex, fim) {
-    const g = geracao, h = el.heroi, box = document.createElement('div');
-    box.className = 'casas';
-    for (let v = ex.min; v <= ex.max; v++) {
-      box.insertAdjacentHTML('beforeend', `<button class="casa${v < 0 ? ' neg' : v === 0 ? ' zero' : ''}${v === ex.de ? ' saida' : ''}" data-v="${v}" style="--d:${Math.max(0, -v)}">${fmt(v)}</button>`);
-    }
-    el.cena.appendChild(box);
-    el.painel = box;
-    el.cena.classList.add('parada');
-    const base = h.getBoundingClientRect();
-    const ponto = v => { const r = box.querySelector(`[data-v="${v}"]`).getBoundingClientRect(); return { x: r.left + r.width / 2 - (base.left + base.width / 2), y: r.top - base.bottom }; };
-    const tr = (p, sobe = 0) => `translate(${p.x}px,${p.y - sobe}px)`;
-    let atual = ex.de;
-    pose('parado');
-    await animar(h, [{ transform: 'none' }, { transform: tr(ponto(atual)) }], 450);
-    box.onclick = async e => {
-      const b = e.target.closest('.casa');
-      if (!b || ocupado || box.dataset.feito) return;
-      box.dataset.feito = 1;
-      ocupado = true;
-      const alvo = +b.dataset.v, dir = Math.sign(alvo - atual);
-      pose('pula');
-      while (atual !== alvo) {
-        const a = ponto(atual), c = ponto(atual + dir);
-        atual += dir;
-        som('clique');
-        await animar(h, [{ transform: tr(a) }, { transform: tr({ x: (a.x + c.x) / 2, y: Math.min(a.y, c.y) }, 18), offset: .5 }, { transform: tr(c) }], 170);
-        if (g !== geracao) return;
-      }
-      const certo = alvo === ex.resposta;
-      b.classList.add(certo ? 'certo' : 'errado');
-      if (!certo) box.querySelector(`[data-v="${ex.resposta}"]`).classList.add('certa');
-      ocupado = false;
-      fim(certo, { dada: fmt(alvo), conta: ex.conta || ex.pergunta, animado: true });
-    };
-  }
-
-  // fim de uma animação feita pelo próprio painel (casas): só a reação final
-  function fechar(certo, fim) {
-    const g = geracao;
-    travar();
-    if (certo) {
-      const rh = el.heroi.getBoundingClientRect();
-      moeda({ left: rh.left, width: rh.width, top: rh.top - 70, height: 34 }, rh);
-      som('moeda');
-      vibrar(25);
-    } else {
-      pose('tombo');
-      vibrar([70, 40, 70]);
-    }
-    balao(certo ? sortear(['Boa!', 'Isso!', 'Uau!']) : sortear(['Quase!', 'Ops!']));
-    setTimeout(() => { if (g === geracao && fim) fim(); }, 550);
-  }
-
-  const PAINEIS = { conjunto: pConjunto, ligar: pLigar, ordenar: pOrdenar, reta: pReta, padrao: pPadrao, grade: pGrade, tabuleiro: pTabuleiro, fila: pFila, repartir: pRepartir, casas: pCasas };
-
-  // ---------- Extra B: buraco no caminho; a resposta certa constrói a ponte ----------
-  function abrirBuraco() {
-    const b = document.createElement('div');
-    b.className = 'buraco chega';
-    b.innerHTML = '<i class="tabuas"></i>';
-    el.cena.appendChild(b);
-    setTimeout(() => { if (b.isConnected && !ocupado) { el.cena.classList.add('parada'); pose('parado'); } }, 600);
-  }
-
-  async function ponte(i, certo, fim) {
-    const g = geracao, h = el.heroi, bu = el.cena.querySelector('.buraco'), b = el.blocos.children[i];
-    if (!bu) return bater(i, certo, fim);
-    ocupado = true;
-    travar();
-    if (b) b.classList.add('bate', certo ? 'certo' : 'errado');
-    const c = el.cena.getBoundingClientRect(), rb = bu.getBoundingClientRect(), rh = h.getBoundingClientRect();
-    const meio = rb.left + rb.width / 2 - (rh.left + rh.width / 2), alem = rb.right + 8 - rh.left;
-    if (certo) {
-      bu.classList.add('ponte');
-      som('moeda');
-      vibrar(25);
-      await esperar(450);
-      if (g !== geracao) return;
-      el.cena.classList.remove('parada');
-      pose('corre');
-      await animar(h, [{ transform: 'none' }, { transform: `translateX(${alem}px)` }], 650, 'linear');
-      if (g !== geracao) return;
-      el.blocos.classList.add('some');
-      await Promise.all([
-        animar(h, [{ transform: `translateX(${alem}px)` }, { transform: 'none' }], 600, 'ease-in-out'),
-        animar(bu, [{ transform: 'none' }, { transform: `translateX(${-(rb.right - c.left) - 20}px)` }], 600, 'ease-in')
-      ]);
-    } else {
-      pose('pula');
-      som('pulo');
-      await animar(h, [{ transform: 'none' }, { transform: `translate(${meio / 2}px,-40px)`, offset: .5 }, { transform: `translate(${meio}px,0)` }], 420);
-      if (g !== geracao) return;
-      pose('tombo');
-      som('erro');
-      vibrar([70, 40, 70]);
-      await animar(h, [{ transform: `translate(${meio}px,0)` }, { transform: `translate(${meio}px,130px) rotate(-120deg)`, opacity: 0 }], 480, 'ease-in');
-      await esperar(250);
-      if (g !== geracao) return;
-      pose('parado'); // volta ao início do trecho
-      await animar(h, [{ transform: 'translateX(-30px)', opacity: 0 }, { transform: 'none', opacity: 1 }], 380);
-    }
-    terminar(g, certo, fim);
-  }
-
-  // ---------- Extra C: chefão com monstrinho e barra de vida ----------
-  const MONSTRO = '<svg viewBox="0 0 100 100"><path d="M24 34 L28 6 L42 28Z M76 34 L72 6 L58 28Z" fill="#FFC531" stroke="#1E1240" stroke-width="4" stroke-linejoin="round"/><ellipse cx="50" cy="60" rx="40" ry="34" fill="#14B8A6" stroke="#1E1240" stroke-width="4"/><circle cx="50" cy="50" r="15" fill="#fff" stroke="#1E1240" stroke-width="3"/><circle cx="44" cy="52" r="7" fill="#1E1240"/><path d="M30 74 Q50 88 70 74Z" fill="#fff" stroke="#1E1240" stroke-width="4" stroke-linejoin="round"/><rect x="28" y="90" width="14" height="9" rx="4" fill="#1E1240"/><rect x="58" y="90" width="14" height="9" rx="4" fill="#1E1240"/></svg>';
-  function criarMonstro() {
-    el.cena.classList.add('chefe');
-    const m = document.createElement('div');
-    m.className = 'monstro';
-    m.innerHTML = `<div class="vida"><i></i></div>${MONSTRO}`;
-    el.cena.appendChild(m);
-    el.monstro = m;
-    el.passos = 0;
-  }
-
-  // acerto: o personagem lança uma bolinha no monstro
-  function monstroDano(vida, max) {
-    const m = el.monstro;
-    if (!m) return;
-    const c = el.cena.getBoundingClientRect(), rh = el.heroi.getBoundingClientRect(), rm = m.getBoundingClientRect(), b = document.createElement('div');
-    const x0 = rh.left - c.left + rh.width / 2 - 9, y0 = rh.top - c.top + 20;
-    const dx = rm.left - c.left + rm.width / 2 - 9 - x0, dy = rm.top - c.top + rm.height / 2 - 9 - y0;
-    b.className = 'bolinha';
-    b.style.cssText = `left:${x0}px;top:${y0}px`;
-    el.cena.appendChild(b);
-    b.animate([{ transform: 'none' }, { transform: `translate(${dx / 2}px,${Math.min(dy, 0) - 60}px)`, offset: .5 }, { transform: `translate(${dx}px,${dy}px)` }], { duration: 520, easing: 'ease-in-out' }).onfinish = () => {
-      b.remove();
-      m.querySelector('.vida i').style.width = Math.max(0, (100 * vida) / max) + '%';
-      tremer(m.querySelector('svg'));
-      som('pulo');
-      if (vida <= 0) { m.classList.add('derrotado'); som('vitoria'); confete(); aviso('🎉 Vitória!'); }
-    };
-  }
-
-  // erro: o monstro avança um passo
-  function monstroAvanca() {
-    const m = el.monstro;
-    if (!m) return;
-    el.passos++;
-    m.style.setProperty('--x', `${-el.passos * 14}px`);
-    m.classList.remove('pisa');
-    void m.offsetWidth;
-    m.classList.add('pisa');
-  }
-
-  // power-up: botão que abre uma dica visual por cima da cena
-  function powerup(icone, qtd, usar) {
-    const b = document.createElement('button');
-    b.className = 'power';
-    b.innerHTML = `${icone}<small>${qtd}</small>`;
-    b.onclick = () => {
-      if (ocupado) return;
-      b.remove();
-      som('bau');
-      const d = document.createElement('div');
-      d.className = 'painel p-dica';
-      d.innerHTML = usar() + '<p>👆 ✕</p>';
-      d.onclick = () => d.remove();
-      el.cena.appendChild(d);
-    };
-    el.cena.appendChild(b);
-  }
-
-  // contra o tempo: barra que esvazia; ao acabar, conta como erro
-  let relogioId = null, relogioFim = 0, relogioResta = 0, relogioCb = null;
-  function armarRelogio(ms) {
-    relogioFim = Date.now() + ms;
-    relogioId = setTimeout(() => { const cb = relogioCb; relogioId = null; relogioCb = null; if (cb) cb(); }, ms);
-  }
-  function relogio(seg, aoAcabar) {
-    pararRelogio();
-    const r = document.createElement('div');
-    r.className = 'relogio';
-    r.innerHTML = `<i style="animation-duration:${seg}s"></i>`;
-    el.cena.appendChild(r);
-    relogioCb = aoAcabar;
-    armarRelogio(seg * 1000);
-  }
-  function pararRelogio() {
-    clearTimeout(relogioId);
-    relogioId = null;
-    relogioCb = null;
-    const r = el.cena && el.cena.querySelector('.relogio i');
-    if (r) r.style.animationPlayState = 'paused';
-  }
-  // app em segundo plano: o relógio espera o aluno voltar
-  document.addEventListener('visibilitychange', () => {
-    const barra = el.cena && el.cena.querySelector('.relogio i');
-    if (!relogioCb || !barra) return;
-    if (document.hidden) {
-      clearTimeout(relogioId);
-      relogioResta = Math.max(0, relogioFim - Date.now());
-      barra.style.animationPlayState = 'paused';
-    } else {
-      barra.style.animationPlayState = 'running';
-      armarRelogio(relogioResta);
-    }
-  });
-
-  // combo: 3 acertos dão brilho, 5 soltam confete
-  function combo(n, mult) {
-    el.brilho = n >= 3;
-    el.heroi.classList.toggle('brilho', el.brilho);
-    el.combo.hidden = n < 3;
-    el.combo.textContent = `🔥 x${mult}`;
-    if (n === 3 || n === 5) { el.combo.classList.remove('pop'); void el.combo.offsetWidth; el.combo.classList.add('pop'); }
-    if (n > 0 && n % 5 === 0) confete();
-  }
-
-  function aviso(txt) {
-    const d = document.createElement('div');
-    d.className = 'aviso';
-    d.textContent = txt;
-    el.cena.appendChild(d);
-    setTimeout(() => d.remove(), 1400);
-  }
-
-  function parar() {
-    geracao++;
-    ocupado = false;
-    pararRelogio();
-    if (el.cena) el.cena.classList.add('parada');
-  }
-
-  // desafio solto (baús e portas trancadas da masmorra): só o painel, sem cena lateral
+  // abre o painel do exercício dentro da caixa; "reagir" responde a cada passo
   function desafio(caixa, ex, fim, reagir) {
-    geracao++;
     ocupado = false;
     caixa.innerHTML = '';
-    el = { palco: caixa, reagir, cena: null, blocos: null, painel: null };
+    el = { palco: caixa, reagir, painel: null };
     PAINEIS[ex.tipo](ex, fim);
     if (el.painel) el.painel.classList.add('solto');
   }
 
-  return { iniciar, pergunta, escrever, bater, reagir, ponte, fechar, trilha, combo, aviso, powerup, relogio, pararRelogio, monstroDano, monstroAvanca, parar, desafio, ocupado: () => ocupado };
+  return { desafio, tipos: Object.keys(PAINEIS) };
 })();
 
 // =====================================================================
@@ -671,7 +214,7 @@ const Jogo = (() => {
 // =====================================================================
 
 // Salas em dados: 11 colunas × 13 linhas. Legenda:
-// #  parede   .  chão   o  moeda   c  baú (desafio)   X  saída   @  início   m  monstro
+// #  parede   .  chão   o  moeda   c  baú (desafio)   X  saída   @  início   m  monstro   B  chefão
 // ^ v < >  portas (norte, sul, oeste, leste): levam à sala vizinha em "pos" [coluna, linha]
 // trancas: portas com cadeado, abertas com um desafio ('cima', 'baixo', 'esquerda', 'direita')
 // Portas e saída só abrem quando todos os monstros da sala caem.
@@ -742,8 +285,8 @@ const SALAS_MASMORRA = [
     '#...#X#...#',
     '#.........#',
     '#..#...#..#',
-    '#.o.....o.#',
-    '#..m...m..#',
+    '#.o..B..o.#',
+    '#.........#',
     '#.........#',
     '###########'] }
 ];
@@ -751,13 +294,14 @@ const SALAS_MASMORRA = [
 // ---------- monstros originais por tema ----------
 const TEMAS_MONSTRO = ['Natural', 'Negativo', 'Tabuada', 'Divisão'];
 const ICONE_TEMA = { Natural: '🌿', Negativo: '❄️', Tabuada: '✖️', 'Divisão': '➗' };
+const NOMES_CHEFE = { Natural: 'Rei Raizão', Negativo: 'Rainha Geleira', Tabuada: 'Vulcão Supremo', 'Divisão': 'Maré Gigante' };
 const NOMES_MONSTRO = {
   Natural: ['Brotão', 'Folhito', 'Raizudo'],
   Negativo: ['Friúncio', 'Gelatão', 'Nevisco'],
   Tabuada: ['Brasinha', 'Lavito', 'Fumacê'],
   'Divisão': ['Bolhudo', 'Gotão', 'Marolo']
 };
-function desenharMonstro(tema) {
+function desenharMonstro(tema, chefe = false) {
   const K = '#1E1240', T = `stroke="${K}" stroke-width="4" stroke-linejoin="round"`;
   const olho = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" ${T}/><circle cx="${x - 2}" cy="${y + 1}" r="${r / 2}" fill="${K}"/>`;
   const traco = d => `<path d="${d}" fill="none" stroke="${K}" stroke-width="4" stroke-linecap="round"/>`;
@@ -771,13 +315,15 @@ function desenharMonstro(tema) {
     // gota com bolhas; a boca é um ÷
     'Divisão': `<path d="M50 4 Q72 36 82 56 Q92 92 50 96 Q8 92 18 56 Q28 36 50 4Z" fill="#22D3EE" ${T}/><circle cx="28" cy="30" r="5" fill="#CFFAFE" ${T}/><circle cx="76" cy="24" r="4" fill="#CFFAFE" ${T}/>` + olho(38, 58, 10) + olho(62, 58, 10) + traco('M40 80 H60') + `<circle cx="50" cy="73" r="3" fill="${K}"/><circle cx="50" cy="87" r="3" fill="${K}"/>`
   };
-  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${ARTE[tema] || ARTE.Natural}</svg>`;
+  const coroa = chefe ? `<path d="M28 16 L34 -6 L44 6 L50 -10 L56 6 L66 -6 L72 16Z" fill="#FFC531" ${T}/><circle cx="50" cy="3" r="3.5" fill="#FF4B5C"/>` : '';
+  return `<svg viewBox="0 ${chefe ? -14 : 0} 100 ${chefe ? 114 : 100}" xmlns="http://www.w3.org/2000/svg">${ARTE[tema] || ARTE.Natural}${coroa}</svg>`;
 }
 
 const Masmorra = (() => {
   const T = 32, COLS = 11, LINS = 13, VEL = 3.4;               // px por casa · tamanho da sala · casas por segundo
   const CORPO = { l: .56, a: .44 };                              // caixa de colisão dos pés (em casas)
   const MON = { vel: 1.2, velCaca: 2, raio: 3.4, corpo: .6, acorda: .9 }; // passo, perseguição, visão, tamanho, espera ao entrar
+  const CHEFE = { velCaca: 1.4, corpo: .9, toque: 1.05, tamanho: 1.7 };
   const VETOR = { cima: [0, -1], baixo: [0, 1], esquerda: [-1, 0], direita: [1, 0] };
   const PORTAS = { '^': 'cima', v: 'baixo', '<': 'esquerda', '>': 'direita' };
   const OPOSTA = { cima: 'v', baixo: '^', esquerda: '>', direita: '<' };
@@ -808,7 +354,7 @@ const Masmorra = (() => {
     cv = document.getElementById('mas-tela');
     ctx = cv.getContext('2d');
     if (!ligado) ligarControles();
-    M = { op, prog: op.progresso, cor: PALETAS[op.mundo] || PALETAS[0], vidas: op.vidas, textos: [], transicao: null, ultimo: 0, fim: false, pausa: false, graca: 0, acorda: 0, aviso: 0, errosSala: 0 };
+    M = { op, prog: op.progresso, cor: PALETAS[op.mundo] || PALETAS[0], vidas: op.vidas, maxVidas: op.vidas, entrada: null, textos: [], transicao: null, ultimo: 0, fim: false, pausa: false, graca: 0, acorda: 0, aviso: 0, errosSala: 0 };
     montarSalas();
     irParaInicio();
     sprites();
@@ -822,7 +368,7 @@ const Masmorra = (() => {
   function montarSalas() {
     M.salas = SALAS_MASMORRA.map((s, i) => ({
       pos: s.pos,
-      g: s.mapa.map((linha, l) => linha.split('').map((ch, c) => ('@m'.includes(ch) ? '.' : M.prog.pegos.includes(`${i}:${c}:${l}`) ? (ch === 'c' ? 'C' : '.') : ch))),
+      g: s.mapa.map((linha, l) => linha.split('').map((ch, c) => ('@mB'.includes(ch) ? '.' : M.prog.pegos.includes(`${i}:${c}:${l}`) ? (ch === 'c' ? 'C' : '.') : ch))),
       portas: [...new Set(s.mapa.join('').split('').filter(ch => PORTAS[ch]).map(ch => PORTAS[ch]))],
       saida: s.mapa.join('').includes('X'),
       trancas: s.trancas || [],
@@ -835,10 +381,10 @@ const Masmorra = (() => {
     const lista = [];
     s.mapa.forEach((linha, l) => linha.split('').forEach((ch, c) => {
       const chave = `m:${i}:${c}:${l}`;
-      if (ch !== 'm' || M.prog.pegos.includes(chave)) return;
-      const tema = TEMAS_MONSTRO[M.op.mundo] || sortear(TEMAS_MONSTRO);
-      const [min, max] = CONFIG_BATALHA.vidaMonstro, vida = min + 5 * rnd(0, Math.floor((max - min) / 5));
-      lista.push({ chave, sala: i, x: c + .5, y: l + .5, tema, nome: sortear(NOMES_MONSTRO[tema]), vida, max: vida, dir: null, t: 0, olhar: -1, caca: false, cores: { a1: M.cor.topo, a2: M.cor.chao } });
+      if (!'mB'.includes(ch) || M.prog.pegos.includes(chave)) return;
+      const tema = TEMAS_MONSTRO[M.op.mundo] || sortear(TEMAS_MONSTRO), chefe = ch === 'B';
+      const [min, max] = CONFIG_BATALHA.vidaMonstro, vida = chefe ? CONFIG_BATALHA.vidaChefe : min + 5 * rnd(0, Math.floor((max - min) / 5));
+      lista.push({ chave, sala: i, x: c + .5, y: l + .5, tema, chefe, nome: chefe ? NOMES_CHEFE[tema] : sortear(NOMES_MONSTRO[tema]), vida, max: vida, dir: null, t: 0, olhar: -1, caca: false, cores: { a1: M.cor.topo, a2: M.cor.chao } });
     }));
     return lista;
   }
@@ -858,7 +404,10 @@ const Masmorra = (() => {
       cache = { chave, imgs: {} };
       for (const dir of Object.keys(VETOR)) for (const pose of ['parado', 'anda1', 'anda2']) cache.imgs[dir + pose] = imagem(desenharPersonagem(M.op.personagem, pose, dir).replace('<svg ', '<svg width="100" height="132" '));
     }
-    for (const tema of TEMAS_MONSTRO) if (!artes[tema]) artes[tema] = imagem(desenharMonstro(tema).replace('<svg ', '<svg width="100" height="100" '));
+    for (const tema of TEMAS_MONSTRO) if (!artes[tema]) {
+      artes[tema] = imagem(desenharMonstro(tema).replace('<svg ', '<svg width="100" height="100" '));
+      artes[tema + '👑'] = imagem(desenharMonstro(tema, true).replace('<svg ', '<svg width="100" height="114" '));
+    }
   }
   function imagem(svg) {
     const img = new Image();
@@ -1026,6 +575,8 @@ const Masmorra = (() => {
     M.acorda = MON.acorda;
     M.errosSala = 0;
     visitar(destino);
+    const chefe = sala().monstros.find(m => m.chefe);
+    if (chefe) { M.entrada = { t: 0, nome: chefe.nome }; som('chefe'); vibrar([120, 60, 120]); } // entrada dramática
   }
 
   function visitar(i) {
@@ -1051,19 +602,20 @@ const Masmorra = (() => {
         if (m.t <= 0 || !m.dir) { m.dir = sortear(Object.keys(VETOR)); m.t = 1 + Math.random(); }
         dir = m.dir;
       }
-      const v = (m.caca ? MON.velCaca : MON.vel) * dt;
+      const v = (m.caca ? (m.chefe ? CHEFE.velCaca : MON.velCaca) : MON.vel) * dt;
       if (!passoMonstro(m, dir, v)) {
         if (m.caca) passoMonstro(m, Math.abs(dx) > Math.abs(dy) ? (dy > 0 ? 'baixo' : 'cima') : dx > 0 ? 'direita' : 'esquerda', v);
         else m.t = 0;
       }
-      if (dist < .75 && M.graca <= 0 && !M.pausa) return batalha(m);
+      if (dist < (m.chefe ? CHEFE.toque : .75) && M.graca <= 0 && !M.pausa) return batalha(m);
     }
   }
 
   function passoMonstro(m, dir, v) {
     const [vx, vy] = VETOR[dir], nx = m.x + vx * v, ny = m.y + vy * v;
     if (vx) m.olhar = vx;
-    if (colide(nx, ny, MON.corpo, MON.corpo, bloqueiaMonstro)) return false;
+    const corpo = m.chefe ? CHEFE.corpo : MON.corpo;
+    if (colide(nx, ny, corpo, corpo, bloqueiaMonstro)) return false;
     m.x = nx;
     m.y = ny;
     return true;
@@ -1077,7 +629,7 @@ const Masmorra = (() => {
     joy.x = joy.y = 0;
     som('pulo');
     vibrar(60);
-    M.op.aoBatalha(m, M.vidas, res => {
+    M.op.aoBatalha(m, { vidas: M.vidas, max: M.maxVidas }, res => {
       M.pausa = false;
       M.ultimo = 0;
       M.graca = 1.2;
@@ -1091,11 +643,11 @@ const Masmorra = (() => {
         if (!sala().monstros.length) {
           som('vitoria');
           flutuar('🔓', M.P.x, M.P.y - 1.2);
-          M.op.aoSalaLimpa(M.atual, M.errosSala === 0);
+          M.op.aoSalaLimpa(M.atual, M.errosSala === 0, !!m.chefe);
         }
       } else {
         // sem corações: volta ao início com o progresso do dia guardado
-        M.vidas = M.op.vidas;
+        M.vidas = M.maxVidas;
         M.transicao = { t: 0, trocou: false, trocar: () => { montarSalas(); irParaInicio(); flutuar('💪', M.P.x, M.P.y - 1); } };
       }
       pintarVidas();
@@ -1120,6 +672,11 @@ const Masmorra = (() => {
       tr.t += dt;
       if (tr.t >= .14 && !tr.trocou) { tr.trocou = true; tr.trocar(); }
       if (tr.t >= .36) M.transicao = null;
+      return;
+    }
+    if (M.entrada) {
+      M.entrada.t += dt;
+      if (M.entrada.t > 1.4) M.entrada = null;
       return;
     }
     if (M.pausa) return;
@@ -1154,6 +711,8 @@ const Masmorra = (() => {
 
   function desenhar(t) {
     const C = M.cor, g = sala().g;
+    ctx.save();
+    if (M.entrada && M.entrada.t < .5) ctx.translate(Math.sin(t * 70) * 3, 0); // o chão treme quando o chefão chega
     ctx.fillStyle = C.chao;
     ctx.fillRect(0, 0, COLS * T, LINS * T);
     for (let l = 0; l < LINS; l++) for (let c = 0; c < COLS; c++) {
@@ -1175,11 +734,32 @@ const Masmorra = (() => {
     for (const m of sala().monstros) monstro(m, t);
     heroi();
     textos();
+    ctx.restore();
+    if (M.entrada) entradaChefe();
     if (M.transicao) {
       const tr = M.transicao, a = tr.t < .14 ? tr.t / .14 : 1 - (tr.t - .14) / .22;
       ctx.fillStyle = `rgba(20,15,46,${Math.max(0, Math.min(1, a))})`;
       ctx.fillRect(0, 0, COLS * T, LINS * T);
     }
+  }
+
+  // entrada do chefão: escurece, o nome cresce e some (1,4 s em passos curtos)
+  function entradaChefe() {
+    const e = M.entrada.t, a = Math.min(1, e / .3) * (e > 1.1 ? Math.max(0, 1 - (e - 1.1) / .3) : 1), k = e < .4 ? .6 + e : 1;
+    ctx.fillStyle = `rgba(20,15,46,${.6 * a})`;
+    ctx.fillRect(0, 0, COLS * T, LINS * T);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate((COLS * T) / 2, LINS * T * .3);
+    ctx.scale(k, k);
+    ctx.font = '900 26px ui-rounded, "Nunito", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = TINTA;
+    ctx.fillStyle = '#FFC531';
+    ctx.strokeText(`👑 ${M.entrada.nome}`, 0, 0);
+    ctx.fillText(`👑 ${M.entrada.nome}`, 0, 0);
+    ctx.restore();
   }
 
   function porta(x, y, dir) {
@@ -1236,7 +816,7 @@ const Masmorra = (() => {
   }
 
   function monstro(m, t) {
-    const img = artes[m.tema], w = T * 1.1, pulo = Math.abs(Math.sin(m.bob * (m.caca ? 9 : 5))) * 3;
+    const img = artes[m.tema + (m.chefe ? '👑' : '')], w = T * (m.chefe ? CHEFE.tamanho : 1.1), h = m.chefe ? w * 1.14 : w, pulo = Math.abs(Math.sin(m.bob * (m.caca ? 9 : 5))) * 3;
     ctx.fillStyle = 'rgba(0,0,0,.18)';
     ctx.beginPath();
     ctx.ellipse(m.x * T, (m.y + .3) * T, w * .34, 4, 0, 0, Math.PI * 2);
@@ -1245,14 +825,14 @@ const Masmorra = (() => {
       ctx.save();
       ctx.translate(m.x * T, (m.y + .3) * T - pulo);
       if (m.olhar > 0) ctx.scale(-1, 1); // a arte olha para a esquerda
-      ctx.drawImage(img, -w / 2, -w, w, w);
+      ctx.drawImage(img, -w / 2, -h, w, h);
       ctx.restore();
     }
     if (m.caca && M.acorda <= 0) {
       ctx.font = '900 14px ui-rounded, system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillStyle = '#FF4B5C';
-      ctx.fillText('!', m.x * T, (m.y - .9) * T - pulo);
+      ctx.fillText('!', m.x * T, (m.y + .3) * T - h - 4 - pulo);
     }
   }
 
@@ -1285,7 +865,7 @@ const Masmorra = (() => {
 
   // ---------- corações e mini mapa (HUD) ----------
   function pintarVidas() {
-    document.getElementById('mas-vidas').innerHTML = Array.from({ length: M.op.vidas }, (_, k) => (k < M.vidas ? '❤️' : '🤍')).join('');
+    document.getElementById('mas-vidas').innerHTML = Array.from({ length: M.maxVidas }, (_, k) => (k < M.vidas ? '❤️' : '🤍')).join('');
   }
 
   function pintarMini() {
@@ -1312,7 +892,21 @@ const Masmorra = (() => {
     joy.x = joy.y = 0;
   }
 
-  return { abrir, parar };
+  // o app pausa a masmorra (melhorias) e dá corações extras
+  function pausar(sim) {
+    if (!M) return;
+    M.pausa = sim;
+    M.ultimo = 0;
+    teclas.clear();
+  }
+  function coracao() {
+    if (!M) return;
+    M.maxVidas++;
+    M.vidas++;
+    pintarVidas();
+  }
+
+  return { abrir, parar, pausar, coracao };
 })();
 
 // =====================================================================
@@ -1324,13 +918,17 @@ const Batalha = (() => {
 
   function abrir(o) {
     op = o;
-    const m = o.monstro, b = $b('batalha');
+    const m = o.monstro, b = $b('batalha'), arena = $b('arena');
     b.hidden = false;
+    arena.classList.toggle('chefe', !!m.chefe);
     b.style.setProperty('--a1', m.cores.a1);
     b.style.setProperty('--a2', m.cores.a2);
     $b('b-nome').textContent = `${ICONE_TEMA[m.tema]} ${m.nome}`;
-    $b('b-arte').className = 'b-arte-m';
-    $b('b-arte').innerHTML = desenharMonstro(m.tema);
+    $b('b-arte').className = 'b-arte-m' + (m.chefe ? ' grande' : '');
+    $b('b-arte').innerHTML = desenharMonstro(m.tema, m.chefe);
+    $b('b-poderes').hidden = true;
+    $b('b-efeitos').textContent = '';
+    $b('b-dano').classList.remove('pop');
     $b('b-heroi').className = 'b-arte-h';
     $b('b-heroi').innerHTML = desenharPersonagem(o.personagem, 'parado', 'cima');
     $b('b-respostas').innerHTML = '';
@@ -1342,6 +940,48 @@ const Batalha = (() => {
     $b('b-poder').disabled = !o.aoPoder;
     $b('b-poder').onclick = () => o.aoPoder && o.aoPoder();
     $b('b-dicabt').onclick = () => o.aoDica();
+    if (m.chefe) { // entrada dramática: escurece, o chefão desce, nome grande, tremor
+      animar(arena, 'escurece');
+      animar($b('b-arte'), 'desce');
+      banner(`👑 ${m.nome}`);
+      som('chefe');
+      vibrar([150, 60, 150]);
+      setTimeout(() => animar(arena, 'balanca'), 450);
+    }
+  }
+
+  function banner(txt) {
+    const b = $b('b-banner');
+    b.textContent = txt;
+    animar(b, 'mostra');
+  }
+
+  // fase do chefão: novo tipo de pergunta e cor mais brava
+  function fase(n, rotulo) {
+    const a = $b('b-arte');
+    a.classList.remove('fase2', 'fase3');
+    if (n > 1) a.classList.add('fase' + n);
+    banner(`Fase ${n} · ${rotulo}`);
+  }
+
+  // poderes das cartas: lista curta acima das respostas
+  function poderes(lista, escolher) {
+    const p = $b('b-poderes');
+    if (!p.hidden) { p.hidden = true; return; }
+    p.innerHTML = lista.map(x => `<button class="b-poder" data-id="${x.id}"${x.qtd ? '' : ' disabled'}><span>${x.icone}</span><b>${x.nome} · ${x.qtd}</b><small>${x.efeito}</small></button>`).join('');
+    p.hidden = false;
+    p.onclick = e => { const bt = e.target.closest('.b-poder'); if (!bt || bt.disabled) return; p.hidden = true; escolher(bt.dataset.id); };
+  }
+
+  function eliminar(k) {
+    const bt = botoes()[k];
+    if (bt) { bt.disabled = true; bt.classList.add('fora'); }
+  }
+
+  function efeitos(selos, dicaTxt, poderTxt) {
+    $b('b-efeitos').textContent = selos;
+    $b('b-dicabt').textContent = dicaTxt;
+    $b('b-poder').textContent = poderTxt;
   }
 
   function vida(v, max) {
@@ -1357,6 +997,7 @@ const Batalha = (() => {
 
   // a pergunta aparece digitando (até 0,45 s); as respostas ficam numa grade 2x2
   function perguntar(q, pronto) {
+    $b('b-poderes').hidden = true;
     $b('b-dica').innerHTML = '';
     $b('b-segue').hidden = true;
     const r = $b('b-respostas');
@@ -1409,7 +1050,7 @@ const Batalha = (() => {
   }
 
   // erro: o monstro ataca, a tela balança, sai um coração e aparece a dica
-  function erro(i, certa, q, n, cb) {
+  function erro(i, certa, q, n, txt, cb) {
     clearInterval(fala);
     travar();
     botoes()[i].classList.add('errada');
@@ -1420,7 +1061,7 @@ const Batalha = (() => {
       som('erro');
       vibrar([80, 40, 80]);
       vidas(n, true);
-      numero('−1 ❤️', '#FFB3BB');
+      numero(txt, '#FFB3BB');
       dica(q.dica, q.visual);
       const s = $b('b-segue');
       s.hidden = false;
@@ -1432,13 +1073,14 @@ const Batalha = (() => {
     $b('b-dica').innerHTML = `💡 ${esc(txt)}${visual ? `<div class="visual">${visual}</div>` : ''}`;
   }
 
-  function vitoria(txt, cb) {
+  function vitoria(txt, cb, chefe) {
     $b('b-respostas').innerHTML = '';
+    if (chefe) { banner('🏆 Vitória!'); confete(); }
     animar($b('b-arte'), 'desmaia');
     numero(txt, '#FFE48A');
     $b('b-fala').textContent = '🎉 Monstro derrotado!';
     som('vitoria');
-    setTimeout(cb, 1100);
+    setTimeout(cb, chefe ? 1600 : 1100);
   }
 
   function derrota(cb) {
@@ -1455,5 +1097,5 @@ const Batalha = (() => {
     $b('batalha').hidden = true;
   }
 
-  return { abrir, perguntar, acerto, erro, dica, vitoria, derrota, fechar };
+  return { abrir, perguntar, acerto, erro, dica, vitoria, derrota, fechar, fase, poderes, eliminar, efeitos };
 })();
