@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7B2FF7">
+<title>Mohamed</title>
+<style>
+:root{
+  --acc:#7B2FF7;--acc-esc:#5A17C9;--acc-cl:#F0E8FF;
+  --ok:#1FC46B;--ok-esc:#129A52;--ok-cl:#E2FBEE;
+  --erro:#FF4B5C;--erro-esc:#D12C3D;--erro-cl:#FFE9EB;
+  --ouro:#FFC531;--ouro-esc:#D99A00;
+  --tx:#1E1240;--tx2:#7A7396;--cinza:#E8E5F0;--cinza-esc:#BDB8CE;
+  --fonte:ui-rounded,"SF Pro Rounded","Nunito","Varela Round","Arial Rounded MT Bold",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#fff}
+body{font-family:var(--fonte);color:var(--tx);font-size:20px;line-height:1.3;overflow-x:hidden;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-action:manipulation}
+input{font:inherit;-webkit-user-select:text;user-select:text}
+svg{display:block}
+[hidden]{display:none!important}
+
+/* ---------- telas ---------- */
+.tela{display:none;flex-direction:column;min-height:100dvh;max-width:480px;margin:0 auto;padding:24px 20px calc(24px + env(safe-area-inset-bottom))}
+.tela.ativa{display:flex;animation:entra .3s ease-out}
+.centro{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center}
+.titulo{font-size:36px;font-weight:900;letter-spacing:-.5px;line-height:1.1}
+.sub{font-size:20px;font-weight:800;color:var(--tx2)}
+.logo{font-size:56px;font-weight:900;color:var(--acc);letter-spacing:-1.5px}
+.logo-heroi{width:120px;height:158px;animation:flutua 2.4s ease-in-out infinite}
+.logo-heroi svg{width:100%;height:100%}
+.topo{display:flex;align-items:center;gap:10px}
+.espaco{flex:1}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:999px;background:var(--acc-cl);color:var(--acc);font-weight:900;font-size:18px;white-space:nowrap}
+
+/* ---------- botões e campos ---------- */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:64px;padding:0 28px;border-radius:999px;background:var(--acc);color:#fff;font-size:22px;font-weight:900;box-shadow:0 6px 0 var(--acc-esc);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(5px);box-shadow:0 1px 0 var(--acc-esc)}
+.btn:disabled{background:var(--cinza);color:var(--cinza-esc);box-shadow:0 6px 0 var(--cinza-esc);transform:none}
+.btn.ok{background:var(--ok);box-shadow:0 6px 0 var(--ok-esc)}
+.btn.erro{background:var(--erro);box-shadow:0 6px 0 var(--erro-esc)}
+.btn.claro{background:#fff;color:var(--acc);box-shadow:0 6px 0 var(--cinza),inset 0 0 0 3px var(--cinza)}
+.btn-ico{flex:0 0 auto;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:24px;font-weight:900;background:var(--acc-cl);color:var(--acc);transition:transform .1s}
+.btn-ico:active{transform:scale(.9)}
+.btn-ico svg{width:34px;height:45px}
+.rodape{display:flex;flex-direction:column;gap:14px;margin-top:20px}
+.campo{width:100%;min-height:64px;border-radius:24px;border:3px solid var(--cinza);padding:0 20px;font-size:22px;font-weight:800;color:var(--tx);text-align:center;outline:0;background:#fff;transition:border-color .15s}
+.campo:focus{border-color:var(--acc)}
+.campo::placeholder{color:var(--cinza-esc)}
+
+/* ---------- personagem ---------- */
+.preview{width:150px;height:198px}
+.preview svg,.premio svg{width:100%;height:100%}
+.pop{animation:pop .3s cubic-bezier(.3,1.6,.6,1)}
+.grupos{width:100%}
+.grupo{display:flex;align-items:center;gap:10px;margin-top:14px}
+.grupo>span{font-size:28px;width:36px;text-align:center}
+.opcoes{flex:1;display:flex;flex-wrap:wrap;gap:8px}
+.op{width:58px;height:58px;border-radius:18px;background:#F6F4FB;display:grid;place-items:center;font-size:24px;border:3px solid transparent;transition:transform .1s}
+.op:active{transform:scale(.9)}
+.op.sel{border-color:var(--acc);background:var(--acc-cl)}
+.op svg{width:40px;height:52px}
+.op .cor{display:block;width:36px;height:36px;border-radius:50%}
+
+/* ---------- mapa ---------- */
+#t-mapa{padding:0;height:100dvh}
+#t-mapa .topo{padding:12px 16px;border-bottom:3px solid var(--cinza)}
+.mapa-rolagem{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.mapa-rolagem>svg{width:100%;height:auto}
+.no:not(.bloq){cursor:pointer}
+.pulso{transform-box:fill-box;transform-origin:center;animation:pulso 1.6s ease-out infinite}
+.heroi-mapa{animation:flutua 1.8s ease-in-out infinite}
+
+/* ---------- dia ---------- */
+.trilha-dia{display:flex;flex-direction:column;align-items:center;gap:22px;padding:12px 0}
+.licao-no{position:relative;width:80px;height:80px;border-radius:50%;display:grid;place-items:center;font-size:34px;background:var(--acc);box-shadow:0 7px 0 var(--acc-esc)}
+.licao-no.feita{background:var(--ouro);box-shadow:0 7px 0 var(--ouro-esc)}
+.licao-no.bloq{background:var(--cinza);box-shadow:0 7px 0 var(--cinza-esc);font-size:26px;cursor:default}
+.licao-no.atual{animation:pula 1.3s ease-in-out infinite}
+.licao-no.chefao{width:100px;height:100px;font-size:46px}
+.licao-no:not(:disabled):active{transform:translateY(5px);box-shadow:none}
+.em-breve{font-size:88px}
+
+/* ---------- lição ---------- */
+#t-licao{height:100dvh;padding:10px 12px calc(12px + env(safe-area-inset-bottom));gap:10px}
+.licao-topo{display:flex;align-items:center;gap:10px}
+.licao-topo .btn-ico{width:44px;height:44px;font-size:20px}
+#trilha{flex:1;position:relative;height:48px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 2px 6px}
+.bola{width:12px;height:12px;border-radius:50%;background:var(--cinza);transition:background .3s}
+.bola.feita{background:var(--ok)}
+.bandeira{font-size:22px;line-height:1;margin-bottom:-4px}
+.trilha-heroi{position:absolute;bottom:14px;width:24px;height:32px;transform:translateX(-50%);transition:left .6s cubic-bezier(.3,1.5,.6,1)}
+.trilha-heroi svg{width:100%;height:100%}
+#vidas{display:flex;font-size:15px}
+#vidas .perde{animation:treme .5s}
+#cena{position:relative;flex:1;min-height:200px;border-radius:28px;overflow:hidden}
+.pergunta{min-height:70px;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;font-size:26px;font-weight:900;padding:0 6px}
+.pergunta.entra{animation:entra .3s ease-out}
+.tag{background:var(--acc);color:#fff;border-radius:999px;padding:2px 12px;font-size:20px}
+#teclado{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.tecla{height:52px;border-radius:16px;background:#F3F0FA;font-size:24px;font-weight:900;box-shadow:0 4px 0 var(--cinza)}
+.tecla:active{transform:translateY(3px);box-shadow:none}
+#teclado .btn{grid-column:1/-1;min-height:56px}
+.folha{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:22px 20px calc(20px + env(safe-area-inset-bottom));border-radius:28px 28px 0 0;transform:translateY(110%);transition:transform .25s ease-out;z-index:20}
+.folha.aberta{transform:none}
+.folha.ok{background:var(--ok-cl);color:var(--ok-esc)}
+.folha.erro{background:var(--erro-cl);color:var(--erro-esc)}
+.folha-titulo{display:flex;align-items:center;gap:10px;font-size:26px;font-weight:900}
+.folha-titulo .xp{margin-left:auto;font-size:22px}
+.dica{margin-top:10px;font-size:20px;font-weight:800;color:var(--tx)}
+.visual{margin-top:10px;display:flex;justify-content:center}
+.visual svg{width:100%;max-height:72px}
+.folha .btn{margin-top:16px}
+
+/* ---------- cena lateral (jogo.js) ---------- */
+.cena{position:absolute;inset:0;overflow:hidden}
+.cena.m4::before{content:"";position:absolute;inset:0;background-image:radial-gradient(2px 2px at 12% 18%,#fff,transparent),radial-gradient(2px 2px at 38% 8%,#fff,transparent),radial-gradient(3px 3px at 64% 22%,#fff,transparent),radial-gradient(2px 2px at 86% 12%,#fff,transparent),radial-gradient(2px 2px at 52% 36%,#fff,transparent)}
+.camada,.chao{position:absolute;left:0;right:0;background-repeat:repeat-x;animation:linear infinite}
+.c-longe{bottom:22%;height:52%;background-size:480px 100%;animation-name:rolaLonge;animation-duration:30s}
+.c-perto{bottom:22%;height:26%;background-size:320px 100%;animation-name:rolaPerto;animation-duration:6s}
+.chao{bottom:0;height:22%;background-size:64px 100%;animation-name:rolaChao;animation-duration:.8s}
+.cena.parada .camada,.cena.parada .chao{animation-play-state:paused}
+.heroi{position:absolute;left:4%;bottom:21%;width:70px;height:92px;z-index:3;transform-origin:50% 90%}
+.heroi svg{width:100%;height:100%;overflow:visible}
+.heroi.corre svg{animation:galopa .3s ease-in-out infinite}
+.corre .perna-a,.corre .perna-b{transform-box:fill-box;transform-origin:50% 0;animation:perna .3s ease-in-out infinite alternate}
+.corre .perna-b{animation-direction:alternate-reverse}
+.heroi.brilho{filter:drop-shadow(0 0 6px #fff) drop-shadow(0 0 12px var(--ouro))}
+.combo-tag{position:absolute;top:10px;left:10px;z-index:4;padding:4px 12px;border-radius:999px;background:#fff;color:var(--acc);font-weight:900;font-size:18px}
+.combo-tag.pop{animation:pop .4s cubic-bezier(.3,1.6,.6,1)}
+.blocos{position:absolute;left:26%;right:2%;top:10%;display:flex;justify-content:space-around;gap:8px;z-index:2}
+.bloco{position:relative;min-width:64px;height:64px;padding:0 10px;border-radius:16px;background:var(--ouro);color:#6B3E00;font-size:26px;font-weight:900;display:grid;place-items:center;white-space:nowrap;border:3px solid #FFE48A;box-shadow:inset 0 -6px 0 #0000001f,0 5px 0 #00000026;animation:surge .4s cubic-bezier(.3,1.6,.6,1) backwards,boia 1.8s ease-in-out infinite}
+.bloco::after{content:"?";position:absolute;top:-10px;right:-8px;width:24px;height:24px;border-radius:50%;background:#fff;color:var(--acc);font-size:15px;display:grid;place-items:center;box-shadow:0 2px 0 #0002}
+.bloco.longo{font-size:19px}
+.bloco.vf-v{color:var(--ok-esc)}
+.bloco.vf-f{color:var(--erro-esc)}
+.bloco.bate{animation:bate .3s ease-out}
+.bloco.certo{background:var(--ok);border-color:#8EF0B9;color:#fff}
+.bloco.errado{background:var(--erro);border-color:#FFB3BB;color:#fff;animation:bate .3s ease-out,treme .4s .1s}
+.blocos.some .bloco{opacity:0;transition:opacity .3s}
+.moeda{position:absolute;z-index:4;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFF6C2,var(--ouro) 55%,#E09B00);box-shadow:inset 0 0 0 3px #E09B00;animation:moeda .7s ease-in forwards}
+.balao{position:absolute;z-index:5;padding:6px 14px;border-radius:16px;background:#fff;color:var(--tx);font-weight:900;font-size:20px;white-space:nowrap;box-shadow:0 3px 0 #0002;animation:balao 1.1s ease-out forwards}
+.balao::after{content:"";position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);border:8px solid transparent;border-top-color:#fff;border-bottom:0}
+.aviso{position:absolute;left:50%;top:45%;z-index:6;padding:12px 22px;border-radius:999px;background:var(--acc);color:#fff;font-weight:900;font-size:24px;white-space:nowrap;animation:aviso 1.4s ease-out forwards}
+
+/* ---------- resultado ---------- */
+.trofeu{font-size:96px;line-height:1;animation:surge .5s cubic-bezier(.3,1.6,.6,1)}
+.stats{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.stat{min-width:92px;padding:12px 10px;border-radius:20px;background:var(--acc-cl);display:flex;flex-direction:column;align-items:center;font-size:22px;font-weight:900}
+.stat small{font-size:14px;color:var(--tx2)}
+
+/* ---------- álbum ---------- */
+.secao{font-size:18px;font-weight:900;color:var(--tx2);margin:24px 0 12px}
+.medalhas{display:flex;gap:10px}
+.medalha{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;font-size:13px;font-weight:800;color:var(--tx2)}
+.medalha .m{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;font-size:32px;background:linear-gradient(160deg,#FFE27A,var(--ouro));box-shadow:0 5px 0 var(--ouro-esc)}
+.medalha.falta .m{background:var(--cinza);box-shadow:0 5px 0 var(--cinza-esc);filter:grayscale(1);opacity:.5}
+.grade{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media (min-width:420px){.grade{grid-template-columns:repeat(3,1fr)}}
+.carta{aspect-ratio:3/4;border-radius:22px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;color:#fff;background:linear-gradient(160deg,var(--c1),var(--c2));box-shadow:0 6px 0 #00000022}
+.carta .em{font-size:42px;line-height:1}
+.carta b{font-size:17px;line-height:1.1}
+.carta p{font-size:14px;font-weight:700;opacity:.95}
+.carta.falta{background:var(--cinza);color:var(--cinza-esc);box-shadow:0 6px 0 var(--cinza-esc)}
+.carta.falta .em{font-size:60px;font-weight:900}
+.carta.grande{width:190px}
+.carta.vira{animation:vira .7s ease-out}
+.frases{display:flex;flex-direction:column;gap:10px}
+.frases p{padding:14px 18px;border-radius:20px;background:var(--acc-cl);font-weight:800;font-size:18px}
+
+/* ---------- sobreposições ---------- */
+.sobre{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:24px;background:#1E1240d9;animation:fade .2s}
+.caixa{width:100%;max-width:380px;background:#fff;border-radius:32px;padding:28px 22px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;animation:surge .35s cubic-bezier(.3,1.6,.6,1)}
+.bau{width:170px;height:142px}
+.bau svg{width:100%;height:100%;overflow:visible}
+.bau .tampa{transform-box:fill-box;transform-origin:0 100%;transition:transform .4s cubic-bezier(.3,1.6,.6,1)}
+.bau.treme{animation:treme .45s 2}
+.bau.aberto{filter:drop-shadow(0 0 22px var(--ouro))}
+.bau.aberto .tampa{transform:translate(-4px,-16px) rotate(-30deg)}
+.premio{width:140px;height:185px;animation:pop .5s cubic-bezier(.3,1.6,.6,1)}
+.frase{font-size:24px;font-weight:900;color:var(--acc)}
+.toast{position:fixed;top:calc(14px + env(safe-area-inset-top));left:50%;z-index:60;padding:12px 20px;border-radius:999px;background:var(--tx);color:#fff;font-weight:900;font-size:18px;white-space:nowrap;animation:toast 2.6s ease forwards}
+.confete{position:fixed;inset:0;pointer-events:none;z-index:70;overflow:hidden}
+.confete i{position:absolute;top:-16px;width:10px;height:14px;border-radius:3px;animation:cai 1.6s ease-in forwards}
+
+/* ---------- animações ---------- */
+@keyframes entra{from{opacity:0;transform:translateY(12px)}}
+@keyframes flutua{50%{transform:translateY(-8px)}}
+@keyframes pulso{from{transform:scale(1);opacity:.6}to{transform:scale(1.7);opacity:0}}
+@keyframes pula{50%{transform:translateY(-8px)}}
+@keyframes pop{from{transform:scale(.6)}}
+@keyframes surge{from{transform:scale(.3);opacity:0}}
+@keyframes boia{50%{transform:translateY(-7px)}}
+@keyframes bate{40%{transform:translateY(-16px)}}
+@keyframes treme{20%,60%{transform:translateX(-6px) rotate(-3deg)}40%,80%{transform:translateX(6px) rotate(3deg)}}
+@keyframes galopa{50%{transform:translateY(-5px)}}
+@keyframes perna{from{transform:rotate(-30deg)}to{transform:rotate(30deg)}}
+@keyframes rolaLonge{to{background-position-x:-480px}}
+@keyframes rolaPerto{to{background-position-x:-320px}}
+@keyframes rolaChao{to{background-position-x:-64px}}
+@keyframes moeda{0%{transform:translate(0,0) scale(.4)}30%{transform:translate(0,-34px) scale(1.15)}100%{transform:translate(var(--hx),var(--hy)) scale(.5);opacity:.3}}
+@keyframes balao{0%{opacity:0;transform:translate(-50%,-80%) scale(.5)}15%{opacity:1;transform:translate(-50%,-100%) scale(1.1)}25%,80%{opacity:1;transform:translate(-50%,-100%) scale(1)}100%{opacity:0;transform:translate(-50%,-130%)}}
+@keyframes aviso{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}20%,80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.2)}}
+@keyframes cai{to{transform:translate(var(--dx),105vh) rotate(var(--r))}}
+@keyframes toast{0%{opacity:0;transform:translate(-50%,-20px)}10%,85%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-20px)}}
+@keyframes vira{from{transform:rotateY(90deg) scale(.7)}}
+@keyframes fade{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<!-- 1. Início -->
+<section class="tela" id="t-inicio">
+  <div class="centro">
+    <div class="logo-heroi" id="logo-heroi"></div>
+    <h1 class="logo">Mohamed</h1>
+    <p class="sub">Matemática no modo jogo 🎮</p>
+    <input class="campo" id="in-nome" placeholder="😀 Seu nome" maxlength="20" autocomplete="off">
+    <input class="campo" id="in-turma" placeholder="🏫 Turma" maxlength="12" autocomplete="off">
+  </div>
+  <div class="rodape"><button class="btn" id="bt-comecar" disabled>Começar ▶</button></div>
+</section>
+
+<!-- 2. Criação do personagem -->
+<section class="tela" id="t-personagem">
+  <h2 class="titulo" style="text-align:center">Crie seu herói ✨</h2>
+  <div class="centro">
+    <div class="preview" id="pv-heroi"></div>
+    <div class="grupos">
+      <div class="grupo"><span>🎨</span><div class="opcoes" id="op-cor"></div></div>
+      <div class="grupo"><span>🙂</span><div class="opcoes" id="op-rosto"></div></div>
+      <div class="grupo"><span>🎩</span><div class="opcoes" id="op-acessorio"></div></div>
+    </div>
+  </div>
+  <div class="rodape"><button class="btn" id="bt-pronto">Pronto ✔</button></div>
+</section>
+
+<!-- 3. Mapa de fases -->
+<section class="tela" id="t-mapa">
+  <div class="topo">
+    <button class="btn-ico" id="bt-perfil" data-ir="t-personagem" aria-label="Personagem"></button>
+    <span class="espaco"></span>
+    <span class="chip" id="chip-xp">⚡ 0</span>
+    <span class="chip" id="chip-dias">⭐ 0</span>
+    <button class="btn-ico" data-ir="t-album" aria-label="Álbum">🃏</button>
+  </div>
+  <div class="mapa-rolagem" id="mapa"></div>
+</section>
+
+<!-- Lições do dia -->
+<section class="tela" id="t-dia">
+  <div class="topo"><button class="btn-ico" data-ir="t-mapa" aria-label="Mapa">←</button></div>
+  <div class="centro">
+    <p class="sub" id="dia-mundo"></p>
+    <h2 class="titulo" id="dia-titulo"></h2>
+    <div class="trilha-dia" id="dia-licoes"></div>
+    <p class="sub" id="dia-prox"></p>
+  </div>
+</section>
+
+<!-- 4. Lição -->
+<section class="tela" id="t-licao">
+  <div class="licao-topo">
+    <button class="btn-ico" id="bt-sair" aria-label="Sair">✕</button>
+    <div id="trilha"></div>
+    <div id="vidas"></div>
+  </div>
+  <div id="cena"></div>
+  <div class="pergunta" id="pergunta"></div>
+  <div id="teclado" hidden></div>
+  <div class="folha" id="folha"></div>
+</section>
+
+<!-- 5. Resultado -->
+<section class="tela" id="t-resultado">
+  <div class="centro" id="res-conteudo"></div>
+  <div class="rodape" id="res-acoes"></div>
+</section>
+
+<!-- 6. Álbum de cartas -->
+<section class="tela" id="t-album">
+  <div class="topo">
+    <button class="btn-ico" data-ir="t-mapa" aria-label="Mapa">←</button>
+    <span class="espaco"></span>
+    <span class="chip" id="album-xp">⚡ 0</span>
+    <span class="chip" id="album-cont">🃏 0/0</span>
+  </div>
+  <div class="secao">🏅 Medalhas</div>
+  <div class="medalhas" id="album-medalhas"></div>
+  <div id="album-cartas"></div>
+</section>
+
+<script src="conteudo.js"></script>
+<script src="jogo.js"></script>
+<script src="relatorio.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
