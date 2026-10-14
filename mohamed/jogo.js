@@ -112,8 +112,8 @@ const Jogo = (() => {
   }
 
   function travar() {
-    el.cena.querySelectorAll('.power').forEach(x => x.remove()); // power-up não gasta depois da resposta
-    el.blocos.classList.add('travado');
+    if (el.cena) el.cena.querySelectorAll('.power').forEach(x => x.remove()); // power-up não gasta depois da resposta
+    if (el.blocos) el.blocos.classList.add('travado');
     if (el.painel) el.painel.classList.add('travado');
   }
 
@@ -184,6 +184,7 @@ const Jogo = (() => {
 
   // reação curta a cada passo de um painel
   function pulinho(ok) {
+    if (el.reagir) return el.reagir(ok); // desafio solto: quem chamou decide a reação
     const h = el.heroi;
     if (ok) {
       h.animate([{ transform: 'none' }, { transform: 'translateY(-20px)' }, { transform: 'none' }], { duration: 320, easing: 'ease-out' });
@@ -222,7 +223,7 @@ const Jogo = (() => {
     const p = document.createElement('div');
     p.className = 'painel ' + cls;
     p.innerHTML = html;
-    el.cena.appendChild(p);
+    (el.palco || el.cena).appendChild(p);
     el.painel = p;
     return p;
   }
@@ -652,16 +653,28 @@ const Jogo = (() => {
     if (el.cena) el.cena.classList.add('parada');
   }
 
-  return { iniciar, pergunta, escrever, bater, reagir, ponte, fechar, trilha, combo, aviso, powerup, relogio, pararRelogio, monstroDano, monstroAvanca, parar, ocupado: () => ocupado };
+  // desafio solto (baús e portas trancadas da masmorra): só o painel, sem cena lateral
+  function desafio(caixa, ex, fim, reagir) {
+    geracao++;
+    ocupado = false;
+    caixa.innerHTML = '';
+    el = { palco: caixa, reagir, cena: null, blocos: null, painel: null };
+    PAINEIS[ex.tipo](ex, fim);
+    if (el.painel) el.painel.classList.add('solto');
+  }
+
+  return { iniciar, pergunta, escrever, bater, reagir, ponte, fechar, trilha, combo, aviso, powerup, relogio, pararRelogio, monstroDano, monstroAvanca, parar, desafio, ocupado: () => ocupado };
 })();
 
 // =====================================================================
-// MASMORRA vista de cima (Canvas) · parte 1: salas, movimento e mini mapa
+// MASMORRA vista de cima (Canvas): salas, movimento, monstros e desafios
 // =====================================================================
 
 // Salas em dados: 11 colunas × 13 linhas. Legenda:
-// #  parede   .  chão   o  moeda   c  baú   X  saída   @  início
+// #  parede   .  chão   o  moeda   c  baú (desafio)   X  saída   @  início   m  monstro
 // ^ v < >  portas (norte, sul, oeste, leste): levam à sala vizinha em "pos" [coluna, linha]
+// trancas: portas com cadeado, abertas com um desafio ('cima', 'baixo', 'esquerda', 'direita')
+// Portas e saída só abrem quando todos os monstros da sala caem.
 const SALAS_MASMORRA = [
   { pos: [0, 0], mapa: [
     '###########',
@@ -674,7 +687,7 @@ const SALAS_MASMORRA = [
     '#.........#',
     '#..#...#..#',
     '#..#.c.#..#',
-    '#.........#',
+    '#.......m.#',
     '#.o.....o.#',
     '###########'] },
   { pos: [1, 0], mapa: [
@@ -686,7 +699,7 @@ const SALAS_MASMORRA = [
     '#...###...#',
     '<...#c#...#',
     '#...#.#...#',
-    '#.........#',
+    '#..m...m..#',
     '#.o.....o.#',
     '#.##...##.#',
     '#.........#',
@@ -696,7 +709,7 @@ const SALAS_MASMORRA = [
     '#.........#',
     '#..o...o..#',
     '#.#######.#',
-    '#.........#',
+    '#..m...m..#',
     '#.o.#.#.o.#',
     '<...#c#...#',
     '#.........#',
@@ -705,7 +718,7 @@ const SALAS_MASMORRA = [
     '#.........#',
     '#.........#',
     '###########'] },
-  { pos: [0, 1], mapa: [
+  { pos: [0, 1], trancas: ['baixo'], mapa: [
     '###########',
     '#.........#',
     '#.o.o.o.o.#',
@@ -714,7 +727,7 @@ const SALAS_MASMORRA = [
     '#.........#',
     '#.........>',
     '#.#.#.#.#.#',
-    '#.........#',
+    '#.m..m..m.#',
     '#.o.o.o.o.#',
     '#....c....#',
     '#.........#',
@@ -730,14 +743,41 @@ const SALAS_MASMORRA = [
     '#.........#',
     '#..#...#..#',
     '#.o.....o.#',
-    '#.........#',
+    '#..m...m..#',
     '#.........#',
     '###########'] }
 ];
 
+// ---------- monstros originais por tema ----------
+const TEMAS_MONSTRO = ['Natural', 'Negativo', 'Tabuada', 'Divisão'];
+const ICONE_TEMA = { Natural: '🌿', Negativo: '❄️', Tabuada: '✖️', 'Divisão': '➗' };
+const NOMES_MONSTRO = {
+  Natural: ['Brotão', 'Folhito', 'Raizudo'],
+  Negativo: ['Friúncio', 'Gelatão', 'Nevisco'],
+  Tabuada: ['Brasinha', 'Lavito', 'Fumacê'],
+  'Divisão': ['Bolhudo', 'Gotão', 'Marolo']
+};
+function desenharMonstro(tema) {
+  const K = '#1E1240', T = `stroke="${K}" stroke-width="4" stroke-linejoin="round"`;
+  const olho = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" ${T}/><circle cx="${x - 2}" cy="${y + 1}" r="${r / 2}" fill="${K}"/>`;
+  const traco = d => `<path d="${d}" fill="none" stroke="${K}" stroke-width="4" stroke-linecap="round"/>`;
+  const ARTE = {
+    // broto com uma folha de cada lado e um olho só
+    Natural: `<path d="M50 26 Q38 6 22 12 Q32 28 50 26Z M50 26 Q62 4 80 10 Q70 28 50 26Z" fill="#86EFAC" ${T}/>${traco('M50 26 V36')}<ellipse cx="50" cy="64" rx="38" ry="32" fill="#22C55E" ${T}/>` + olho(50, 56, 14) + traco('M38 76 Q50 84 62 76'),
+    // bloco de gelo com pontas; a boca é um sinal de menos
+    Negativo: `<path d="M22 42 L30 12 L40 36 L50 6 L60 36 L70 12 L78 42Z" fill="#E0F2FE" ${T}/><rect x="14" y="34" width="72" height="62" rx="30" fill="#60A5FA" ${T}/>` + olho(38, 58, 10) + olho(62, 58, 10) + traco('M40 80 H60'),
+    // chama de lava brava; a boca é um ×
+    Tabuada: `<path d="M50 6 Q66 26 74 34 Q92 52 84 74 Q76 96 50 96 Q24 96 16 74 Q8 52 26 34 Q34 26 50 6Z" fill="#F97316" ${T}/><path d="M50 42 Q62 56 60 70 Q56 84 50 84 Q44 84 40 70 Q38 56 50 42Z" fill="#FDE047"/>` + olho(36, 56, 10) + olho(64, 56, 10) + traco('M26 42 L44 48 M74 42 L56 48') + traco('M44 72 L56 84 M56 72 L44 84'),
+    // gota com bolhas; a boca é um ÷
+    'Divisão': `<path d="M50 4 Q72 36 82 56 Q92 92 50 96 Q8 92 18 56 Q28 36 50 4Z" fill="#22D3EE" ${T}/><circle cx="28" cy="30" r="5" fill="#CFFAFE" ${T}/><circle cx="76" cy="24" r="4" fill="#CFFAFE" ${T}/>` + olho(38, 58, 10) + olho(62, 58, 10) + traco('M40 80 H60') + `<circle cx="50" cy="73" r="3" fill="${K}"/><circle cx="50" cy="87" r="3" fill="${K}"/>`
+  };
+  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${ARTE[tema] || ARTE.Natural}</svg>`;
+}
+
 const Masmorra = (() => {
-  const T = 32, COLS = 11, LINS = 13, VEL = 3.4;      // px por casa · tamanho da sala · casas por segundo
-  const CORPO = { l: .56, a: .44 };                     // caixa de colisão dos pés (em casas)
+  const T = 32, COLS = 11, LINS = 13, VEL = 3.4;               // px por casa · tamanho da sala · casas por segundo
+  const CORPO = { l: .56, a: .44 };                              // caixa de colisão dos pés (em casas)
+  const MON = { vel: 1.2, velCaca: 2, raio: 3.4, corpo: .6, acorda: .9 }; // passo, perseguição, visão, tamanho, espera ao entrar
   const VETOR = { cima: [0, -1], baixo: [0, 1], esquerda: [-1, 0], direita: [1, 0] };
   const PORTAS = { '^': 'cima', v: 'baixo', '<': 'esquerda', '>': 'direita' };
   const OPOSTA = { cima: 'v', baixo: '^', esquerda: '>', direita: '<' };
@@ -752,11 +792,15 @@ const Masmorra = (() => {
   ];
 
   let M = null, cv = null, ctx = null, raf = 0, ligado = false, cache = { chave: '', imgs: {} };
-  const joy = { x: 0, y: 0 }, teclas = new Set();
+  const joy = { x: 0, y: 0 }, teclas = new Set(), artes = {};
 
   const sala = () => M.salas[M.atual];
   const casa = (c, l) => (sala().g[l] || [])[c] || '#';
-  const solido = (c, l) => '#cC'.includes(casa(c, l));
+  const aberta = (i, dir) => M.prog.pegos.includes(`porta:${i}:${dir}`);
+  const cadeado = dir => sala().trancas.includes(dir) && !aberta(M.atual, dir);
+  // portas e saída fecham enquanto houver monstro; porta com cadeado pede desafio
+  const fechada = ch => (PORTAS[ch] || ch === 'X') && (sala().monstros.length > 0 || (PORTAS[ch] && cadeado(PORTAS[ch])));
+  const solido = (c, l) => { const ch = casa(c, l); return '#cC'.includes(ch) || fechada(ch); };
   const vizinha = (s, dir) => M.salas.findIndex(o => o.pos[0] === s.pos[0] + VETOR[dir][0] && o.pos[1] === s.pos[1] + VETOR[dir][1]);
 
   // ---------- abrir a masmorra do dia ----------
@@ -764,18 +808,10 @@ const Masmorra = (() => {
     cv = document.getElementById('mas-tela');
     ctx = cv.getContext('2d');
     if (!ligado) ligarControles();
-    const prog = op.progresso;
-    M = {
-      op, prog, cor: PALETAS[op.mundo] || PALETAS[0], vidas: op.vidas || 5, atual: 0, textos: [], transicao: null, ultimo: 0, fim: false,
-      salas: SALAS_MASMORRA.map((s, i) => {
-        const g = s.mapa.map((linha, l) => linha.split('').map((ch, c) =>
-          ch === '@' ? '.' : prog.pegos.includes(`${i}:${c}:${l}`) ? (ch === 'c' ? 'C' : '.') : ch));
-        return { pos: s.pos, g, portas: [...new Set(s.mapa.join('').split('').filter(ch => PORTAS[ch]).map(ch => PORTAS[ch]))], saida: s.mapa.join('').includes('X') };
-      })
-    };
-    SALAS_MASMORRA[0].mapa.forEach((linha, l) => { const c = linha.indexOf('@'); if (c >= 0) M.P = { x: c + .5, y: l + .5, dir: 'baixo', passo: 0, andando: false }; });
+    M = { op, prog: op.progresso, cor: PALETAS[op.mundo] || PALETAS[0], vidas: op.vidas, textos: [], transicao: null, ultimo: 0, fim: false, pausa: false, graca: 0, acorda: 0, aviso: 0, errosSala: 0 };
+    montarSalas();
+    irParaInicio();
     sprites();
-    visitar(0);
     pintarVidas();
     ajustar();
     teclas.clear();
@@ -783,16 +819,51 @@ const Masmorra = (() => {
     raf = requestAnimationFrame(quadro);
   }
 
+  function montarSalas() {
+    M.salas = SALAS_MASMORRA.map((s, i) => ({
+      pos: s.pos,
+      g: s.mapa.map((linha, l) => linha.split('').map((ch, c) => ('@m'.includes(ch) ? '.' : M.prog.pegos.includes(`${i}:${c}:${l}`) ? (ch === 'c' ? 'C' : '.') : ch))),
+      portas: [...new Set(s.mapa.join('').split('').filter(ch => PORTAS[ch]).map(ch => PORTAS[ch]))],
+      saida: s.mapa.join('').includes('X'),
+      trancas: s.trancas || [],
+      monstros: criarMonstros(i, s)
+    }));
+  }
+
+  // monstros que ainda não caíram; o tema vem do mundo do dia (revisão: sorteado)
+  function criarMonstros(i, s) {
+    const lista = [];
+    s.mapa.forEach((linha, l) => linha.split('').forEach((ch, c) => {
+      const chave = `m:${i}:${c}:${l}`;
+      if (ch !== 'm' || M.prog.pegos.includes(chave)) return;
+      const tema = TEMAS_MONSTRO[M.op.mundo] || sortear(TEMAS_MONSTRO);
+      const [min, max] = CONFIG_BATALHA.vidaMonstro, vida = min + 5 * rnd(0, Math.floor((max - min) / 5));
+      lista.push({ chave, sala: i, x: c + .5, y: l + .5, tema, nome: sortear(NOMES_MONSTRO[tema]), vida, max: vida, dir: null, t: 0, olhar: -1, caca: false, cores: { a1: M.cor.topo, a2: M.cor.chao } });
+    }));
+    return lista;
+  }
+
+  function irParaInicio() {
+    M.atual = 0;
+    SALAS_MASMORRA[0].mapa.forEach((linha, l) => { const c = linha.indexOf('@'); if (c >= 0) M.P = { x: c + .5, y: l + .5, dir: 'baixo', passo: 0, andando: false }; });
+    M.acorda = MON.acorda;
+    M.errosSala = 0;
+    visitar(0);
+  }
+
   // personagem do aluno: a função SVG vira imagens nas 4 direções (parado e 2 passos)
   function sprites() {
     const chave = JSON.stringify(M.op.personagem);
-    if (cache.chave === chave) return;
-    cache = { chave, imgs: {} };
-    for (const dir of Object.keys(VETOR)) for (const pose of ['parado', 'anda1', 'anda2']) {
-      const img = new Image();
-      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(desenharPersonagem(M.op.personagem, pose, dir).replace('<svg ', '<svg width="100" height="132" '));
-      cache.imgs[dir + pose] = img;
+    if (cache.chave !== chave) {
+      cache = { chave, imgs: {} };
+      for (const dir of Object.keys(VETOR)) for (const pose of ['parado', 'anda1', 'anda2']) cache.imgs[dir + pose] = imagem(desenharPersonagem(M.op.personagem, pose, dir).replace('<svg ', '<svg width="100" height="132" '));
     }
+    for (const tema of TEMAS_MONSTRO) if (!artes[tema]) artes[tema] = imagem(desenharMonstro(tema).replace('<svg ', '<svg width="100" height="100" '));
+  }
+  function imagem(svg) {
+    const img = new Image();
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    return img;
   }
 
   // câmera fixa: a sala inteira cabe no palco, nítida em qualquer tela
@@ -821,7 +892,7 @@ const Masmorra = (() => {
       joy.y = dy / raio;
     };
     const soltar = e => {
-      if (e.pointerId !== id) return;
+      if (e && e.pointerId !== id) return;
       id = null;
       joy.x = joy.y = 0;
       bola.style.transform = '';
@@ -833,7 +904,7 @@ const Masmorra = (() => {
     base.addEventListener('pointercancel', soltar);
     addEventListener('keydown', e => {
       const d = TECLAS[(e.key || '').toLowerCase()];
-      if (!d || !M || !document.getElementById('t-masmorra').classList.contains('ativa')) return;
+      if (!d || !M || M.pausa || !document.getElementById('t-masmorra').classList.contains('ativa')) return;
       teclas.delete(d);
       teclas.add(d);
       e.preventDefault();
@@ -850,10 +921,9 @@ const Masmorra = (() => {
   }
 
   // ---------- movimento e colisão ----------
-  function colide(x, y) {
-    const c0 = Math.floor(x - CORPO.l / 2), c1 = Math.floor(x + CORPO.l / 2 - 1e-6);
-    const l0 = Math.floor(y - CORPO.a / 2), l1 = Math.floor(y + CORPO.a / 2 - 1e-6);
-    for (let l = l0; l <= l1; l++) for (let c = c0; c <= c1; c++) if (solido(c, l)) return true;
+  function colide(x, y, l = CORPO.l, a = CORPO.a, bloqueia = solido) {
+    const c0 = Math.floor(x - l / 2), c1 = Math.floor(x + l / 2 - 1e-6), l0 = Math.floor(y - a / 2), l1 = Math.floor(y + a / 2 - 1e-6);
+    for (let k = l0; k <= l1; k++) for (let c = c0; c <= c1; c++) if (bloqueia(c, k)) return true;
     return false;
   }
 
@@ -863,8 +933,9 @@ const Masmorra = (() => {
     if (!colide(novo.x, novo.y)) { P[eixo] = novo[eixo]; return; }
     const outro = eixo === 'x' ? 'y' : 'x', s = Math.sign(passo), meia = (eixo === 'x' ? CORPO.l : CORPO.a) / 2;
     const frente = Math.floor(P[eixo] + s * (meia + .05)), meio = Math.floor(P[outro]);
-    const ali = eixo === 'x' ? [frente, meio] : [meio, frente];
-    if (casa(...ali) === 'c') return abrirBau(...ali);
+    const ali = eixo === 'x' ? [frente, meio] : [meio, frente], ch = casa(...ali);
+    if (ch === 'c') return abrirBau(...ali);
+    if (fechada(ch)) return bateuPorta(ch, ali);
     // quina: escorrega para o centro da fileira livre mais perto (passa fácil em portas e corredores)
     let alvo = null;
     for (const k of [meio, meio - 1, meio + 1]) {
@@ -878,7 +949,28 @@ const Masmorra = (() => {
     if (!colide(tenta.x, tenta.y)) P[outro] = tenta[outro];
   }
 
-  // ---------- moedas, baús, portas e saída ----------
+  // porta fechada: monstros na sala (aviso) ou cadeado (desafio)
+  function bateuPorta(ch, [c, l]) {
+    if (M.graca > 0 || M.pausa) return;
+    if (sala().monstros.length) {
+      if (M.aviso <= 0) { flutuar('👾 primeiro', c + .5, l + .3); M.aviso = 1.2; }
+      return;
+    }
+    const dir = PORTAS[ch];
+    M.pausa = true;
+    M.op.aoDesafio('porta', r => {
+      M.pausa = false;
+      M.ultimo = 0;
+      M.graca = .8;
+      if (!r.aberto) return;
+      M.prog.pegos.push(`porta:${M.atual}:${dir}`);
+      M.op.aoSalvar();
+      som('bau');
+      flutuar('🔓', c + .5, l + .3);
+    });
+  }
+
+  // ---------- moedas, baús (desafio), portas e saída ----------
   const guardar = (c, l) => { M.prog.pegos.push(`${M.atual}:${c}:${l}`); M.op.aoSalvar(); };
 
   function coletar() {
@@ -895,19 +987,28 @@ const Masmorra = (() => {
   }
 
   function abrirBau(c, l) {
-    sala().g[l][c] = 'C';
-    guardar(c, l);
-    M.op.aoMoeda(5);
-    som('bau');
-    vibrar(40);
-    flutuar('+5 🪙', c + .5, l - .1);
+    if (M.graca > 0 || M.pausa) return;
+    M.pausa = true;
+    M.op.aoDesafio('bau', r => {
+      M.pausa = false;
+      M.ultimo = 0;
+      M.graca = .8;
+      if (!r.aberto) return;
+      const n = r.certo ? 5 : 2;
+      sala().g[l][c] = 'C';
+      guardar(c, l);
+      M.op.aoMoeda(n);
+      som('bau');
+      vibrar(40);
+      flutuar(`+${n} 🪙`, c + .5, l - .1);
+    });
   }
 
   function conferirCasa() {
     const P = M.P, ch = casa(Math.floor(P.x), Math.floor(P.y));
     if (PORTAS[ch] && !M.transicao) {
-      const destino = vizinha(sala(), PORTAS[ch]);
-      if (destino >= 0) { som('clique'); M.transicao = { t: 0, destino, dir: PORTAS[ch], trocou: false }; }
+      const destino = vizinha(sala(), PORTAS[ch]), dir = PORTAS[ch];
+      if (destino >= 0) { som('clique'); M.transicao = { t: 0, trocou: false, trocar: () => entrar(destino, dir) }; }
     }
     if (ch === 'X' && !M.fim) {
       M.fim = true;
@@ -917,13 +1018,14 @@ const Masmorra = (() => {
     }
   }
 
-  // troca de sala: escurece, muda e clareia (0,36 s); o aluno entra pela porta oposta
-  function trocarSala() {
-    const tr = M.transicao, [dx, dy] = VETOR[tr.dir];
-    M.atual = tr.destino;
-    sala().g.forEach((linha, l) => linha.forEach((ch, c) => { if (ch === OPOSTA[tr.dir]) { M.P.x = c + .5 + dx; M.P.y = l + .5 + dy; } }));
-    tr.trocou = true;
-    visitar(M.atual);
+  // o aluno entra pela porta oposta da sala vizinha
+  function entrar(destino, dir) {
+    const [dx, dy] = VETOR[dir];
+    M.atual = destino;
+    sala().g.forEach((linha, l) => linha.forEach((ch, c) => { if (ch === OPOSTA[dir]) { M.P.x = c + .5 + dx; M.P.y = l + .5 + dy; } }));
+    M.acorda = MON.acorda;
+    M.errosSala = 0;
+    visitar(destino);
   }
 
   function visitar(i) {
@@ -932,6 +1034,73 @@ const Masmorra = (() => {
   }
 
   const flutuar = (txt, x, y) => M.textos.push({ txt, x, y, t: 0 });
+
+  // ---------- monstros: passeiam e perseguem de perto ----------
+  const bloqueiaMonstro = (c, l) => { const ch = casa(c, l); return '#cCX'.includes(ch) || !!PORTAS[ch]; };
+
+  function moverMonstros(dt) {
+    for (const m of sala().monstros) {
+      m.bob = (m.bob || 0) + dt;
+      if (M.acorda > 0) continue;
+      const dx = M.P.x - m.x, dy = M.P.y - m.y, dist = Math.hypot(dx, dy);
+      m.caca = dist < MON.raio;
+      let dir;
+      if (m.caca) dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'direita' : 'esquerda') : dy > 0 ? 'baixo' : 'cima';
+      else {
+        m.t -= dt;
+        if (m.t <= 0 || !m.dir) { m.dir = sortear(Object.keys(VETOR)); m.t = 1 + Math.random(); }
+        dir = m.dir;
+      }
+      const v = (m.caca ? MON.velCaca : MON.vel) * dt;
+      if (!passoMonstro(m, dir, v)) {
+        if (m.caca) passoMonstro(m, Math.abs(dx) > Math.abs(dy) ? (dy > 0 ? 'baixo' : 'cima') : dx > 0 ? 'direita' : 'esquerda', v);
+        else m.t = 0;
+      }
+      if (dist < .75 && M.graca <= 0 && !M.pausa) return batalha(m);
+    }
+  }
+
+  function passoMonstro(m, dir, v) {
+    const [vx, vy] = VETOR[dir], nx = m.x + vx * v, ny = m.y + vy * v;
+    if (vx) m.olhar = vx;
+    if (colide(nx, ny, MON.corpo, MON.corpo, bloqueiaMonstro)) return false;
+    m.x = nx;
+    m.y = ny;
+    return true;
+  }
+
+  // encostou: abre a batalha por turnos (app.js decide perguntas, dano e prêmios)
+  function batalha(m) {
+    M.pausa = true;
+    M.P.andando = false;
+    teclas.clear();
+    joy.x = joy.y = 0;
+    som('pulo');
+    vibrar(60);
+    M.op.aoBatalha(m, M.vidas, res => {
+      M.pausa = false;
+      M.ultimo = 0;
+      M.graca = 1.2;
+      if (res.venceu) {
+        M.vidas = res.vidas;
+        sala().monstros = sala().monstros.filter(x => x !== m);
+        M.prog.pegos.push(m.chave);
+        M.op.aoSalvar();
+        M.errosSala += res.erros;
+        flutuar('💥', m.x, m.y - .4);
+        if (!sala().monstros.length) {
+          som('vitoria');
+          flutuar('🔓', M.P.x, M.P.y - 1.2);
+          M.op.aoSalaLimpa(M.atual, M.errosSala === 0);
+        }
+      } else {
+        // sem corações: volta ao início com o progresso do dia guardado
+        M.vidas = M.op.vidas;
+        M.transicao = { t: 0, trocou: false, trocar: () => { montarSalas(); irParaInicio(); flutuar('💪', M.P.x, M.P.y - 1); } };
+      }
+      pintarVidas();
+    });
+  }
 
   // ---------- laço do jogo ----------
   function quadro(ms) {
@@ -949,20 +1118,26 @@ const Masmorra = (() => {
     const tr = M.transicao, P = M.P;
     if (tr) {
       tr.t += dt;
-      if (tr.t >= .14 && !tr.trocou) trocarSala();
+      if (tr.t >= .14 && !tr.trocou) { tr.trocou = true; tr.trocar(); }
       if (tr.t >= .36) M.transicao = null;
       return;
     }
+    if (M.pausa) return;
+    M.graca = Math.max(0, M.graca - dt);
+    M.acorda = Math.max(0, M.acorda - dt);
+    M.aviso = Math.max(0, M.aviso - dt);
     const d = M.fim ? null : direcao();
     P.andando = !!d;
-    if (!d) return;
-    P.dir = d;
-    P.passo += dt;
-    const [dx, dy] = VETOR[d];
-    if (dx) andar('x', dx * VEL * dt);
-    else andar('y', dy * VEL * dt);
-    coletar();
-    conferirCasa();
+    if (d) {
+      P.dir = d;
+      P.passo += dt;
+      const [dx, dy] = VETOR[d];
+      if (dx) andar('x', dx * VEL * dt);
+      else andar('y', dy * VEL * dt);
+      coletar();
+      conferirCasa();
+    }
+    if (!M.pausa && !M.transicao) moverMonstros(dt);
   }
 
   // ---------- desenho ----------
@@ -995,8 +1170,9 @@ const Masmorra = (() => {
       if (PORTAS[ch]) porta(x, y, PORTAS[ch]);
       else if (ch === 'o') moeda(x + T / 2, y + T / 2 + Math.sin(t * 4 + c + l) * 2.5);
       else if (ch === 'c' || ch === 'C') bau(x, y, ch === 'C');
-      else if (ch === 'X') saida(x + T / 2, y + T / 2, t);
+      else if (ch === 'X') saida(x + T / 2, y + T / 2, t, fechada('X'));
     }
+    for (const m of sala().monstros) monstro(m, t);
     heroi();
     textos();
     if (M.transicao) {
@@ -1007,12 +1183,29 @@ const Masmorra = (() => {
   }
 
   function porta(x, y, dir) {
+    const [dx, dy] = VETOR[dir];
     ctx.fillStyle = M.cor.sombra;
     ctx.globalAlpha = .3;
     ctx.fillRect(x, y, T, T);
+    ctx.globalAlpha = 1;
+    if (sala().monstros.length) { // grades enquanto houver monstro
+      ctx.fillStyle = '#4B4466';
+      for (let k = 0; k < 3; k++) dy ? ctx.fillRect(x + 6 + k * 9, y + 2, 4, T - 4) : ctx.fillRect(x + 2, y + 6 + k * 9, T - 4, 4);
+      return;
+    }
+    if (cadeado(dir)) { // cadeado dourado
+      ctx.fillStyle = '#FFC531';
+      caixa(x + 9, y + 14, 14, 12, 3);
+      ctx.strokeStyle = '#FFC531';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x + 16, y + 14, 5, Math.PI, 0);
+      ctx.stroke();
+      return;
+    }
     ctx.globalAlpha = .75;
     ctx.fillStyle = '#fff';
-    const [dx, dy] = VETOR[dir], cx = x + T / 2 + dx * 4, cy = y + T / 2 + dy * 4;
+    const cx = x + T / 2 + dx * 4, cy = y + T / 2 + dy * 4;
     ctx.beginPath();
     ctx.moveTo(cx + dx * 7, cy + dy * 7);
     ctx.lineTo(cx - dy * 7 - dx * 4, cy + dx * 7 - dy * 4);
@@ -1035,11 +1228,32 @@ const Masmorra = (() => {
     if (aberto) { ctx.globalAlpha = .7; ctx.fillStyle = '#FFE48A'; circ(px + w / 2, py + 3, 6); ctx.globalAlpha = 1; }
   }
 
-  function saida(x, y, t) {
-    const p = 1 + Math.sin(t * 5) * .08;
-    ctx.fillStyle = '#7B2FF7'; circ(x, y, 13 * p);
-    ctx.fillStyle = '#C4B5FD'; circ(x, y, 8 * p);
+  function saida(x, y, t, fechadaAgora) {
+    const p = fechadaAgora ? 1 : 1 + Math.sin(t * 5) * .08;
+    ctx.fillStyle = fechadaAgora ? '#6B6585' : '#7B2FF7'; circ(x, y, 13 * p);
+    ctx.fillStyle = fechadaAgora ? '#9D97B5' : '#C4B5FD'; circ(x, y, 8 * p);
     ctx.fillStyle = '#fff'; circ(x, y, 3.5);
+  }
+
+  function monstro(m, t) {
+    const img = artes[m.tema], w = T * 1.1, pulo = Math.abs(Math.sin(m.bob * (m.caca ? 9 : 5))) * 3;
+    ctx.fillStyle = 'rgba(0,0,0,.18)';
+    ctx.beginPath();
+    ctx.ellipse(m.x * T, (m.y + .3) * T, w * .34, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (img && img.complete && img.naturalWidth) {
+      ctx.save();
+      ctx.translate(m.x * T, (m.y + .3) * T - pulo);
+      if (m.olhar > 0) ctx.scale(-1, 1); // a arte olha para a esquerda
+      ctx.drawImage(img, -w / 2, -w, w, w);
+      ctx.restore();
+    }
+    if (m.caca && M.acorda <= 0) {
+      ctx.font = '900 14px ui-rounded, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#FF4B5C';
+      ctx.fillText('!', m.x * T, (m.y - .9) * T - pulo);
+    }
   }
 
   function heroi() {
@@ -1049,7 +1263,9 @@ const Masmorra = (() => {
     ctx.beginPath();
     ctx.ellipse(P.x * T, pe - 2, w * .32, 4, 0, 0, Math.PI * 2);
     ctx.fill();
+    if (M.graca > 0 && Math.floor(M.graca * 10) % 2) ctx.globalAlpha = .45; // pisca depois da batalha
     if (img && img.complete && img.naturalWidth) ctx.drawImage(img, P.x * T - w / 2, pe - h * (128 / 132), w, h);
+    ctx.globalAlpha = 1;
   }
 
   function textos() {
@@ -1069,7 +1285,7 @@ const Masmorra = (() => {
 
   // ---------- corações e mini mapa (HUD) ----------
   function pintarVidas() {
-    document.getElementById('mas-vidas').innerHTML = Array.from({ length: 5 }, (_, k) => (k < M.vidas ? '❤️' : '🤍')).join('');
+    document.getElementById('mas-vidas').innerHTML = Array.from({ length: M.op.vidas }, (_, k) => (k < M.vidas ? '❤️' : '🤍')).join('');
   }
 
   function pintarMini() {
@@ -1097,4 +1313,147 @@ const Masmorra = (() => {
   }
 
   return { abrir, parar };
+})();
+
+// =====================================================================
+// BATALHA por turnos: monstro no alto à direita, aluno de costas embaixo
+// =====================================================================
+const Batalha = (() => {
+  const $b = id => document.getElementById(id);
+  let op = null, fala = 0;
+
+  function abrir(o) {
+    op = o;
+    const m = o.monstro, b = $b('batalha');
+    b.hidden = false;
+    b.style.setProperty('--a1', m.cores.a1);
+    b.style.setProperty('--a2', m.cores.a2);
+    $b('b-nome').textContent = `${ICONE_TEMA[m.tema]} ${m.nome}`;
+    $b('b-arte').className = 'b-arte-m';
+    $b('b-arte').innerHTML = desenharMonstro(m.tema);
+    $b('b-heroi').className = 'b-arte-h';
+    $b('b-heroi').innerHTML = desenharPersonagem(o.personagem, 'parado', 'cima');
+    $b('b-respostas').innerHTML = '';
+    $b('b-fala').textContent = `${m.nome} apareceu!`;
+    $b('b-dica').innerHTML = '';
+    $b('b-segue').hidden = true;
+    vida(m.vida, m.max);
+    vidas(o.vidas);
+    $b('b-poder').disabled = !o.aoPoder;
+    $b('b-poder').onclick = () => o.aoPoder && o.aoPoder();
+    $b('b-dicabt').onclick = () => o.aoDica();
+  }
+
+  function vida(v, max) {
+    const i = $b('b-vida'), f = v / max;
+    i.style.width = 100 * f + '%';
+    i.style.background = f > .5 ? 'var(--ok)' : f > .25 ? 'var(--ouro)' : 'var(--erro)';
+    $b('b-pv').textContent = `${v}/${max}`;
+  }
+
+  function vidas(n, perdeu) {
+    $b('b-vidas').innerHTML = Array.from({ length: op.maxVidas }, (_, k) => `<span class="${perdeu && k === n ? 'perde' : ''}">${k < n ? '❤️' : '🤍'}</span>`).join('');
+  }
+
+  // a pergunta aparece digitando (até 0,45 s); as respostas ficam numa grade 2x2
+  function perguntar(q, pronto) {
+    $b('b-dica').innerHTML = '';
+    $b('b-segue').hidden = true;
+    const r = $b('b-respostas');
+    r.innerHTML = '';
+    q.opcoes.forEach((o, i) => {
+      const bt = document.createElement('button');
+      bt.className = 'b-resp' + (o.length > 6 ? ' longa' : '');
+      bt.dataset.i = i;
+      bt.textContent = o;
+      r.appendChild(bt);
+    });
+    r.onclick = e => { const bt = e.target.closest('.b-resp'); if (bt && !bt.disabled) op.aoResponder(+bt.dataset.i); };
+    const el = $b('b-fala'), n = q.texto.length, porVez = Math.max(1, Math.ceil(n / 28));
+    let k = 0;
+    clearInterval(fala);
+    el.textContent = '';
+    fala = setInterval(() => {
+      k = Math.min(n, k + porVez);
+      el.textContent = q.texto.slice(0, k);
+      if (k >= n) { clearInterval(fala); if (pronto) pronto(); }
+    }, 16);
+  }
+
+  const botoes = () => [...$b('b-respostas').children];
+  const travar = () => botoes().forEach(b => (b.disabled = true));
+  const animar = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+
+  function numero(txt, cor) {
+    const d = $b('b-dano');
+    d.textContent = txt;
+    d.style.color = cor;
+    animar(d, 'pop');
+  }
+
+  // acerto: o aluno avança e ataca, o monstro treme e a vida desce
+  function acerto(i, dano, v, max, rapido, cb) {
+    clearInterval(fala);
+    travar();
+    botoes()[i].classList.add('certa');
+    animar($b('b-heroi'), 'ataca');
+    som('pulo');
+    setTimeout(() => {
+      animar($b('b-arte'), 'dor');
+      vida(v, max);
+      numero(`Acerto! ${dano} de dano${rapido ? ' ⚡' : ''}`, '#fff');
+      som('moeda');
+      vibrar(30);
+    }, 200);
+    setTimeout(cb, 900);
+  }
+
+  // erro: o monstro ataca, a tela balança, sai um coração e aparece a dica
+  function erro(i, certa, q, n, cb) {
+    clearInterval(fala);
+    travar();
+    botoes()[i].classList.add('errada');
+    botoes()[certa].classList.add('certa');
+    animar($b('b-arte'), 'investe');
+    setTimeout(() => {
+      animar($b('arena'), 'balanca');
+      som('erro');
+      vibrar([80, 40, 80]);
+      vidas(n, true);
+      numero('−1 ❤️', '#FFB3BB');
+      dica(q.dica, q.visual);
+      const s = $b('b-segue');
+      s.hidden = false;
+      s.onclick = () => { s.hidden = true; som('clique'); cb(); };
+    }, 250);
+  }
+
+  function dica(txt, visual) {
+    $b('b-dica').innerHTML = `💡 ${esc(txt)}${visual ? `<div class="visual">${visual}</div>` : ''}`;
+  }
+
+  function vitoria(txt, cb) {
+    $b('b-respostas').innerHTML = '';
+    animar($b('b-arte'), 'desmaia');
+    numero(txt, '#FFE48A');
+    $b('b-fala').textContent = '🎉 Monstro derrotado!';
+    som('vitoria');
+    setTimeout(cb, 1100);
+  }
+
+  function derrota(cb) {
+    $b('b-respostas').innerHTML = '';
+    animar($b('b-heroi'), 'desmaia');
+    $b('b-fala').textContent = '💔 Sem corações! De volta ao início';
+    const s = $b('b-segue');
+    s.hidden = false;
+    s.onclick = () => { s.hidden = true; som('clique'); cb(); };
+  }
+
+  function fechar() {
+    clearInterval(fala);
+    $b('batalha').hidden = true;
+  }
+
+  return { abrir, perguntar, acerto, erro, dica, vitoria, derrota, fechar };
 })();

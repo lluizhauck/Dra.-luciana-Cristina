@@ -301,15 +301,205 @@ function pintarRanking() {
 }
 
 // ---------- masmorra do dia (jogo.js) ----------
+// Ajuste fácil: dano, vida dos monstros e prêmios
+const CONFIG_BATALHA = {
+  danoBase: 10,            // dano de cada acerto
+  bonusSeguido: 5,         // + por acerto seguido…
+  bonusSeguidoMax: 20,     // …até este limite
+  bonusRapido: 5,          // + se responder em até…
+  segundosRapido: 5,       // …estes segundos
+  vidaMonstro: [30, 60],   // sorteada de 5 em 5 (3 a 5 acertos)
+  coracoes: 5,
+  recompensa: { moedas: 3, xp: 15 },
+  custoDica: 2             // moedas por dica
+};
+// tema do monstro → dias de onde saem as perguntas (conteudo.js)
+const DIAS_DO_TEMA = { Natural: [1, 2, 3], Negativo: [4, 5, 6, 7, 8], Tabuada: [9, 10, 11, 12, 13, 14], 'Divisão': [15, 16, 17] };
+
 function telaMasmorra() {
   const d = DIAS[diaAberto - 1];
   const progresso = (estado.masmorras[d.n] = estado.masmorras[d.n] || { pegos: [], visitadas: [] });
+  B = null;
+  Batalha.fechar();
+  $('#desafio').hidden = true;
+  Relatorio.licao(d.n, '🏰 Masmorra');
   Masmorra.abrir({
-    mundo: d.mundo, personagem: estado.personagem, progresso, vidas: 5,
+    mundo: d.mundo, personagem: estado.personagem, progresso, vidas: CONFIG_BATALHA.coracoes,
     aoMoeda: n => { estado.moedas += n; salvar(); },
     aoSalvar: salvar,
-    aoSaida: () => { toast('🏁 Saída! Hora da lição'); irPara('t-dia'); } // parte 1: a saída leva às lições do dia
+    aoBatalha: batalhar,
+    aoDesafio: desafio,
+    aoSalaLimpa: (i, semErro) => salaLimpa(d, i, semErro),
+    aoSaida: () => concluirMasmorra(d)
   });
+}
+
+// sala sem monstros: a carta da lição daquela sala vira do aluno
+function salaLimpa(d, i, semErro) {
+  const lic = d.licoes[i];
+  if (lic && !lic.chefao) {
+    estado.licoes[lic.id] = true;
+    if (!estado.cartas.includes(lic.id)) { estado.cartas.push(lic.id); toast(`🃏 ${lic.carta.titulo}`); confete(); }
+  }
+  if (semErro) ganharMedalha('perfeita');
+  salvar();
+  Relatorio.placar();
+}
+
+// saída: conclui o dia, libera o próximo nó do mapa e dá o baú (na parte 3, o chefão faz isso)
+function concluirMasmorra(d) {
+  const novo = !estado.diasConcluidos.includes(d.n);
+  if (novo) {
+    estado.diasConcluidos.push(d.n);
+    if (d.n === estado.diaAtual) { estado.andar = d.n; estado.diaAtual = d.n + 1; }
+    ganharMedalha('dia');
+  }
+  if (d.n === 20) { ganharMedalha('mestre'); Relatorio.enviarFinal(); }
+  salvar();
+  Relatorio.placar();
+  if (novo) abrirBau();
+  else { toast('🏁 Masmorra concluída!'); irPara('t-mapa'); }
+}
+
+// ---------- perguntas da batalha: o motor atual vira 4 respostas ----------
+const TIPOS_BATALHA = ['escolha', 'vf', 'digitar', 'padrao', 'grade', 'tabuleiro', 'repartir'];
+function paraBatalha(ex) {
+  if (!ex || !TIPOS_BATALHA.includes(ex.tipo)) return null; // arrastar, ligar, reta… ficam para baús e portas
+  const texto = (ex.tipo === 'padrao' ? [...ex.linhas, ex.ultima.includes('?') ? ex.ultima : ex.ultima + ' ?'].join('  ·  ')
+    : ex.tipo === 'grade' ? `${ex.a} × ${ex.b} = ?` : ex.pergunta).replace(/^(⏱ |🔁 )/, '');
+  const base = { ex, texto, dica: ex.dica || 'Pense com calma', visual: ex.visual || '', conta: ex.conta || texto };
+  if (ex.tipo === 'vf') return { ...base, opcoes: ['✔', '✘'], certa: ex.resposta ? 0 : 1 };
+  const txt = v => (typeof v === 'number' ? fmt(v) : String(v));
+  const certo = ex.tipo === 'escolha' ? txt(ex.opcoes.find(o => norm(o) === norm(ex.resposta))) : txt(ex.resposta);
+  const ops = ex.tipo === 'escolha' ? ex.opcoes.map(txt) : [certo];
+  // respostas numéricas: completa até 4 com números perto (inclui o erro de sinal)
+  if (/^-?\d+$/.test(norm(certo))) {
+    const n = Number(norm(certo)), neg = n < 0 || /−/.test(texto), usadas = new Set(ops.map(norm));
+    for (const v of embaralhar([n + 1, n - 1, n + 2, n - 2, n + 10, n - 10, -n, n * 2])) {
+      if (ops.length >= 4) break;
+      if (v !== n && (neg || v >= 0) && !usadas.has(String(v))) { usadas.add(String(v)); ops.push(fmt(v)); }
+    }
+  }
+  const lista = embaralhar(ops);
+  return { ...base, opcoes: lista, certa: lista.findIndex(o => norm(o) === norm(certo)) };
+}
+
+// perguntas do monstro: o tema escolhe os dias; a sala puxa a lição do dia; erros antigos voltam às vezes
+function geradorDoMonstro(tema, d, sala) {
+  const lic = d.licoes[sala], dias = DIAS_DO_TEMA[tema].filter(n => n <= d.n);
+  const doDia = DIAS_DO_TEMA[tema].includes(d.n) || d.mundo === 4 ? (lic && lic.modelos) || modelosDos([d.n]) : [];
+  const doTema = modelosDos(dias.length ? dias : [DIAS_DO_TEMA[tema][0]]), vistas = new Set();
+  return () => {
+    const volta = Math.random() < .2 && errosParaRevisar(DIAS_DO_TEMA[tema], 1)[0];
+    const qv = volta && paraBatalha(volta);
+    if (qv) return qv;
+    for (let t = 0; t < 40; t++) {
+      const pool = doDia.length && Math.random() < .7 ? doDia : doTema;
+      const q = paraBatalha(sortear(pool)());
+      if (q && (!vistas.has(q.texto) || t > 30)) { vistas.add(q.texto); return q; }
+    }
+    return paraBatalha(digitar('2 + 2 = ?', 4, '2 + 2 = 4'));
+  };
+}
+
+// ---------- batalha por turnos: a matemática vira dano ----------
+let B = null;
+function batalhar(mon, vidas, fim) {
+  const d = DIAS[diaAberto - 1];
+  B = { mon, vidas, fim, seguidos: 0, erros: 0, q: null, t0: 0, travado: true, dica: false, gerar: geradorDoMonstro(mon.tema, d, mon.sala) };
+  Batalha.abrir({ monstro: mon, personagem: estado.personagem, vidas, maxVidas: CONFIG_BATALHA.coracoes, aoResponder: responderBatalha, aoDica: dicaBatalha, aoPoder: null });
+  setTimeout(proximaBatalha, 500);
+}
+
+function proximaBatalha() {
+  if (!B) return;
+  B.q = B.gerar();
+  B.travado = false;
+  B.dica = false;
+  B.t0 = Infinity; // o relógio do "rápido" começa quando a pergunta termina de aparecer
+  Batalha.perguntar(B.q, () => { if (B) B.t0 = performance.now(); });
+}
+
+function responderBatalha(i) {
+  if (!B || B.travado) return;
+  B.travado = true;
+  const C = CONFIG_BATALHA, q = B.q, d = DIAS[diaAberto - 1], certo = i === q.certa;
+  Relatorio.registrar(certo, q.conta);
+  if (certo) {
+    const rapido = performance.now() - B.t0 <= C.segundosRapido * 1000;
+    const dano = C.danoBase + Math.min(C.bonusSeguidoMax, C.bonusSeguido * B.seguidos) + (rapido ? C.bonusRapido : 0);
+    B.seguidos++;
+    estado.seguidos++;
+    if (q.ex.revisao) acertouRevisao(q.ex);
+    if (estado.seguidos >= 10) ganharMedalha('seq10');
+    B.mon.vida = Math.max(0, B.mon.vida - dano);
+    salvar();
+    Batalha.acerto(i, dano, B.mon.vida, B.mon.max, rapido, () => (B.mon.vida > 0 ? proximaBatalha() : vencerBatalha()));
+  } else {
+    B.seguidos = 0;
+    B.erros++;
+    B.vidas--;
+    estado.seguidos = 0;
+    estado.erros = [...estado.erros, { dia: d.n, licao: 'masmorra', pergunta: q.texto, dada: q.opcoes[i], certa: q.opcoes[q.certa], quando: Date.now() }].slice(-200);
+    guardarErro(q.ex, q.ex.diaOrigem || d.n);
+    salvar();
+    Batalha.erro(i, q.certa, q, B.vidas, () => (B.vidas > 0 ? proximaBatalha() : Batalha.derrota(() => terminarBatalha(false))));
+  }
+}
+
+function vencerBatalha() {
+  const P = CONFIG_BATALHA.recompensa, bonus = marcarStreak();
+  estado.moedas += P.moedas;
+  estado.xp += P.xp + bonus;
+  salvar();
+  Batalha.vitoria(`🎉 +${P.moedas} 🪙 +${P.xp + bonus} ⚡`, () => terminarBatalha(true));
+}
+
+function terminarBatalha(venceu) {
+  const b = B;
+  B = null;
+  Batalha.fechar();
+  b.fim({ venceu, vidas: b.vidas, erros: b.erros });
+}
+
+// dica paga com moedas: mostra a dica visual da pergunta
+function dicaBatalha() {
+  if (!B || B.travado || B.dica) return;
+  if (estado.moedas < CONFIG_BATALHA.custoDica) { toast(`🪙 A dica custa ${CONFIG_BATALHA.custoDica}`); return; }
+  estado.moedas -= CONFIG_BATALHA.custoDica;
+  B.dica = true;
+  salvar();
+  som('clique');
+  Batalha.dica(B.q.dica, B.q.visual);
+}
+
+// ---------- baús e portas trancadas: arrastar para ℕ ou ℤ, ligar pares, reta… ----------
+const TIPOS_DESAFIO = ['conjunto', 'ligar', 'reta', 'ordenar', 'fila'];
+function exercicioDeDesafio(d) {
+  for (const pool of [modelosDos([d.n]), modelosDos(Array.from({ length: d.n }, (_, i) => i + 1))]) {
+    for (let t = 0; t < 60 && pool.length; t++) { const ex = sortear(pool)(); if (TIPOS_DESAFIO.includes(ex.tipo)) return ex; }
+  }
+  return ligar('Ligue conta e resultado 🔗', paresUnicos(() => { const a = rnd(1, 9), b = rnd(1, 9); return [`${a} + ${b}`, a + b]; }), 'Uma conta de cada vez');
+}
+
+function desafio(tipo, fim) {
+  const d = DIAS[diaAberto - 1], ex = exercicioDeDesafio(d), caixa = $('#desafio');
+  caixa.hidden = false;
+  $('#des-icone').textContent = tipo === 'bau' ? '🎁' : '🔒';
+  $('#des-pergunta').textContent = ex.pergunta.replace(/^⏱ /, '');
+  $('#des-volta').onclick = () => { som('clique'); caixa.hidden = true; fim({ aberto: false }); };
+  Jogo.desafio($('#des-palco'), ex, (certo, det) => {
+    Relatorio.registrar(certo, (det && det.conta) || ex.conta || ex.pergunta);
+    if (!certo) guardarErro(ex, d.n);
+    salvar();
+    const aberto = certo || ex.tipo !== 'reta'; // completou o desafio (na reta, só vale acertando)
+    som(aberto ? 'vitoria' : 'erro');
+    $('#des-pergunta').textContent = aberto ? (tipo === 'bau' ? '🎉 Baú aberto!' : '🔓 Porta aberta!') : '😅 Quase! Vem outro';
+    setTimeout(() => {
+      if (caixa.hidden) return;
+      if (aberto) { caixa.hidden = true; fim({ aberto, certo }); } else desafio(tipo, fim);
+    }, 900);
+  }, ok => { som(ok ? 'moeda' : 'erro'); vibrar(ok ? 20 : 60); });
 }
 
 // ---------- lições do dia ----------
