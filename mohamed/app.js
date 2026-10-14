@@ -74,6 +74,7 @@ const SONS = {
   chefe: [[147, .16], [123, .16], [98, .32]]
 };
 function som(tipo) {
+  if (typeof Audio2 !== 'undefined') return Audio2.sfx({ ok: 'acerto', pulo: 'golpe' }[tipo] || tipo); // efeitos do audio.js (respeitam o botão de som)
   try {
     audio = audio || new (window.AudioContext || window.webkitAudioContext)();
     if (audio.state === 'suspended') audio.resume();
@@ -233,6 +234,7 @@ function noMapa(d, p, m) {
 }
 
 function telaMapa() {
+  Audio2.musica('mapa');
   $('#chip-xp').textContent = `⚡ ${estado.xp}`;
   $('#bt-perfil').innerHTML = desenharPersonagem(estado.personagem);
   let estradas = '', faixas = '', placas = '', nos = '';
@@ -415,7 +417,7 @@ function concluirMasmorra(d) {
   salvar();
   Relatorio.placar();
   confete();
-  som('vitoria');
+  Audio2.sfx('vitoria');
   if (novo) { toast('🏆 Dia concluído!'); setTimeout(abrirBau, 700); }
   else { toast('🏁 Masmorra concluída!'); irPara('t-mapa'); }
 }
@@ -751,6 +753,7 @@ function cartaPorId(id) {
 }
 
 function telaAldeia() {
+  Audio2.musica('aldeia');
   const lotes = estado.aldeia.lotes, feitos = new Set(lotes.map(l => l.c).filter(Boolean));
   const total = Math.max(16, Math.ceil((lotes.length + 1) / 4) * 4);
   const livres = estado.cartas.filter(id => !feitos.has(id));

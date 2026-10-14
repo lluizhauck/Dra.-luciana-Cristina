@@ -1,8 +1,8 @@
 // Mohamed — service worker: guarda todos os arquivos do app para funcionar offline.
 // Publicou mudanças? Troque a VERSAO para os alunos receberem os arquivos novos.
-const VERSAO = 'mohamed-v4';
+const VERSAO = 'mohamed-v5';
 const ARQUIVOS = [
-  './', 'index.html', 'app.js', 'jogo.js', 'conteudo.js', 'relatorio.js',
+  './', 'index.html', 'app.js', 'jogo.js', 'conteudo.js', 'relatorio.js', 'tema.css', 'audio.js',
   'manifest.json', 'icone.svg', 'icone-192.png', 'icone-512.png'
 ];
 

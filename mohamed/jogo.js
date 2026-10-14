@@ -330,11 +330,11 @@ const Masmorra = (() => {
   const TECLAS = { arrowup: 'cima', arrowdown: 'baixo', arrowleft: 'esquerda', arrowright: 'direita', w: 'cima', s: 'baixo', a: 'esquerda', d: 'direita' };
   // cor do cenário por mundo: chão, chão alternado, parede, topo da parede, sombra
   const PALETAS = [
-    { chao: '#E9FFF2', chao2: '#DDF7E8', parede: '#2FBF71', topo: '#86E3AE', sombra: '#1C8A50' },
-    { chao: '#EEF6FF', chao2: '#E1EDFC', parede: '#4E9BE8', topo: '#B8DBFF', sombra: '#2F6DB0' },
-    { chao: '#FFF2E8', chao2: '#FFE5D2', parede: '#E2552B', topo: '#F9A66C', sombra: '#9A3412' },
-    { chao: '#EAFDFF', chao2: '#D7F6FA', parede: '#0EA5B7', topo: '#67E8F9', sombra: '#0B6E7A' },
-    { chao: '#2A2463', chao2: '#241F57', parede: '#7C3AED', topo: '#A78BFA', sombra: '#4C1D95' }
+    { chao: '#121D1B', chao2: '#0F1817', parede: '#1B4434', topo: '#2C6A4E', sombra: '#060C0A' },
+    { chao: '#111829', chao2: '#0E1423', parede: '#1E3A63', topo: '#30588F', sombra: '#070B14' },
+    { chao: '#1E1314', chao2: '#191011', parede: '#55201A', topo: '#863726', sombra: '#0C0606' },
+    { chao: '#0F1C21', chao2: '#0C171C', parede: '#134C5A', topo: '#1F7586', sombra: '#050D10' },
+    { chao: '#17112A', chao2: '#130E24', parede: '#391C69', topo: '#573496', sombra: '#09061A' }
   ];
 
   let M = null, cv = null, ctx = null, raf = 0, ligado = false, cache = { chave: '', imgs: {} };
@@ -354,6 +354,7 @@ const Masmorra = (() => {
     cv = document.getElementById('mas-tela');
     ctx = cv.getContext('2d');
     if (!ligado) ligarControles();
+    Audio2.musica('masmorra');
     M = { op, prog: op.progresso, cor: PALETAS[op.mundo] || PALETAS[0], vidas: op.vidas, maxVidas: op.vidas, entrada: null, textos: [], transicao: null, ultimo: 0, fim: false, pausa: false, graca: 0, acorda: 0, aviso: 0, errosSala: 0 };
     montarSalas();
     irParaInicio();
@@ -557,7 +558,7 @@ const Masmorra = (() => {
     const P = M.P, ch = casa(Math.floor(P.x), Math.floor(P.y));
     if (PORTAS[ch] && !M.transicao) {
       const destino = vizinha(sala(), PORTAS[ch]), dir = PORTAS[ch];
-      if (destino >= 0) { som('clique'); M.transicao = { t: 0, trocou: false, trocar: () => entrar(destino, dir) }; }
+      if (destino >= 0) { Audio2.sfx('porta'); M.transicao = { t: 0, trocou: false, trocar: () => entrar(destino, dir) }; }
     }
     if (ch === 'X' && !M.fim) {
       M.fim = true;
@@ -576,7 +577,7 @@ const Masmorra = (() => {
     M.errosSala = 0;
     visitar(destino);
     const chefe = sala().monstros.find(m => m.chefe);
-    if (chefe) { M.entrada = { t: 0, nome: chefe.nome }; som('chefe'); vibrar([120, 60, 120]); } // entrada dramática
+    if (chefe) { M.entrada = { t: 0, nome: chefe.nome }; som('chefe'); vibrar([120, 60, 120]); Audio2.musica('chefao'); } // entrada dramática
   }
 
   function visitar(i) {
@@ -651,6 +652,7 @@ const Masmorra = (() => {
         M.transicao = { t: 0, trocou: false, trocar: () => { montarSalas(); irParaInicio(); flutuar('💪', M.P.x, M.P.y - 1); } };
       }
       pintarVidas();
+      Audio2.musica(res.venceu && sala().monstros.some(x => x.chefe) ? 'chefao' : 'masmorra');
     });
   }
 
@@ -733,6 +735,7 @@ const Masmorra = (() => {
     }
     for (const m of sala().monstros) monstro(m, t);
     heroi();
+    lanterna(t);
     textos();
     ctx.restore();
     if (M.entrada) entradaChefe();
@@ -741,6 +744,27 @@ const Masmorra = (() => {
       ctx.fillStyle = `rgba(20,15,46,${Math.max(0, Math.min(1, a))})`;
       ctx.fillRect(0, 0, COLS * T, LINS * T);
     }
+  }
+
+  // tema escuro: penumbra na sala, luz de lanterna no herói; moedas, portas e saída brilham
+  function lanterna(t) {
+    const x = M.P.x * T, y = M.P.y * T, luz = ctx.createRadialGradient(x, y, T * .6, x, y, T * (4.2 + Math.sin(t * 3) * .12));
+    luz.addColorStop(0, 'rgba(255,210,150,.10)');
+    luz.addColorStop(.55, 'rgba(6,5,18,.2)');
+    luz.addColorStop(1, 'rgba(6,5,18,.62)');
+    ctx.fillStyle = luz;
+    ctx.fillRect(0, 0, COLS * T, LINS * T);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const brilho = (bx, by, r, cor) => { const g = ctx.createRadialGradient(bx, by, 0, bx, by, r); g.addColorStop(0, cor); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(bx - r, by - r, r * 2, r * 2); };
+    sala().g.forEach((linha, l) => linha.forEach((ch, c) => {
+      const bx = (c + .5) * T, by = (l + .5) * T;
+      if (ch === 'o') brilho(bx, by, T * .8, 'rgba(255,197,49,.35)');
+      else if (ch === 'X' && !fechada('X')) brilho(bx, by, T * (1.3 + Math.sin(t * 4) * .1), 'rgba(34,232,255,.42)');
+      else if (PORTAS[ch] && !sala().monstros.length) brilho(bx, by, T, cadeado(PORTAS[ch]) ? 'rgba(255,197,49,.3)' : 'rgba(34,232,255,.3)');
+    }));
+    for (const m of sala().monstros) if (m.caca || m.chefe) brilho(m.x * T, (m.y - .1) * T, T * (m.chefe ? 1.6 : .9), 'rgba(255,40,70,.24)');
+    ctx.restore();
   }
 
   // entrada do chefão: escurece, o nome cresce e some (1,4 s em passos curtos)
@@ -810,8 +834,8 @@ const Masmorra = (() => {
 
   function saida(x, y, t, fechadaAgora) {
     const p = fechadaAgora ? 1 : 1 + Math.sin(t * 5) * .08;
-    ctx.fillStyle = fechadaAgora ? '#6B6585' : '#7B2FF7'; circ(x, y, 13 * p);
-    ctx.fillStyle = fechadaAgora ? '#9D97B5' : '#C4B5FD'; circ(x, y, 8 * p);
+    ctx.fillStyle = fechadaAgora ? '#2A3058' : '#0FB5D0'; circ(x, y, 13 * p);
+    ctx.fillStyle = fechadaAgora ? '#3D4578' : '#B8FBFF'; circ(x, y, 8 * p);
     ctx.fillStyle = '#fff'; circ(x, y, 3.5);
   }
 
@@ -937,6 +961,7 @@ const Batalha = (() => {
     $b('b-segue').hidden = true;
     vida(m.vida, m.max);
     vidas(o.vidas);
+    Audio2.musica(m.chefe ? 'chefao' : 'batalha');
     $b('b-poder').disabled = !o.aoPoder;
     $b('b-poder').onclick = () => o.aoPoder && o.aoPoder();
     $b('b-dicabt').onclick = () => o.aoDica();
@@ -1038,12 +1063,12 @@ const Batalha = (() => {
     travar();
     botoes()[i].classList.add('certa');
     animar($b('b-heroi'), 'ataca');
-    som('pulo');
+    Audio2.sfx('acerto');
     setTimeout(() => {
       animar($b('b-arte'), 'dor');
       vida(v, max);
       numero(`Acerto! ${dano} de dano${rapido ? ' ⚡' : ''}`, '#fff');
-      som('moeda');
+      Audio2.sfx('golpe');
       vibrar(30);
     }, 200);
     setTimeout(cb, 900);
@@ -1087,6 +1112,7 @@ const Batalha = (() => {
     $b('b-respostas').innerHTML = '';
     animar($b('b-heroi'), 'desmaia');
     $b('b-fala').textContent = '💔 Sem corações! De volta ao início';
+    Audio2.sfx('derrota');
     const s = $b('b-segue');
     s.hidden = false;
     s.onclick = () => { s.hidden = true; som('clique'); cb(); };
