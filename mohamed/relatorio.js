@@ -1,4 +1,4 @@
-// Mohamed — relatorio.js: tempo ativo, registro da sessão e envio do relatório ao professor
+// Mohamed — relatorio.js: tempo ativo, relatório ao professor, placar e ranking da turma
 
 // ⚙️ Cole aqui a URL do App da Web do Google Apps Script (termina em /exec)
 const URL_RELATORIO = 'https://script.google.com/macros/s/COLE_AQUI_O_ID/exec';
@@ -7,8 +7,8 @@ const PAUSA_INATIVO = 30;   // segundos sem tocar → o cronômetro pausa
 
 const Relatorio = (() => {
   const CHAVE_R = 'mohamed.relatorio.v1';
-  const novo = () => ({ segundos: 0, acertos: 0, erros: 0, erradas: {}, dia: null, licao: '', fila: [] });
-  let R = ler(), ultimo = Date.now(), enviando = false;
+  const novo = () => ({ segundos: 0, acertos: 0, erros: 0, erradas: {}, dia: null, licao: '', fila: [], ranking: [], rankingEm: 0 });
+  let R = ler(), ultimo = 0, enviando = false; // só conta depois do 1º toque
 
   function ler() {
     try { return { ...novo(), ...JSON.parse(localStorage.getItem(CHAVE_R) || '{}') }; }
@@ -23,6 +23,12 @@ const Relatorio = (() => {
   const ativo = () => !document.hidden && Date.now() - ultimo < PAUSA_INATIVO * 1000;
   const top3 = () => Object.entries(R.erradas).sort((a, b) => b[1] - a[1]).slice(0, 3);
   const falta = () => Math.max(0, MINUTOS_MINIMOS * 60 - R.segundos);
+  const novoId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // fetch com limite de tempo: uma rede travada não prende a fila
+  const comTempo = (url, op = {}, ms = 15000) => {
+    const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
+    return fetch(url, { ...op, signal: c.signal }).finally(() => clearTimeout(t));
+  };
 
   // conta 1 segundo só com o app visível e o aluno interagindo
   function tique() {
@@ -81,25 +87,26 @@ const Relatorio = (() => {
     gravar();
   }
 
-  // monta o relatório, põe na fila, zera a sessão e tenta enviar
+  // relatório da sessão (tipo: 'relatorio' ou 'final')
+  function montarRelatorio(tipo) {
+    return {
+      tipo, id: novoId(),
+      nome: estado.nome, apelido: estado.apelido, turma: estado.turma,
+      dataHora: new Date().toLocaleString('pt-BR'),
+      tempoAtivo: relogio(R.segundos), segundos: R.segundos,
+      dia: R.dia || '', licao: R.licao || '',
+      acertos: R.acertos, erros: R.erros, xp: estado.xp,
+      maisErradas: top3().map(([c, n]) => `${c} (${n}×)`).join(' | ')
+    };
+  }
+  const zerar = () => { Object.assign(R, { segundos: 0, acertos: 0, erros: 0, erradas: {} }); gravar(); };
+  const MSG = { ok: '✅ Enviado ao professor', offline: '📶 Sem internet: envio depois', config: '⚙️ Falta a URL no relatorio.js', fila: '📮 Na fila, enviando…' };
+
+  // botão "Finalizar e enviar": põe na fila, zera a sessão e tenta enviar
   function enviar() {
     if (falta() > 0) return;
-    R.fila.push({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      nome: estado.nome,
-      turma: estado.turma,
-      dataHora: new Date().toLocaleString('pt-BR'),
-      tempoAtivo: relogio(R.segundos),
-      segundos: R.segundos,
-      dia: R.dia || '',
-      licao: R.licao || '',
-      acertos: R.acertos,
-      erros: R.erros,
-      xp: estado.xp,
-      maisErradas: top3().map(([c, n]) => `${c} (${n}×)`).join(' | ')
-    });
-    Object.assign(R, { segundos: 0, acertos: 0, erros: 0, erradas: {} });
-    gravar();
+    R.fila.push(montarRelatorio('relatorio'));
+    zerar();
     som('vitoria');
     confete();
     const s = document.createElement('div');
@@ -107,22 +114,51 @@ const Relatorio = (() => {
     s.innerHTML = '<div class="caixa"><div class="trofeu">📤</div><h2 class="titulo">Relatório pronto!</h2><p class="sub" id="rel-msg">Enviando…</p><button class="btn" id="bt-rel-ok">Ok ▶</button></div>';
     document.body.appendChild(s);
     s.querySelector('#bt-rel-ok').onclick = () => { som('clique'); s.remove(); irPara('t-mapa'); };
-    enviarFila().then(r => {
-      const m = s.querySelector('#rel-msg');
-      if (m) m.textContent = { ok: '✅ Enviado ao professor', offline: '📶 Sem internet: envio depois', config: '⚙️ Falta a URL no relatorio.js' }[r];
-    });
+    enviarFila().then(r => { const m = s.querySelector('#rel-msg'); if (m) m.textContent = MSG[r]; });
+  }
+
+  // prova final concluída: envia sozinho, sem esperar os 15 minutos
+  function enviarFinal() {
+    R.fila.push(montarRelatorio('final'));
+    zerar();
+    enviarFila().then(r => toast(r === 'ok' ? '📤 Relatório final enviado' : MSG[r]));
+  }
+
+  // placar do ranking: só o último fica na fila
+  function placar() {
+    if (!estado.apelido) return;
+    R.fila = R.fila.filter(f => f.tipo !== 'placar');
+    R.fila.push({ tipo: 'placar', id: novoId(), apelido: estado.apelido, turma: estado.turma, xp: estado.xp, dia: Math.min(estado.diaAtual, 20) });
+    gravar();
+    enviarFila();
+  }
+
+  // ranking da turma: GET no Apps Script (no máximo a cada 1 min)
+  async function atualizarRanking(depois) {
+    if (URL_RELATORIO.includes('COLE_AQUI') || !navigator.onLine || !estado.turma || Date.now() - R.rankingEm < 60000) return;
+    R.rankingEm = Date.now();
+    try {
+      const resp = await comTempo(`${URL_RELATORIO}?turma=${encodeURIComponent(estado.turma)}`);
+      const dados = await resp.json();
+      R.ranking = (dados.top || []).slice(0, 10).map(p => ({
+        apelido: String(p.apelido || '?').slice(0, 12), xp: Math.max(0, Math.round(+p.xp) || 0), dia: Math.min(20, Math.max(1, Math.round(+p.dia) || 1))
+      }));
+      gravar();
+      if (depois) depois();
+    } catch (e) { /* sem rede: fica o ranking guardado */ }
   }
 
   // envia a fila em ordem; sem internet, guarda e tenta de novo depois
   async function enviarFila() {
     if (!R.fila.length) return 'ok';
     if (URL_RELATORIO.includes('COLE_AQUI')) return 'config';
-    if (enviando || !navigator.onLine) return 'offline';
+    if (enviando) return 'fila';
+    if (!navigator.onLine) return 'offline';
     enviando = true;
     try {
       while (R.fila.length) {
         // text/plain + no-cors: pedido simples, sem bloqueio de CORS (o script ignora repetidos pelo id)
-        await fetch(URL_RELATORIO, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(R.fila[0]) });
+        await comTempo(URL_RELATORIO, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(R.fila[0]) });
         R.fila.shift();
         gravar();
       }
@@ -144,5 +180,5 @@ const Relatorio = (() => {
     pintar();
   }
 
-  return { iniciar, registrar, licao, tela };
+  return { iniciar, registrar, licao, tela, enviarFinal, placar, atualizarRanking, ranking: () => R.ranking };
 })();

@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#7B2FF7">
 <title>Mohamed</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mohamed">
 <style>
 :root{
   --acc:#7B2FF7;--acc-esc:#5A17C9;--acc-cl:#F0E8FF;
@@ -145,6 +152,8 @@ svg{display:block}
 .balao::after{content:"";position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);border:8px solid transparent;border-top-color:#fff;border-bottom:0}
 .aviso{position:absolute;left:50%;top:45%;z-index:6;padding:12px 22px;border-radius:999px;background:var(--acc);color:#fff;font-weight:900;font-size:24px;white-space:nowrap;animation:aviso 1.4s ease-out forwards}
 
+.aviso,.balao,.moeda,.bolinha,.combo-tag,.relogio{pointer-events:none} /* enfeites não roubam o toque */
+
 /* ---------- resultado ---------- */
 .trofeu{font-size:96px;line-height:1;animation:surge .5s cubic-bezier(.3,1.6,.6,1)}
 .stats{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
@@ -202,7 +211,7 @@ svg{display:block}
 .cz>.rot{color:var(--acc)}
 .cn>.rot{color:var(--ok-esc)}
 .dentro{flex:1;display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start}
-.dentro .ficha{min-width:34px;height:30px;padding:0 6px;font-size:15px}
+.dentro .ficha{min-width:34px;height:30px;padding:0 6px;font-size:15px;pointer-events:none} /* o toque passa para o conjunto */
 .p-ligar{flex-direction:row;gap:10px}
 .p-ligar .col{flex:1;display:flex;flex-direction:column;gap:6px}
 .p-ligar .ficha{width:100%;height:auto;min-height:34px;padding:3px 6px;font-size:16px;line-height:1.1;white-space:normal}
@@ -247,6 +256,58 @@ svg{display:block}
 .btn.duas{flex-direction:column;gap:0;padding:8px 20px;font-size:19px;line-height:1.15}
 .btn small{display:block;font-size:15px;opacity:.85}
 
+/* ---------- Extra A: casas no chão · Extra B: ponte · Extra C: monstro ---------- */
+.casas{position:absolute;left:2%;right:2%;bottom:3%;height:16%;z-index:2;display:flex;gap:2px;align-items:flex-start}
+.casas.travado{pointer-events:none}
+.casa{flex:1;min-width:0;height:100%;border-radius:8px 8px 4px 4px;background:#ffffffde;color:var(--tx);font-size:13px;font-weight:900;box-shadow:inset 0 -4px 0 #0002;transform:translateY(calc(var(--d) * 5px));transition:background .2s}
+.casa.neg{background:#DCE8FF;color:#1D4ED8}
+.casa.zero{background:var(--ouro)}
+.casa.saida{outline:3px solid var(--acc);outline-offset:-3px}
+.casa.certo{background:var(--ok);color:#fff}
+.casa.errado{background:var(--erro);color:#fff}
+.casa.certa{outline:3px dashed var(--ok);outline-offset:-3px}
+.buraco{position:absolute;left:44%;width:24%;bottom:0;height:23%;z-index:1;overflow:hidden;border-radius:12px 12px 0 0;background:linear-gradient(#1E1240,#000)}
+.buraco.chega{animation:chega .6s ease-out}
+.buraco .tabuas{position:absolute;left:-2px;right:-2px;top:0;height:30%;background:repeating-linear-gradient(90deg,#A0642C 0 14px,#6B3E1A 14px 17px);transform:scaleX(0);transform-origin:left;transition:transform .45s cubic-bezier(.3,1.4,.6,1)}
+.buraco.ponte .tabuas{transform:scaleX(1)}
+.cena.chefe .blocos,.cena.chefe .painel{right:25%}
+.monstro{position:absolute;right:3%;bottom:20%;z-index:3;width:68px;height:68px;transform:translateX(var(--x,0));transition:transform .4s cubic-bezier(.3,1.6,.6,1)}
+.monstro svg{width:100%;height:100%;animation:flutua 1.4s ease-in-out infinite}
+.monstro.pisa svg{animation:pisa .4s}
+.monstro svg.treme{animation:treme .4s;filter:brightness(1.5)}
+.monstro.derrotado svg{animation:derrota .9s forwards}
+.monstro .vida{position:absolute;top:-14px;left:4px;right:4px;height:9px;border-radius:99px;background:#fff;box-shadow:0 2px 0 #0002;overflow:hidden}
+.monstro .vida i{display:block;width:100%;height:100%;background:var(--erro);transition:width .4s}
+.bolinha{position:absolute;z-index:6;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,var(--acc));box-shadow:0 0 10px var(--acc)}
+
+/* ---------- fila das operações e repartir ---------- */
+.expr{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px;font-size:21px;font-weight:900}
+.expr .op{position:relative;min-width:34px;height:36px;padding:0 6px;border-radius:10px;background:var(--ouro);color:#6B3E00;font-size:21px;font-weight:900;box-shadow:0 3px 0 #0000002a}
+.expr .op.feita{background:var(--ok);color:#fff}
+.expr .op.feita::after{content:attr(data-n);position:absolute;top:-9px;right:-7px;width:20px;height:20px;border-radius:50%;background:var(--acc);color:#fff;font-size:12px;display:grid;place-items:center}
+.expr .op.treme{animation:treme .4s}
+.p-fila .vaga{min-width:56px;font-size:13px}
+.amigos{display:flex;flex-direction:column;gap:3px;width:100%}
+.amigo{display:flex;align-items:center;gap:2px;min-height:calc(var(--t) + 2px)}
+.amigo b{margin-right:4px;font-size:calc(var(--t) + 4px)}
+.amigo i,.sobra i{width:var(--t);height:var(--t);border-radius:50%;background:var(--acc);animation:surge .3s backwards}
+.sobra{--t:12px;display:flex;gap:2px;padding:3px 6px;border-radius:99px;background:var(--erro-cl)}
+.sobra i{background:var(--erro)}
+.p-repartir p{font-size:20px;font-weight:900}
+
+/* ---------- streak e ranking no mapa ---------- */
+.faixa{display:flex;gap:8px;overflow-x:auto;padding:10px 16px;scrollbar-width:none}
+.faixa:empty{display:none}
+.faixa .chip{flex:0 0 auto;padding:6px 12px;font-size:15px}
+.faixa .eu{background:var(--acc);color:#fff}
+.faixa .fogo{background:#FFE9D6;color:#C2410C}
+
+/* ---------- carta rara ---------- */
+.carta.rara{background:linear-gradient(135deg,#FFD54A,#FF4FD8 45%,#7B2FF7 70%,#38BDF8);background-size:220% 220%;animation:holo 3s ease-in-out infinite;box-shadow:0 6px 0 #B45309,0 0 18px #FFC53199}
+.carta.rara.vira{animation:vira .7s ease-out,holo 3s ease-in-out .7s infinite}
+.carta .selo{padding:2px 8px;border-radius:99px;background:#fff;color:var(--acc);font-size:11px;font-weight:900}
+.carta.falta.rara-falta{outline:3px dashed var(--ouro);outline-offset:-6px}
+
 /* ---------- animações ---------- */
 @keyframes entra{from{opacity:0;transform:translateY(12px)}}
 @keyframes flutua{50%{transform:translateY(-8px)}}
@@ -270,6 +331,10 @@ svg{display:block}
 @keyframes vira{from{transform:rotateY(90deg) scale(.7)}}
 @keyframes fade{from{opacity:0}}
 @keyframes relogio{to{transform:scaleX(0)}}
+@keyframes chega{from{transform:translateX(180%)}}
+@keyframes pisa{40%{transform:translateY(-10px)}}
+@keyframes derrota{to{transform:translateY(30px) rotate(25deg) scale(.4);opacity:0}}
+@keyframes holo{50%{background-position:100% 100%}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -283,6 +348,7 @@ svg{display:block}
     <p class="sub">Matemática no modo jogo 🎮</p>
     <input class="campo" id="in-nome" placeholder="😀 Seu nome" maxlength="20" autocomplete="off">
     <input class="campo" id="in-turma" placeholder="🏫 Turma" maxlength="12" autocomplete="off">
+    <input class="campo" id="in-apelido" placeholder="🦸 Apelido do ranking" maxlength="12" autocomplete="off">
   </div>
   <div class="rodape"><button class="btn" id="bt-comecar" disabled>Começar ▶</button></div>
 </section>
@@ -378,5 +444,9 @@ svg{display:block}
 <script src="jogo.js"></script>
 <script src="relatorio.js"></script>
 <script src="app.js"></script>
+<script>
+  // PWA: guarda os arquivos para funcionar sem internet
+  if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+</script>
 </body>
 </html>

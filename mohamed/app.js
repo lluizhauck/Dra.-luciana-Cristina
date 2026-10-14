@@ -23,7 +23,8 @@ const ACESSORIOS_EXTRA = ['cartola', 'antena', 'capacete', 'flor'];
 const MEDALHAS = [
   { id: 'seq10', emoji: '🔥', nome: '10 acertos seguidos' },
   { id: 'perfeita', emoji: '💎', nome: 'Sem errar nenhuma lição' },
-  { id: 'dia', emoji: '🏆', nome: 'Dia concluído' }
+  { id: 'dia', emoji: '🏆', nome: 'Dia concluído' },
+  { id: 'mestre', emoji: '🎓', nome: 'Mestre Mohamed' }
 ];
 const FRASES = [
   'Livro de matemática? Cheio de problemas! 📚',
@@ -37,11 +38,12 @@ const FRASES = [
 // ---------- estado salvo ----------
 const CHAVE = 'mohamed.v1';
 const novoEstado = () => ({
-  nome: '', turma: '', criado: false,
+  nome: '', turma: '', apelido: '', criado: false,
   personagem: { cor: CORES[0], rosto: 'feliz', acessorio: 'nenhum' },
   xp: 0, diaAtual: 1, diasConcluidos: [], licoes: {},
   cartas: [], medalhas: [], erros: [], seguidos: 0,
-  itens: { cores: [], acessorios: [] }, frases: [], andar: null
+  itens: { cores: [], acessorios: [] }, frases: [], andar: null,
+  revisao: [], streak: { dias: 0, ultimo: '' }
 });
 let estado = carregar();
 function carregar() {
@@ -53,6 +55,7 @@ function salvar() { try { localStorage.setItem(CHAVE, JSON.stringify(estado)); }
 // ---------- utilidades ----------
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const vibrar = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} };
 function toast(txt) {
   const d = document.createElement('div');
@@ -139,16 +142,18 @@ function irPara(id) {
 // ---------- tela inicial ----------
 function telaInicio() {
   $('#logo-heroi').innerHTML = desenharPersonagem(estado.personagem);
-  const nome = $('#in-nome'), turma = $('#in-turma'), bt = $('#bt-comecar');
+  const nome = $('#in-nome'), turma = $('#in-turma'), apelido = $('#in-apelido'), bt = $('#bt-comecar');
   nome.value = estado.nome;
   turma.value = estado.turma;
-  const checar = () => { bt.disabled = !(nome.value.trim() && turma.value.trim()); };
-  nome.oninput = turma.oninput = checar;
-  turma.onkeydown = e => { if (e.key === 'Enter' && !bt.disabled) bt.click(); };
+  apelido.value = estado.apelido;
+  const checar = () => { bt.disabled = !(nome.value.trim() && turma.value.trim() && apelido.value.trim()); };
+  nome.oninput = turma.oninput = apelido.oninput = checar;
+  apelido.onkeydown = e => { if (e.key === 'Enter' && !bt.disabled) bt.click(); };
   checar();
   bt.onclick = () => {
     estado.nome = nome.value.trim();
     estado.turma = turma.value.trim();
+    estado.apelido = apelido.value.trim().slice(0, 12);
     salvar();
     som('ok');
     irPara(estado.criado ? 't-mapa' : 't-personagem');
@@ -220,13 +225,19 @@ function telaMapa() {
   const ini = estado.andar ? estado.andar - 1 : alvo;
   const lugar = pt => `translate(${pt.x - 28}px,${pt.y - 100}px)`;
   const box = $('#mapa');
-  box.innerHTML = `<svg viewBox="0 0 360 ${POS[POS.length - 1].y + 110}" xmlns="http://www.w3.org/2000/svg">
+  box.innerHTML = `<div class="faixa" id="faixa"></div><svg viewBox="0 0 360 ${POS[POS.length - 1].y + 110}" xmlns="http://www.w3.org/2000/svg">
     <g fill="none" stroke-width="20" stroke-linecap="round">${estradas}</g>
     <g fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 16" opacity=".7">${faixas}</g>
-    ${placas}${nos}
+    ${placas}${nos}<g id="colegas"></g>
     <g id="mapa-heroi" style="transform:${lugar(POS[ini])}"><g class="heroi-mapa">${desenharPersonagem(estado.personagem).replace('<svg ', '<svg width="56" height="74" ')}</g></g>
   </svg>`;
-  const rolar = (y, suave) => box.scrollTo({ top: y * box.clientWidth / 360 - box.clientHeight / 2, behavior: suave ? 'smooth' : 'auto' });
+  pintarRanking();
+  Relatorio.atualizarRanking(pintarRanking);
+  const svg = box.querySelector('svg');
+  const rolar = (y, suave) => {
+    const r = svg.getBoundingClientRect();
+    box.scrollTo({ top: r.top - box.getBoundingClientRect().top + box.scrollTop + (y * r.width) / 360 - box.clientHeight / 2, behavior: suave ? 'smooth' : 'auto' });
+  };
   if (estado.andar && ini !== alvo) {
     // dia concluído: o personagem anda até o próximo nó
     const a = POS[ini], b = POS[alvo], heroi = $('#mapa-heroi');
@@ -248,6 +259,21 @@ function telaMapa() {
     estado.andar = null;
     rolar(POS[alvo].y);
   }
+}
+
+// streak, ranking da turma (top 10 por apelido) e colegas na trilha
+function pintarRanking() {
+  const faixa = $('#faixa'), colegas = $('#colegas');
+  if (!faixa || !colegas) return;
+  const top = Relatorio.ranking(), s = streakAtivo();
+  faixa.innerHTML = (s ? `<span class="chip fogo">🔥 ${s} ${s > 1 ? 'dias' : 'dia'}</span>` : '') +
+    (estado.apelido ? '' : '<button class="chip" data-ir="t-inicio">🦸 Apelido</button>') +
+    top.map((p, i) => `<span class="chip${p.apelido === estado.apelido ? ' eu' : ''}">${['🥇', '🥈', '🥉'][i] || `${i + 1}º`} ${esc(p.apelido)} · ${p.xp}</span>`).join('');
+  const porDia = {};
+  colegas.innerHTML = top.filter(p => p.apelido !== estado.apelido).map(p => {
+    const i = p.dia - 1, pos = POS[i], k = (porDia[i] = (porDia[i] || 0) + 1), lado = pos.x > 180 ? -1 : 1;
+    return `<g transform="translate(${pos.x + lado * (36 + k * 16)} ${pos.y - 26})"><circle r="12" fill="#fff" stroke="${MUNDOS[DIAS[i].mundo].cor}" stroke-width="3"/><text y="4" text-anchor="middle" font-size="11" font-weight="900" fill="${TINTA}">${esc(p.apelido.slice(0, 2).toUpperCase())}</text></g>`;
+  }).join('');
 }
 
 // ---------- lições do dia ----------
@@ -277,13 +303,48 @@ const norm = v => {
   return /^-?\d+$/.test(s) ? String(Number(s)) : s; // "−0" = "0", "07" = "7"
 };
 
+// ---------- lista de erros: revisão (dia 19) e reforço nas lições ----------
+const chaveEx = ex => ex.pergunta + JSON.stringify(ex.pares || ex.itens || ex.linhas || ex.tokens || [ex.a, ex.b, ex.n, ex.atual, ex.de, ex.resposta]);
+function guardarErro(ex, dia) {
+  const chave = ex.revisao || chaveEx(ex), item = estado.revisao.find(r => r.chave === chave);
+  if (item) { item.vezes = Math.min(item.vezes + 1, 5); return; }
+  const { surpresa, limite, revisao, diaOrigem, ...copia } = ex;
+  copia.pergunta = copia.pergunta.replace(/^(⏱ |🔁 )/, '');
+  estado.revisao = [...estado.revisao, { chave, dia, vezes: 2, ex: copia }].slice(-60);
+}
+function acertouRevisao(ex) {
+  const i = estado.revisao.findIndex(r => r.chave === ex.revisao);
+  if (i >= 0 && --estado.revisao[i].vezes <= 0) estado.revisao.splice(i, 1);
+}
+// sorteia contas da lista de erros: as mais erradas saem mais
+function errosParaRevisar(dias, qtd) {
+  const pool = estado.revisao.filter(r => !dias || dias.includes(r.dia)), lista = [];
+  while (lista.length < qtd && pool.length) {
+    let x = Math.random() * pool.reduce((t, r) => t + r.vezes, 0), k = 0;
+    while (k < pool.length - 1 && (x -= pool[k].vezes) > 0) k++;
+    const r = pool.splice(k, 1)[0];
+    lista.push({ ...r.ex, revisao: r.chave, diaOrigem: r.dia, pergunta: '🔁 ' + r.ex.pergunta });
+  }
+  return lista;
+}
+// reforço: até 2 contas erradas deste dia voltam na lição
+function reforcar(exs, dia) {
+  errosParaRevisar([dia.n], 2).forEach(r => {
+    const livres = exs.map((e, i) => (e.surpresa || e.revisao ? -1 : i)).filter(i => i >= 0);
+    if (livres.length) exs[sortear(livres)] = r;
+  });
+  return exs;
+}
+
 function iniciarLicao(dia, idx) {
   const lic = dia.licoes[idx];
-  L = { dia, idx, lic, exs: lic.gerar(), i: 0, vidas: 5, xp: 0, combo: 0, maxCombo: 0, acertos: 0, erros: 0, entrada: '', travado: false, power: 3 };
+  L = { dia, idx, lic, exs: lic.semReforco ? lic.gerar() : reforcar(lic.gerar(), dia), i: 0, vidas: 5, xp: 0, combo: 0, maxCombo: 0, acertos: 0, erros: 0, entrada: '', travado: false, power: 3 };
   Relatorio.licao(dia.n, lic.titulo);
   irPara('t-licao');
   $('#folha').className = 'folha';
-  Jogo.iniciar($('#cena'), { personagem: estado.personagem, mundo: dia.mundo, total: L.exs.length });
+  Jogo.iniciar($('#cena'), { personagem: estado.personagem, mundo: dia.mundo, total: L.exs.length, chefe: !!lic.chefao });
+  // chefão: o monstro cai com (questões − 4) acertos
+  L.monstro = lic.chefao ? { max: L.exs.length - 4, vida: L.exs.length - 4 } : null;
   desenharVidas();
   proximo();
 }
@@ -295,11 +356,11 @@ function desenharVidas(perdeu) {
 
 // tipos de exercício: blocos "?" (bater), teclado e painéis sobre o cenário
 const BLOCOS = ['escolha', 'vf', 'digitar'];
-const TECLADO = ['digitar', 'padrao', 'grade', 'tabuleiro'];
+const TECLADO = ['digitar', 'padrao', 'grade', 'tabuleiro', 'repartir'];
 
 function proximo() {
   if (L.vidas <= 0) return fimLicao(false);
-  if (L.i >= L.exs.length) return fimLicao(true);
+  if ((L.monstro && L.monstro.vida <= 0) || L.i >= L.exs.length) return fimLicao(true);
   const ex = L.exs[L.i], p = $('#pergunta'), atual = L;
   L.entrada = '';
   L.travado = false;
@@ -308,10 +369,12 @@ function proximo() {
   p.classList.remove('entra');
   void p.offsetWidth;
   p.classList.add('entra');
-  Jogo.pergunta(ex, responder, (certo, det) => avaliar(certo, det.dada, det.conta, fim => Jogo.reagir(certo, fim)));
+  L.ponte = !L.monstro && BLOCOS.includes(ex.tipo) && !ex.limite && Math.random() < .25; // Extra B
+  Jogo.pergunta(ex, responder, (certo, det) => avaliar(certo, det.dada, det.conta, fim => (det.animado ? Jogo.fechar : Jogo.reagir)(certo, fim)), { ponte: L.ponte });
   $('#teclado').hidden = !TECLADO.includes(ex.tipo);
   if (ex.surpresa) { Jogo.aviso('⚡ Surpresa!'); som('bau'); }
-  if (ex.dedos && L.power > 0) Jogo.powerup(L.power, () => { L.power--; return dedos(ex.dedos); });
+  if (ex.dedos && L.power > 0) Jogo.powerup('🖐️', L.power, () => { L.power--; return dedos(ex.dedos); });
+  else if (ex.sinais && L.power > 0 && estado.cartas.includes(CARTA_SINAIS)) Jogo.powerup('🌟', L.power, () => { L.power--; return cartaSinais(); });
   if (ex.limite) Jogo.relogio(ex.limite, () => { if (L === atual) avaliar(false, '⏰', null, fim => Jogo.reagir(false, fim)); });
 }
 
@@ -321,7 +384,7 @@ function responder(v, i = 0) {
   const ex = L.exs[L.i];
   const certo = ex.tipo === 'vf' ? v === ex.resposta : norm(v) === norm(ex.resposta);
   const dada = ex.tipo === 'vf' ? (v ? 'V' : 'F') : String(v);
-  avaliar(certo, dada, null, fim => BLOCOS.includes(ex.tipo) ? Jogo.bater(i, certo, fim) : Jogo.reagir(certo, fim));
+  avaliar(certo, dada, null, fim => (L.ponte ? Jogo.ponte(i, certo, fim) : BLOCOS.includes(ex.tipo) ? Jogo.bater(i, certo, fim) : Jogo.reagir(certo, fim)));
 }
 
 // pontua qualquer tipo de exercício, anima a cena e abre o feedback
@@ -338,6 +401,7 @@ function avaliar(certo, dada, conta, animar) {
     L.maxCombo = Math.max(L.maxCombo, L.combo);
     ganho = 10 * (L.combo >= 5 ? 3 : L.combo >= 3 ? 2 : 1) * (ex.surpresa ? 2 : 1);
     L.xp += ganho;
+    if (ex.revisao) acertouRevisao(ex);
   } else {
     L.combo = 0;
     L.vidas--;
@@ -347,6 +411,7 @@ function avaliar(certo, dada, conta, animar) {
       dia: L.dia.n, licao: L.lic.id, pergunta: ex.pergunta,
       dada, certa: gabarito(ex) || '', quando: Date.now()
     }].slice(-200);
+    guardarErro(ex, ex.diaOrigem || L.dia.n);
   }
   Relatorio.registrar(certo, conta || ex.conta || ex.pergunta);
   salvar();
@@ -354,6 +419,10 @@ function avaliar(certo, dada, conta, animar) {
   animar(() => {
     if (L !== atual) return;
     if (!certo) desenharVidas(true);
+    if (L.monstro) {
+      if (certo) Jogo.monstroDano(--L.monstro.vida, L.monstro.max);
+      else Jogo.monstroAvanca();
+    }
     Jogo.combo(L.combo, L.combo >= 5 ? 3 : 2);
     if (estado.seguidos >= 10) ganharMedalha('seq10');
     mostrarFolha(certo, ex, ganho);
@@ -376,7 +445,8 @@ function mostrarFolha(certo, ex, ganho) {
     + `<button class="btn ${certo ? 'ok' : 'erro'}" id="bt-continuar">Continuar ▶</button>`;
   f.className = `folha aberta ${certo ? 'ok' : 'erro'}`;
   som(certo ? 'ok' : 'erro');
-  $('#bt-continuar').onclick = () => {
+  $('#bt-continuar').onclick = e => {
+    e.currentTarget.onclick = null; // duplo toque não pula questão
     som('clique');
     f.className = 'folha';
     L.i++;
@@ -402,11 +472,16 @@ function montarTeclado() {
 }
 
 function fimLicao(venceu) {
+  if (L.acabou) return; // trava: a lição só termina uma vez
+  L.acabou = true;
   Jogo.parar();
   const { dia, lic } = L;
   let carta = null, diaFeito = false;
+  L.bonus = 0;
   if (venceu) {
-    estado.xp += L.xp;
+    if (estado.licoes[lic.id]) L.xp = Math.round(L.xp / 2); // lição refeita vale metade do XP
+    L.bonus = marcarStreak();
+    estado.xp += L.xp + L.bonus;
     estado.licoes[lic.id] = true;
     if (!estado.cartas.includes(lic.id)) { estado.cartas.push(lic.id); carta = lic.carta; }
     if (L.erros === 0) ganharMedalha('perfeita');
@@ -417,8 +492,26 @@ function fimLicao(venceu) {
       ganharMedalha('dia');
     }
     salvar();
+    if (lic.prova) { ganharMedalha('mestre'); Relatorio.enviarFinal(); }
+    Relatorio.placar();
   }
   telaResultado(venceu, carta, diaFeito);
+}
+
+// streak diário: bônus de 10 XP por dia seguido (máx. 70), no 1º acerto do dia
+const diaTxt = d => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+function marcarStreak() {
+  const s = estado.streak, hoje = diaTxt(new Date()), ontem = new Date();
+  if (s.ultimo === hoje) return 0;
+  ontem.setDate(ontem.getDate() - 1);
+  s.dias = s.ultimo === diaTxt(ontem) ? s.dias + 1 : 1;
+  s.ultimo = hoje;
+  return 10 * Math.min(s.dias, 7);
+}
+function streakAtivo() {
+  const s = estado.streak, ontem = new Date();
+  ontem.setDate(ontem.getDate() - 1);
+  return s.ultimo === diaTxt(new Date()) || s.ultimo === diaTxt(ontem) ? s.dias : 0;
 }
 
 // ---------- medalhas ----------
@@ -434,9 +527,10 @@ function ganharMedalha(id) {
 
 // ---------- resultado ----------
 function cartaHTML(l, mundo, tem, extra = '') {
-  if (!tem) return '<div class="carta falta"><span class="em">?</span></div>';
-  const [c1, c2] = l.chefao ? ['#FFD54A', '#FF9F1C'] : [MUNDOS[mundo].cor, '#7B2FF7'];
-  return `<div class="carta${extra}" style="--c1:${c1};--c2:${c2}"><span class="em">${l.carta.emoji}</span><b>${l.carta.titulo}</b><p>${l.carta.regra}</p></div>`;
+  const rara = l.carta.rara;
+  if (!tem) return `<div class="carta falta${rara ? ' rara-falta' : ''}"><span class="em">?</span></div>`;
+  const [c1, c2] = rara ? ['#FFD54A', '#FF4FD8'] : l.chefao ? ['#FFD54A', '#FF9F1C'] : [MUNDOS[mundo].cor, '#7B2FF7'];
+  return `<div class="carta${rara ? ' rara' : ''}${extra}" style="--c1:${c1};--c2:${c2}">${rara ? '<small class="selo">✨ RARA</small>' : ''}<span class="em">${l.carta.emoji}</span><b>${l.carta.titulo}</b><p>${l.carta.regra}</p></div>`;
 }
 
 function telaResultado(venceu, carta, diaFeito) {
@@ -449,14 +543,15 @@ function telaResultado(venceu, carta, diaFeito) {
     som('erro');
     return;
   }
-  c.innerHTML = `<div class="trofeu">${diaFeito ? '🏆' : L.erros ? '🎉' : '💎'}</div>
-    <h2 class="titulo">${diaFeito ? 'Dia concluído!' : 'Lição completa!'}</h2>
+  c.innerHTML = `<div class="trofeu">${L.lic.prova ? '🎓' : diaFeito ? '🏆' : L.erros ? '🎉' : '💎'}</div>
+    <h2 class="titulo">${L.lic.prova ? 'Mestre Mohamed!' : diaFeito ? 'Dia concluído!' : 'Lição completa!'}</h2>
     <div class="stats">
       <div class="stat">⚡ ${L.xp}<small>XP</small></div>
       <div class="stat">🎯 ${L.acertos}/${L.exs.length}<small>acertos</small></div>
       <div class="stat">🔥 ${L.maxCombo}<small>combo</small></div>
+      ${L.bonus ? `<div class="stat">📅 ${estado.streak.dias}<small>+${L.bonus} ⚡</small></div>` : ''}
     </div>
-    ${carta ? `<p class="sub">🃏 Carta nova!</p>${cartaHTML(L.lic, L.dia.mundo, true, ' vira grande')}` : ''}`;
+    ${carta ? `<p class="sub">${carta.rara ? '✨ Carta rara!' : '🃏 Carta nova!'}</p>${cartaHTML(L.lic, L.dia.mundo, true, ' vira grande')}` : ''}`;
   if (diaFeito) {
     a.innerHTML = '<button class="btn" id="bt-bau">🎁 Abrir baú</button>';
     $('#bt-bau').onclick = abrirBau;
@@ -464,7 +559,7 @@ function telaResultado(venceu, carta, diaFeito) {
     a.innerHTML = '<button class="btn" data-ir="t-dia">Continuar ▶</button>';
   }
   som('vitoria');
-  if (carta || diaFeito) confete();
+  if (carta || diaFeito || L.lic.chefao) confete(); // chefão vencido: festa
 }
 
 // ---------- baú surpresa (fim do dia) ----------
@@ -575,7 +670,7 @@ function iniciarApp() {
   };
   // teclado físico na lição
   document.addEventListener('keydown', e => {
-    if (!L || !$('#t-licao').classList.contains('ativa')) return;
+    if (e.repeat || !L || !$('#t-licao').classList.contains('ativa')) return; // Enter segurado não repete
     if (e.key === 'Enter' && $('#folha').classList.contains('aberta')) return $('#bt-continuar').click();
     if ($('#teclado').hidden) return;
     const k = /^[0-9]$/.test(e.key) ? e.key : { Backspace: '⌫', '-': '−', Enter: 'ok' }[e.key];

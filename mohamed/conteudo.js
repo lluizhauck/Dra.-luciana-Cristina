@@ -80,7 +80,7 @@ function montar(modelos, surpresa, total = 8) {
   while (lista.length < total - 1) {
     if (!fila.length) fila = embaralhar(modelos);
     const ex = fila.pop()();
-    const chave = ex.pergunta + JSON.stringify(ex.pares || ex.itens || ex.linhas || [ex.a, ex.b, ex.atual, ex.resposta]);
+    const chave = ex.pergunta + JSON.stringify(ex.pares || ex.itens || ex.linhas || ex.tokens || [ex.a, ex.b, ex.n, ex.atual, ex.de, ex.resposta]);
     if (vistas.has(chave) && tentativas++ < 50) continue;
     vistas.add(chave);
     lista.push(ex);
@@ -138,16 +138,68 @@ function dedos(k) {
   return s + `<text x="125" y="88" text-anchor="middle" font-size="15" font-weight="900" fill="#1E1240">9 × ${k}: ${k - 1} | ${10 - k} → ${9 * k}</text></svg>`;
 }
 
+// carta rara da regra dos sinais (dia 14) — vira power-up 🌟 no dia 17
+const CARTA_SINAIS = 'd14l4';
+const cartaSinais = () => '<svg viewBox="0 0 220 96"><rect width="220" height="96" rx="16" fill="#FFF3C4" stroke="#FFC531" stroke-width="4"/>' +
+  [['(+)·(+) = +', 14, 38, '#129A52'], ['(−)·(−) = +', 114, 38, '#129A52'], ['(+)·(−) = −', 14, 76, '#D12C3D'], ['(−)·(+) = −', 114, 76, '#D12C3D']]
+    .map(([t, x, y, c]) => `<text x="${x}" y="${y}" font-size="19" font-weight="900" fill="${c}">${t}</text>`).join('') + '</svg>';
+
+// divisão: n bolinhas repartidas entre k amigos (painel com teclado)
+const repartir = (n, k, pergunta, resposta, rotulo, extra) => ({
+  tipo: 'repartir', pergunta, n, k, resposta, rotulo, conta: `${n} ÷ ${k}`,
+  dica: `${n} ÷ ${k} = ${Math.floor(n / k)}${n % k ? `, sobra ${n % k}` : ''}`, visual: bolinhas(k, Math.max(1, Math.floor(n / k))), ...extra
+});
+
+// Extra A: o chão vira reta com casas; soma anda ➡️, subtração ⬅️ (11 casas)
+function casas(de, passo, pergunta, piso = -Infinity) {
+  const ate = de + passo, min = Math.max(piso, Math.min(de, ate) - rnd(0, 10 - Math.abs(passo)));
+  return {
+    tipo: 'casas', pergunta, de, resposta: ate, min, max: min + 10, conta: pergunta.replace(' = ?', ''),
+    dica: `${Math.abs(passo)} casas para a ${passo > 0 ? 'direita ➡️' : 'esquerda ⬅️'}: ${fmt(ate)}`
+  };
+}
+
+// fila das operações (dia 18): ( ) primeiro, depois × ÷, depois + −, da esquerda para a direita
+function analisar(lista) {
+  let id = 0;
+  const tokens = lista.map(x => (typeof x === 'number' ? { t: ent(x) } : '+−×÷'.includes(x) ? { op: x, id: id++ } : { t: x }));
+  const pilha = lista.map((x, i) => (typeof x === 'number' ? { n: x } : tokens[i].op ? { op: x, id: tokens[i].id } : { p: x }));
+  const conta = (a, op, b) => (op === '+' ? a + b : op === '−' ? a - b : op === '×' ? a * b : a / b);
+  const ordem = [], passos = [];
+  while (pilha.length > 1) {
+    const abre = pilha.map(x => x.p).lastIndexOf('(');
+    const ini = abre + 1, fim = abre >= 0 ? pilha.findIndex((x, i) => i > abre && x.p === ')') : pilha.length;
+    const trecho = pilha.slice(ini, fim);
+    if (trecho.length === 1) { pilha.splice(abre, 3, trecho[0]); continue; }
+    let k = trecho.findIndex(x => x.op === '×' || x.op === '÷');
+    if (k < 0) k = trecho.findIndex(x => x.op);
+    const a = trecho[k - 1].n, b = trecho[k + 1].n, r = conta(a, trecho[k].op, b);
+    ordem.push(trecho[k].id);
+    passos.push(`${ent(a)} ${trecho[k].op} ${ent(b)} = ${fmt(r)}`);
+    pilha.splice(ini + k - 1, 3, { n: r });
+  }
+  return { tokens, ordem, passos, valor: pilha[0].n };
+}
+const textoExpr = lista => lista.map(x => (typeof x === 'number' ? ent(x) : x)).join(' ').replace(/\( /g, '(').replace(/ \)/g, ')');
+function fila(lista, extra) {
+  const { tokens, ordem, passos } = analisar(lista);
+  return {
+    tipo: 'fila', pergunta: 'Toque na ordem das contas 🚦', tokens, ordem, passos, conta: textoExpr(lista),
+    gabarito: passos.map(x => x.split(' = ')[0]).join(' → '), dica: '( ) primeiro, depois × ÷, depois + −', ...extra
+  };
+}
+const contaExpr = (lista, extra) => { const { passos, valor } = analisar(lista); return digitar(`${textoExpr(lista)} = ?`, valor, passos.join(' → '), extra); };
+
 // ---------- montar dias ----------
-// lic(título, ícone, [título da carta, regra], modelos, surpresa, gerar?)
-const lic = (titulo, icone, carta, modelos, surpresa, gerar) => ({ titulo, icone, carta: { emoji: icone, titulo: carta[0], regra: carta[1] }, modelos, surpresa, gerar });
-function criarDia(n, licoes, cartaChefao, surpresaChefao) {
+// lic(título, ícone, [título da carta, regra, rara?], modelos, surpresa, gerar?)
+const lic = (titulo, icone, carta, modelos, surpresa, gerar) => ({ titulo, icone, carta: { emoji: icone, titulo: carta[0], regra: carta[1], rara: !!carta[2] }, modelos, surpresa, gerar });
+function criarDia(n, licoes, cartaChefao, surpresaChefao, totalChefao = 15) {
   DIAS[n - 1].licoes = [
     ...licoes.map((l, i) => ({ ...l, id: `d${n}l${i + 1}`, gerar: l.gerar || (() => montar(l.modelos, l.surpresa)) })),
     {
       id: `d${n}boss`, titulo: 'Chefão', icone: '👑', chefao: true,
       carta: { emoji: '👑', titulo: cartaChefao[0], regra: cartaChefao[1] },
-      gerar: () => montar(licoes.flatMap(l => l.modelos), surpresaChefao, 15)
+      gerar: () => montar(licoes.flatMap(l => l.modelos), surpresaChefao, totalChefao)
     }
   ];
 }
@@ -268,11 +320,11 @@ function tabuleiro(n, surpresa) {
   const TODOS = [...L1, ...L2, ...L3, ...L4, ...L5];
 
   DIAS[0].licoes = [
-    { id: 'd1l1', titulo: 'O que são naturais', icone: '🌱', carta: { emoji: '🌱', titulo: 'Naturais', regra: 'ℕ = {0, 1, 2, 3, …}' }, gerar: () => montar(L1, S1) },
-    { id: 'd1l2', titulo: 'Caça ao natural', icone: '🔍', carta: { emoji: '🔍', titulo: 'Caça ao natural', regra: 'Sem sinal de menos e sem vírgula' }, gerar: () => montar(L2, S2) },
-    { id: 'd1l3', titulo: 'Pares e ímpares', icone: '⚖️', carta: { emoji: '⚖️', titulo: 'Par ou ímpar', regra: 'Par termina em 0, 2, 4, 6 ou 8' }, gerar: () => montar(L3, S3) },
-    { id: 'd1l4', titulo: 'Natural ou não', icone: '🚫', carta: { emoji: '🚫', titulo: 'Fora de ℕ', regra: 'Negativos, decimais e frações não são naturais' }, gerar: () => montar(L4, S4) },
-    { id: 'd1l5', titulo: 'Classificar números', icone: '🗂️', carta: { emoji: '🗂️', titulo: 'Classificar', regra: 'Todo natural é par ou ímpar' }, gerar: () => montar(L5, S5) },
+    { id: 'd1l1', titulo: 'O que são naturais', icone: '🌱', carta: { emoji: '🌱', titulo: 'Naturais', regra: 'ℕ = {0, 1, 2, 3, …}' }, modelos: L1, gerar: () => montar(L1, S1) },
+    { id: 'd1l2', titulo: 'Caça ao natural', icone: '🔍', carta: { emoji: '🔍', titulo: 'Caça ao natural', regra: 'Sem sinal de menos e sem vírgula' }, modelos: L2, gerar: () => montar(L2, S2) },
+    { id: 'd1l3', titulo: 'Pares e ímpares', icone: '⚖️', carta: { emoji: '⚖️', titulo: 'Par ou ímpar', regra: 'Par termina em 0, 2, 4, 6 ou 8' }, modelos: L3, gerar: () => montar(L3, S3) },
+    { id: 'd1l4', titulo: 'Natural ou não', icone: '🚫', carta: { emoji: '🚫', titulo: 'Fora de ℕ', regra: 'Negativos, decimais e frações não são naturais' }, modelos: L4, gerar: () => montar(L4, S4) },
+    { id: 'd1l5', titulo: 'Classificar números', icone: '🗂️', carta: { emoji: '🗂️', titulo: 'Classificar', regra: 'Todo natural é par ou ímpar' }, modelos: L5, gerar: () => montar(L5, S5) },
     { id: 'd1boss', titulo: 'Chefão', icone: '👑', chefao: true, carta: { emoji: '👑', titulo: 'Mestre dos naturais', regra: 'ℕ não tem fim: sempre há +1' }, gerar: () => montar(TODOS, SB, 15) }
   ];
 })();
@@ -809,3 +861,353 @@ const comparar = (a, b) => fixa(`${fmt(a)} ? ${fmt(b)}`, ['<', '=', '>'], relaca
     lic('Contra o tempo', '⏱', ['Relâmpago final', 'Rapidez vem do treino diário ⚡'], tabuada(T, ['tempo', 'tempo', 'tempoLigar'], { dedos: true }), () => rapido(digitar('6 × 8 = ?', 48, '6 × 8 termina em 8: 48'), 8))
   ], ['Mestre da tabuada', 'Toda conta se quebra em partes'], () => digitar('9 × 9 − 9 × 8 = ?', 9, '81 − 72 = 9'));
 })();
+
+// ---------- DIA 14 · Regra dos sinais (multiplicação de inteiros) ----------
+(() => {
+  const vezes = (a, b) => `${ent(a)} · ${ent(b)}`;
+  const sinalDe = n => (n > 0 ? '+' : n < 0 ? '−' : '0');
+  const nz = () => sortear([1, -1]) * rnd(1, 9);
+  // descobrir pelo padrão: (−2)·3, (−2)·2, (−2)·1, (−2)·0, (−2)·(−1)…
+  const L1 = [
+    () => { const a = rnd(2, 5), f = sortear([0, -1, -2]); return padrao([f + 3, f + 2, f + 1].map(k => `${vezes(-a, k)} = ${fmt(-a * k)}`), `${vezes(-a, f)} =`, -a * f, `Cada linha soma ${a}`, { conta: vezes(-a, f) }); },
+    () => { const a = rnd(2, 5), f = sortear([0, -1, -2]); return padrao([f + 3, f + 2, f + 1].map(k => `${vezes(a, k)} = ${fmt(a * k)}`), `${vezes(a, f)} =`, a * f, `Cada linha tira ${a}`, { conta: vezes(a, f) }); },
+    () => { const a = rnd(2, 5); return padrao([2, 1, 0].map(k => `${vezes(-a, k)} = ${fmt(-a * k)}`), `${vezes(-a, -1)} =`, a, 'O padrão sobe e passa para o +!'); },
+    () => { const a = rnd(2, 9), k = rnd(1, 9); return digitar(`${vezes(-a, k)} = ?`, -a * k, `${a} · ${k} = ${a * k}, com sinal −`); }
+  ];
+  const S1 = () => padrao(['(−1) · 2 = −2', '(−1) · 1 = −1', '(−1) · 0 = 0'], '(−1) · (−1) =', 1, 'Seguiu o padrão: +1 🎉');
+
+  // positivo vezes negativo: dívida repetida
+  const L2 = [
+    () => { const n = rnd(2, 6), d = rnd(2, 9); return digitar(`💸 ${n} dívidas de R$${d}. Saldo?`, -n * d, `${vezes(n, -d)} = ${fmt(-n * d)}`, { conta: vezes(n, -d) }); },
+    () => { const n = rnd(2, 9), d = rnd(2, 9); return digitar(`${vezes(n, -d)} = ?`, -n * d, `${n} dívidas de ${d}: ${fmt(-n * d)}`); },
+    () => { const n = rnd(2, 4), d = rnd(2, 9); return digitar(`${Array(n).fill(ent(-d)).join(' + ')} = ${n} · ?`, -d, `Somar ${n} vezes o ${fmt(-d)}`); },
+    () => { const n = rnd(2, 9), d = rnd(2, 9); return escolha(vezes(n, -d), perto(-n * d, n), fmt(-n * d), 'Positivo · negativo = negativo'); },
+    () => { const n = rnd(2, 9), d = rnd(2, 9); return fixa(`${vezes(n, -d)} dá…`, ['+', '−'], '−', 'Dívida repetida continua dívida 💸'); }
+  ];
+  const S2 = () => digitar('💸 10 dívidas de R$10. Saldo?', -100, '10 · (−10) = −100');
+
+  // negativo vezes negativo
+  const L3 = [
+    () => { const a = rnd(2, 9), b = rnd(2, 9); return digitar(`${vezes(-a, -b)} = ?`, a * b, `Menos com menos dá +: ${a * b}`); },
+    () => { const n = rnd(2, 5), d = rnd(2, 9); return digitar(`Apagam ${n} dívidas de R$${d}. Ganho?`, n * d, `${vezes(-n, -d)} = ${n * d} 🎉`, { conta: vezes(-n, -d) }); },
+    () => { const a = rnd(2, 9), b = rnd(2, 9); return vf(`${vezes(-a, -b)} é positivo?`, true, '(−) · (−) = (+)'); },
+    () => { const a = rnd(2, 9), b = rnd(2, 9); return escolha(vezes(-a, -b), perto(a * b, a), fmt(a * b), '(−) · (−) = (+)'); },
+    () => { const a = rnd(2, 4); return padrao([1, 0, -1].map(k => `${vezes(-a, k)} = ${fmt(-a * k)}`), `${vezes(-a, -2)} =`, 2 * a, `Cada linha soma ${a}`); }
+  ];
+  const S3 = () => digitar('(−1) · (−1) · (−1) = ?', -1, '(−1)·(−1) = 1; 1 · (−1) = −1');
+
+  // a regra (carta rara)
+  const L4 = [
+    () => { const a = nz(), b = nz(); return fixa(`${vezes(a, b)} dá…`, ['+', '−'], sinalDe(a * b), 'Iguais dão + · diferentes dão −', { visual: cartaSinais() }); },
+    () => { const a = nz(), b = nz(); return digitar(`${vezes(a, b)} = ?`, a * b, 'Sinal primeiro, depois a tabuada'); },
+    () => vf('Sinais iguais dão +?', true, '(+)·(+) = + · (−)·(−) = +', { visual: cartaSinais() }),
+    () => vf('Sinais diferentes dão +?', false, '(+)·(−) = − · (−)·(+) = −', { visual: cartaSinais() }),
+    () => ligar('Ligue conta e resultado 🔗', paresUnicos(() => { const a = nz(), b = nz(); return [vezes(a, b), a * b]; }), 'Sinal primeiro, depois a tabuada')
+  ];
+  const S4 = () => digitar('(−2) · (−3) · (−1) = ?', -6, 'Três sinais −: o resultado é −');
+
+  // sinais + tabuada
+  const L5 = [
+    () => { const a = nz(), b = nz(); return rapido(escolha(vezes(a, b), perto(a * b, Math.abs(a)), fmt(a * b), 'Sinal primeiro, depois a tabuada'), 8); },
+    () => { const a = nz(), b = nz(); return digitar(`${vezes(a, b)} = ?`, a * b, 'Sinal primeiro, depois a tabuada'); },
+    () => { const a = nz(), b = nz(); return digitar(`${ent(a)} · ? = ${fmt(a * b)}`, b, `${vezes(a, b)} = ${fmt(a * b)}`); },
+    () => ({ ...ligar('⏱ Ligue rápido! 🔗', paresUnicos(() => { const a = nz(), b = nz(); return [vezes(a, b), a * b]; }), 'Sinal primeiro'), limite: 25 })
+  ];
+  const S5 = () => digitar('(−7) · 8 = ?', -56, '5, 6, 7, 8 🎵 com sinal −');
+
+  criarDia(14, [
+    lic('Descobrir o padrão', '🧩', ['Padrão', 'Siga o padrão: o sinal aparece sozinho'], L1, S1),
+    lic('Dívida repetida', '💸', ['Dívida repetida', '3 · (−4) = −12: três dívidas de 4'], L2, S2),
+    lic('Menos com menos', '✨', ['Menos com menos', '(−) · (−) = (+)'], L3, S3),
+    lic('Regra dos sinais', '🌟', ['Regra dos sinais', 'Iguais dão + · diferentes dão −', true], L4, S4),
+    lic('Sinais e tabuada', '⚡', ['Sinal + tabuada', 'Primeiro o sinal, depois a tabuada'], L5, S5)
+  ], ['Mestre dos sinais', 'Sinal certo + tabuada certa'], () => digitar('(−9) · (−9) = ?', 81, 'Iguais dão +: 81'), 20);
+})();
+
+// ---------- DIA 15 · Divisão ----------
+(() => {
+  const div = () => { const k = rnd(2, 9), q = rnd(1, 10); return [k * q, k, q]; };
+  const COISAS = ['🍬', '🍪', '⚽', '🍓'];
+  const L1 = [
+    () => { const k = rnd(2, 5), q = rnd(2, 6); return repartir(k * q, k, `${sortear(COISAS)} ${k * q} para ${k} amigos. Cada um?`, q, `${k * q} ÷ ${k} =`); },
+    () => { const [n, k, q] = div(); return digitar(`${n} ÷ ${k} = ?`, q, `${k} × ${q} = ${n}`, { visual: bolinhas(k, q) }); },
+    () => { const [n, k, q] = div(); return escolha(`${n} ÷ ${k}`, vizinhos(q, 2, 2), q, `${k} × ${q} = ${n}`); },
+    () => ligar('Ligue conta e resultado 🔗', paresUnicos(() => { const [n, k, q] = div(); return [`${n} ÷ ${k}`, q]; }), 'Pense na tabuada ao contrário'),
+    () => { const [n, k, q] = div(), r = q + sortear([0, 0, 1, -1]); return vf(`${n} ÷ ${k} = ${r}?`, r === q, `${n} ÷ ${k} = ${q}`); }
+  ];
+  const S1 = () => digitar('🍕 12 fatias para 4 amigos. Cada um?', 3, '12 ÷ 4 = 3', { visual: bolinhas(4, 3) });
+
+  const L2 = [
+    () => { const [n, k, q] = div(); return digitar(`${k} × ? = ${n}`, q, `${n} ÷ ${k} = ${q}`); },
+    () => { const [n, k, q] = div(); return digitar(`${n} ÷ ${k} = ?`, q, `Pense: ${k} × ? = ${n}`); },
+    () => { const [n, k, q] = div(); return padrao([`${k} × ${q} = ${n}`, `${n} ÷ ${k} = ${q}`], `${n} ÷ ${q} =`, k, '÷ desfaz o ×'); },
+    () => { const [n, k, q] = div(); return vf(`Se ${k} × ${q} = ${n}, ${n} ÷ ${q} = ${k}?`, true, '÷ desfaz o ×'); },
+    () => { const [n, k, q] = div(), e = k + sortear([1, -1]); return vf(`Se ${k} × ${q} = ${n}, ${n} ÷ ${q} = ${e}?`, false, `${n} ÷ ${q} = ${k}`); }
+  ];
+  const S2 = () => { const k = rnd(2, 9); return digitar(`0 ÷ ${k} = ?`, 0, 'Nada para repartir: 0 para cada'); };
+
+  const familia = () => { const a = rnd(2, 9), b = rnd(2, 9); return [a, b, a * b]; };
+  const L3 = [
+    () => ligar('Ligue as cartas da família 🃏', paresUnicos(() => { const [a, b, c] = familia(); return [`${a} × ${b} = ${c}`, `${c} ÷ ${a} = ${b}`]; }), 'Mesmos 3 números, contas irmãs'),
+    () => { const [a, b, c] = familia(); return digitar(`Família ${a}, ${b}, ${c}: ${c} ÷ ${a} = ?`, b, `${a} × ${b} = ${c}`); },
+    () => { const [a, b, c] = familia(), e = c + sortear([a, -a, 1]); return escolha(`Qual é da família ${a}, ${b}, ${c}?`, [`${c} ÷ ${a}`, `${e} ÷ ${a}`, `${c} ÷ ${a + 1}`], `${c} ÷ ${a}`, 'Use só os 3 números da família'); },
+    () => { const [a, b, c] = familia(); return vf(`${c} ÷ ${b} = ${a} é da família ${a}, ${b}, ${c}?`, true, `${b} × ${a} = ${c}`); }
+  ];
+  const S3 = () => digitar('Quantos fatos na família 2, 5, 10?', 4, '2×5, 5×2, 10÷2 e 10÷5');
+
+  const L4 = [
+    () => { const [n, k, q] = div(); return digitar(`${n} ÷ ${k} = ?`, q, `${k} × ${q} = ${n}`); },
+    () => { const [n, k, q] = div(); return rapido(escolha(`${n} ÷ ${k}`, vizinhos(q, 2, 2), q, `${k} × ${q} = ${n}`), 7); },
+    () => ({ ...ligar('⏱ Ligue rápido! 🔗', paresUnicos(() => { const [n, k, q] = div(); return [`${n} ÷ ${k}`, q]; }), 'Tabuada ao contrário'), limite: 20 }),
+    () => { const k = rnd(2, 9); return padrao([1, 2, 3].map(q => `${k * q} ÷ ${k} = ${q}`), `${k * 4} ÷ ${k} =`, 4, `De ${k} em ${k}`); }
+  ];
+  const S4 = () => digitar('81 ÷ 9 = ?', 9, '9 × 9 = 81');
+
+  const L5 = [
+    () => { const k = rnd(2, 6), q = rnd(2, 9); return digitar(`📦 ${k * q} livros em ${k} caixas. Cada caixa?`, q, `${k * q} ÷ ${k} = ${q}`); },
+    () => { const k = rnd(2, 6), q = rnd(2, 9); return digitar(`👥 ${k * q} alunos, grupos de ${k}. Grupos?`, q, `${k * q} ÷ ${k} = ${q}`); },
+    () => { const k = rnd(2, 6), q = rnd(2, 9); return digitar(`🍪 ${k} amigos, ${q} para cada. Total?`, k * q, `${k} × ${q} = ${k * q}`); },
+    () => { const k = rnd(2, 5), q = rnd(2, 5); return repartir(k * q, k, `⚽ ${k * q} bolas para ${k} times. Cada?`, q, `${k * q} ÷ ${k} =`); }
+  ];
+  const S5 = () => digitar('👥 30 alunos, grupos de 5. Grupos?', 6, '30 ÷ 5 = 6');
+
+  criarDia(15, [
+    lic('Dividir é repartir', '🍬', ['Repartir', 'Dividir é repartir em partes iguais'], L1, S1),
+    lic('Inverso da multiplicação', '↩️', ['Inverso', '÷ desfaz o ×: 12 ÷ 4 = 3'], L2, S2),
+    lic('Famílias de fatos', '🃏', ['Família de fatos', '3 × 4 = 12 · 12 ÷ 3 = 4'], L3, S3),
+    lic('Tabuada ao contrário', '🔁', ['Tabuada ao contrário', 'Para dividir, pense na tabuada'], L4, S4),
+    lic('Problemas de repartir', '📦', ['Repartir ou agrupar', 'Quanto em cada? Quantos grupos? ÷'], L5, S5)
+  ], ['Mestre da divisão', '÷ é o caminho de volta do ×'], () => digitar('100 ÷ 10 = ?', 10, '10 × 10 = 100'));
+})();
+
+// ---------- DIA 16 · Divisão com resto ----------
+(() => {
+  const comResto = () => { const k = rnd(2, 9), q = rnd(1, 9), r = rnd(1, k - 1); return [k * q + r, k, q, r]; };
+  const exata = () => { const k = rnd(2, 9), q = rnd(1, 9); return [k * q, k, q, 0]; };
+  const qualquer = () => (Math.random() < .5 ? comResto() : exata());
+  const L1 = [
+    () => { const [n, k, q, r] = qualquer(); return fixa(`${n} ÷ ${k} é exata?`, ['Sim', 'Não'], r ? 'Não' : 'Sim', r ? `Sobra ${r}: não é exata` : `${k} × ${q} = ${n}: exata ✔`); },
+    () => { const [n, k, q, r] = comResto(); return digitar(`${n} ÷ ${k} = ? e sobra ${r}`, q, `${k} × ${q} + ${r} = ${n}`); },
+    () => { const k = rnd(2, 4), q = rnd(2, 5), r = rnd(1, k - 1); return repartir(k * q + r, k, `🍬 ${k * q + r} balas para ${k}. Cada um?`, q, 'Cada um:'); },
+    () => { const [n, k, , r] = qualquer(); return vf(`${n} ÷ ${k} tem resto?`, r > 0, r ? `Sobra ${r}` : 'Resto 0: exata'); }
+  ];
+  const S1 = () => digitar('🍬 7 balas para 10 amigos. Cada um?', 0, 'Não dá 1 para cada: 0, sobram 7');
+
+  const L2 = [
+    () => { const k = rnd(2, 4), q = rnd(2, 5), r = rnd(1, k - 1); return repartir(k * q + r, k, `🍪 ${k * q + r} biscoitos para ${k}. Sobra?`, r, 'Sobra:'); },
+    () => { const [n, k, q, r] = comResto(); return digitar(`Resto de ${n} ÷ ${k}?`, r, `${n} = ${k} × ${q} + ${r}`); },
+    () => vf('O resto pode ser maior que o divisor?', false, 'Se sobra mais, dá mais 1 para cada'),
+    () => { const [n, k, q, r] = comResto(); return escolha(`Resto de ${n} ÷ ${k}`, vizinhos(r, 2, 2), r, `${n} = ${k} × ${q} + ${r}`); }
+  ];
+  const S2 = () => digitar('Resto de 100 ÷ 10?', 0, '10 × 10 = 100: resto 0');
+
+  const L3 = [
+    () => { const [n, k, q, r] = comResto(); return digitar(`${k} × ${q} + ${r} = ?`, n, `É o número do início: ${n}`); },
+    () => { const [n, k, q, r] = comResto(); return padrao([`${n} ÷ ${k} = ${q}, resto ${r}`], `Prova: ${k} × ${q} + ${r} =`, n, 'Volte ao número do início'); },
+    () => { const [n, k, q, r] = comResto(), e = sortear([r, r, r + 1]); return vf(`${n} ÷ ${k} = ${q}, resto ${e}. Certo?`, k * q + e === n, `${k} × ${q} + ${e} = ${k * q + e}`); },
+    () => { const [n, k, q, r] = comResto(); return digitar(`${k} × ${q} + ? = ${n}`, r, `${n} − ${k * q} = ${r}`); }
+  ];
+  const S3 = () => vf('Zé: 20 ÷ 6 = 3, resto 2. Certo?', true, '6 × 3 + 2 = 20 ✔');
+
+  const L4 = [
+    () => { const [n, k, , r] = qualquer(); return fixa(`${n} ÷ ${k} dá exato em ℕ?`, ['Sim', 'Não'], r ? 'Não' : 'Sim', r ? `Sobra ${r}` : 'Resto 0 ✔'); },
+    () => { const n = rnd(1, 50); return fixa(`${n} ÷ 0 dá para fazer?`, ['Sim', 'Não'], 'Não', 'Dividir por 0 não existe 🚫'); },
+    () => { const k = rnd(1, 9); return vf(`0 ÷ ${k} = 0?`, true, 'Nada para repartir: 0'); },
+    () => { const k = rnd(2, 9), n = rnd(k + 1, 60), m = k * Math.floor(n / k); return digitar(`Maior múltiplo de ${k} até ${n}?`, m, `${k} × ${m / k} = ${m}`); }
+  ];
+  const S4 = () => fixa('7 ÷ 0 dá para fazer?', ['Sim', 'Não'], 'Não', 'Ninguém reparte para 0 amigos 🚫');
+
+  const L5 = [
+    () => { const k = rnd(4, 10), q = rnd(2, 6), r = rnd(1, k - 1); return digitar(`🚌 ${k * q + r} alunos, vans de ${k}. Vans?`, q + 1, `${q} vans cheias + 1 para quem sobrou`); },
+    () => { const k = rnd(3, 8), q = rnd(2, 9), r = rnd(1, k - 1); return digitar(`🍪 ${k * q + r} biscoitos, pacotes de ${k}. Pacotes cheios?`, q, `Sobram ${r} de fora`); },
+    () => { const k = rnd(3, 8), q = rnd(2, 9), r = rnd(1, k - 1); return digitar(`🍪 ${k * q + r} biscoitos, pacotes de ${k}. Sobram?`, r, `${k} × ${q} = ${k * q}; sobram ${r}`); },
+    () => { const k = rnd(2, 5), q = rnd(2, 6), r = rnd(1, k - 1); return digitar(`🎈 ${k * q + r} balões para ${k}. Cada um?`, q, `Sobram ${r}`); }
+  ];
+  const S5 = () => digitar('🚌 41 alunos, vans de 10. Vans?', 5, '4 cheias + 1 para quem sobrou');
+
+  criarDia(16, [
+    lic('Exata ou com resto', '🍬', ['Resto', 'O que sobra é o resto'], L1, S1),
+    lic('Bolinhas que sobram', '🔵', ['Resto pequeno', 'Resto < divisor, sempre'], L2, S2),
+    lic('Conferir a divisão', '✅', ['Prova real', 'divisor × quociente + resto = dividendo'], L3, S3),
+    lic('Dá em ℕ?', '🚫', ['Divisível', 'Exato quando o resto é 0 · ÷ 0 não existe'], L4, S4),
+    lic('Problemas com resto', '🚌', ['Resto no problema', 'Sobrou gente? Mais uma van!'], L5, S5)
+  ], ['Mestre do resto', 'dividendo = divisor × quociente + resto'], () => digitar('Resto de 50 ÷ 7?', 1, '7 × 7 = 49; sobra 1'));
+})();
+
+// ---------- DIA 17 · Divisão de inteiros (com a carta rara dos sinais) ----------
+(() => {
+  const S = { sinais: true }; // power-up 🌟 para quem tem a carta rara
+  const divi = () => { const k = rnd(2, 9) * sortear([1, -1]), q = rnd(1, 9) * sortear([1, -1]); return [k * q, k, q]; };
+  const barra = (a, b) => `${ent(a)} ÷ ${ent(b)}`;
+  const sinalDe = n => (n > 0 ? '+' : '−');
+  const L1 = [
+    () => { const [n, k, q] = divi(); return fixa(`${barra(n, k)} dá…`, ['+', '−'], sinalDe(q), 'Mesma regra da ×: iguais +, diferentes −', { ...S, visual: cartaSinais() }); },
+    () => vf('Na ÷ vale a mesma regra dos sinais?', true, 'Iguais +, diferentes −', { ...S, visual: cartaSinais() }),
+    () => { const [n, k, q] = divi(); return digitar(`${barra(n, k)} = ?`, q, `${Math.abs(n)} ÷ ${Math.abs(k)} = ${Math.abs(q)}; sinal ${sinalDe(q)}`, S); }
+  ];
+  const S1 = () => fixa('(−100) ÷ (−10) dá…', ['+', '−'], '+', 'Iguais dão +', { ...S, visual: cartaSinais() });
+
+  const L2 = [
+    () => { const k = rnd(2, 9), q = rnd(1, 9); return digitar(`${barra(-k * q, k)} = ?`, -q, `Diferentes dão −: ${fmt(-q)}`, S); },
+    () => { const k = rnd(2, 6), q = rnd(2, 9); return digitar(`💸 Dívida de ${k * q} para ${k}. Cada um?`, -q, `${barra(-k * q, k)} = ${fmt(-q)}`, { ...S, conta: barra(-k * q, k) }); },
+    () => { const k = rnd(2, 9), q = rnd(1, 9); return escolha(barra(k * q, -k), perto(-q, 2), fmt(-q), 'Diferentes dão −', S); },
+    () => { const k = rnd(2, 9), q = rnd(1, 9); return vf(`${barra(-k * q, k)} = ${q}?`, false, `É ${fmt(-q)}: diferentes dão −`, S); }
+  ];
+  const S2 = () => digitar('💸 Dívida de 100 para 4. Cada um?', -25, '(−100) ÷ 4 = −25', S);
+
+  const L3 = [
+    () => { const k = rnd(2, 9), q = rnd(1, 9); return digitar(`${barra(-k * q, -k)} = ?`, q, 'Menos ÷ menos dá +', S); },
+    () => { const k = rnd(2, 9), q = rnd(1, 9); return padrao([`${ent(-k)} · ${q} = ${fmt(-k * q)}`], `${barra(-k * q, -k)} =`, q, '÷ desfaz o ·', S); },
+    () => { const k = rnd(2, 9), q = rnd(1, 9); return escolha(barra(-k * q, -k), perto(q, 2), fmt(q), '(−) ÷ (−) = (+)', S); },
+    () => { const k = rnd(2, 6), q = rnd(2, 9); return digitar(`Quantas dívidas de ${k} dão ${fmt(-k * q)}?`, q, `${barra(-k * q, -k)} = ${q}`, S); }
+  ];
+  const S3 = () => digitar('(−1) ÷ (−1) = ?', 1, 'Iguais dão +', S);
+
+  const L4 = [
+    () => { const [n, k, q] = divi(); return digitar(`${ent(k)} · ? = ${fmt(n)}`, q, `${barra(n, k)} = ${fmt(q)}`, S); },
+    () => ligar('Ligue conta e resultado 🔗', paresUnicos(() => { const [n, k, q] = divi(); return [barra(n, k), q]; }), 'Sinal primeiro, depois a tabuada', S),
+    () => { const [n, k, q] = divi(); return vf(`Se ${ent(k)} · ${ent(q)} = ${fmt(n)}, ${barra(n, k)} = ${fmt(q)}?`, true, '÷ desfaz o ·', S); }
+  ];
+  const S4 = () => digitar('? · (−5) = 35', -7, '35 ÷ (−5) = −7', S);
+
+  const L5 = [
+    () => { const [n, k, q] = divi(); return rapido(escolha(barra(n, k), perto(q, 2), fmt(q), 'Sinal primeiro', S), 8); },
+    () => { const a = sortear([1, -1]) * rnd(2, 9), b = sortear([1, -1]) * rnd(2, 9); return digitar(`${ent(a)} · ${ent(b)} = ?`, a * b, 'Sinal primeiro, depois a tabuada', S); },
+    () => { const [n, k, q] = divi(); return digitar(`${barra(n, k)} = ?`, q, 'Sinal primeiro, depois a tabuada', S); },
+    () => ({ ...ligar('⏱ Ligue rápido! 🔗', paresUnicos(() => { const [n, k, q] = divi(); return Math.random() < .5 ? [barra(n, k), q] : [`${ent(k)} · ${ent(q)}`, n]; }), 'Sinal primeiro', S), limite: 25 })
+  ];
+  const S5 = () => digitar('(−63) ÷ 9 = ?', -7, '9 × 7 = 63; diferentes dão −', S);
+
+  criarDia(17, [
+    lic('Sinal da divisão', '➗', ['Sinais na ÷', 'Mesma regra da ×'], L1, S1),
+    lic('Negativo ÷ positivo', '💸', ['Dívida repartida', '(−12) ÷ 3 = −4'], L2, S2),
+    lic('Negativo ÷ negativo', '✨', ['Menos ÷ menos', '(−) ÷ (−) = (+)'], L3, S3),
+    lic('Inverso em ℤ', '↩️', ['Inverso em ℤ', '÷ desfaz o ·, com sinal e tudo'], L4, S4),
+    lic('× e ÷ com sinais', '⚡', ['Sinal primeiro', 'Sinal primeiro, conta depois'], L5, S5)
+  ], ['Mestre da ÷ em ℤ', 'A carta rara dos sinais vale na ÷ 🌟'], () => digitar('(−81) ÷ (−9) = ?', 9, 'Iguais dão +', S));
+})();
+
+// ---------- DIA 18 · Operações misturadas ----------
+(() => {
+  const n = () => rnd(1, 9);
+  const z = () => sortear([1, -1]) * rnd(1, 9);
+  const exprs = [
+    () => [n(), '+', n(), '×', n()],
+    () => [n(), '×', n(), '−', n()],
+    () => { const c = rnd(2, 5); return [n(), '+', c * n(), '÷', c]; },
+    () => ['(', n(), '+', n(), ')', '×', n()],
+    () => [n(), '×', '(', rnd(5, 9), '−', rnd(1, 4), ')'],
+    () => [n(), '+', n(), '×', n(), '−', n()],
+    () => { const c = rnd(2, 5); return [c * n(), '÷', c, '+', n(), '×', n()]; }
+  ];
+  const tres = (certo, ...outros) => [...new Set([certo, ...outros, ...vizinhos(certo, 2, 3)])].slice(0, 3);
+
+  // arrastar as operações na fila (toque na ordem)
+  const L1 = [
+    () => fila(sortear(exprs)()),
+    () => fila(sortear(exprs)()),
+    () => contaExpr(sortear(exprs)()),
+    () => { const a = n(), b = n(), c = n(); return fixa(`${a} + ${b} × ${c}: primeiro…`, ['+', '×'], '×', '× e ÷ vêm antes de + e −'); },
+    () => { const a = n(), b = n(), c = n(); return fixa(`(${a} + ${b}) × ${c}: primeiro…`, ['( )', '×'], '( )', 'Parênteses mandam primeiro'); }
+  ];
+  const S1 = () => fila(['(', n(), '+', n(), ')', '×', '(', rnd(5, 9), '−', rnd(1, 4), ')']);
+
+  const L2 = [
+    () => contaExpr([n(), '+', n(), '×', n()]),
+    () => { const c = rnd(2, 5); return contaExpr([rnd(10, 30), '−', c * n(), '÷', c]); },
+    () => { const a = n(), b = n(), c = n(); return vf(`${a} + ${b} × ${c} = ${(a + b) * c}?`, a + b * c === (a + b) * c, `${b} × ${c} primeiro: ${a + b * c}`); },
+    () => contaExpr([n(), '×', n(), '+', n(), '×', n()]),
+    () => { const a = n(), b = n(), c = n(); return escolha(`${a} + ${b} × ${c}`, tres(a + b * c, (a + b) * c), a + b * c, '× antes do +'); }
+  ];
+  const S2 = () => contaExpr([2, '+', 3, '×', 4], { dica: '3 × 4 = 12; 2 + 12 = 14 (não 20!)' });
+
+  const L3 = [
+    () => contaExpr([z(), '+', z(), '×', z()], { sinais: true }),
+    () => contaExpr([z(), '×', z(), '−', z()], { sinais: true }),
+    () => fila([z(), '+', z(), '×', z()]),
+    () => contaExpr(['(', z(), '−', z(), ')', '×', z()], { sinais: true }),
+    () => { const c = sortear([2, 3, -2, -3]); return contaExpr([z(), '+', c * z(), '÷', c], { sinais: true }); }
+  ];
+  const S3 = () => contaExpr([-3, '×', -4, '−', 12], { sinais: true });
+
+  const L4 = [
+    () => { const q = rnd(2, 5), p = rnd(2, 9), c = rnd(1, 9); return digitar(`🛒 ${q} cadernos de R$${p} e caneta de R$${c}. Total?`, q * p + c, `${q} × ${p} + ${c} = ${q * p + c}`, { conta: `${q} × ${p} + ${c}` }); },
+    () => { const t = rnd(30, 60), q = rnd(2, 4), p = rnd(2, 9); return digitar(`💰 Tinha R$${t}, comprei ${q} de R$${p}. Sobrou?`, t - q * p, `${t} − ${q} × ${p} = ${t - q * p}`, { conta: `${t} − ${q} × ${p}` }); },
+    () => { const pz = rnd(2, 4), k = sortear([2, 4, 8]); return digitar(`🍕 ${pz} pizzas de 8 fatias, ${k} amigos. Cada?`, (pz * 8) / k, `${pz} × 8 = ${pz * 8}; ${pz * 8} ÷ ${k} = ${(pz * 8) / k}`); },
+    () => { const a = rnd(2, 6), d = rnd(2, 5), g = rnd(1, a * d); return digitar(`⭐ ${a} pontos por dia, ${d} dias. Gasto ${g}. Fico?`, a * d - g, `${a} × ${d} − ${g} = ${a * d - g}`); }
+  ];
+  const S4 = () => digitar('🍕 3 pizzas de 8 fatias, 6 amigos. Cada?', 4, '3 × 8 = 24; 24 ÷ 6 = 4');
+
+  const L5 = [
+    () => fila(sortear(exprs)()),
+    () => contaExpr(sortear(exprs)()),
+    () => { const e = sortear(exprs)(), a = analisar(e), r = a.valor + sortear([0, 1, -1, 2]); return vf(`${textoExpr(e)} = ${fmt(r)}?`, r === a.valor, a.passos.join(' → ')); },
+    () => fila([z(), '×', '(', n(), '−', z(), ')'])
+  ];
+  const S5 = () => fila([n(), '+', n(), '×', '(', n(), '+', n(), ')']);
+
+  criarDia(18, [
+    lic('Fila das operações', '🚦', ['Fila das operações', '( ) → × ÷ → + −, da esquerda p/ direita'], L1, S1),
+    lic('× e ÷ primeiro', '✖️', ['× e ÷ primeiro', '2 + 3 × 4 = 14, não 20'], L2, S2),
+    lic('Expressões com inteiros', '🧮', ['Expressões em ℤ', 'Ordem certa + regra dos sinais'], L3, S3),
+    lic('Problemas em 2 passos', '🪜', ['Dois passos', 'Resolva uma parte, depois a outra'], L4, S4),
+    lic('Mistura', '🎯', ['Expressão completa', 'Parênteses mandam primeiro'], L5, S5)
+  ], ['Mestre das expressões', 'Ordem + sinais = resposta certa'], () => contaExpr(['(', 2, '+', 3, ')', '×', '(', 4, '−', 6, ')'], { sinais: true }));
+})();
+
+// modelos de exercício dos dias pedidos (para revisão e prova)
+const modelosDos = dias => dias.flatMap(n => (DIAS[n - 1].licoes || []).flatMap(l => l.modelos || []));
+
+// ---------- DIA 19 · Revisão montada com os erros do aluno ----------
+(() => {
+  // pega até (total − 3) contas da lista de erros do aluno e completa com sorteio dos mesmos dias
+  const revisar = (dias, total) => {
+    const meus = typeof errosParaRevisar === 'function' ? errosParaRevisar(dias, total - 3) : [];
+    const pool = modelosDos(dias), lista = montar(pool, () => sortear(pool)(), total - meus.length);
+    meus.forEach(m => lista.splice(rnd(0, lista.length), 0, m));
+    return lista;
+  };
+  const GRUPOS = [
+    ['Revisão de naturais', '🌿', [1, 2, 3], 'Quem revisa, lembra'],
+    ['Revisão de inteiros', '❄️', [4, 5, 6, 7, 8], 'Erro é pista, não é fim'],
+    ['Revisão de tabuada', '🌋', [9, 10, 11, 12, 13, 14], 'Treino deixa fácil'],
+    ['Revisão de divisão', '🌊', [15, 16, 17], 'Cada erro vira acerto'],
+    ['Revisão de expressões', '🧮', [18], 'Persistência é superpoder']
+  ];
+  DIAS[18].licoes = [
+    ...GRUPOS.map(([titulo, icone, dias, regra], i) => ({
+      id: `d19l${i + 1}`, titulo, icone, semReforco: true, modelos: modelosDos(dias),
+      carta: { emoji: icone, titulo, regra }, gerar: () => revisar(dias, 8)
+    })),
+    {
+      id: 'd19boss', titulo: 'Chefão', icone: '👑', chefao: true, semReforco: true,
+      carta: { emoji: '👑', titulo: 'Mestre da revisão', regra: 'Seus erros viraram treino' }, gerar: () => revisar(Array.from({ length: 18 }, (_, i) => i + 1), 15)
+    }
+  ];
+})();
+
+// ---------- DIA 20 · Prova final (20 questões, uma de cada dia + extras) ----------
+(() => {
+  const SF = () => contaExpr([-2, '×', '(', 3, '+', -5, ')', '+', 10, '÷', 2], { sinais: true });
+  DIAS[19].licoes = [{
+    id: 'd20prova', titulo: 'Prova final', icone: '🎓', chefao: true, prova: true, semReforco: true,
+    carta: { emoji: '🎓', titulo: 'Mestre Mohamed', regra: 'Você dominou a matemática básica!', rara: true },
+    gerar: () => {
+      const lista = Array.from({ length: 18 }, (_, i) => sortear(modelosDos([i + 1]))());
+      lista.push(sortear(modelosDos([13, 14, 18]))());
+      const prova = embaralhar(lista);
+      prova.splice(rnd(5, 15), 0, { ...SF(), surpresa: true });
+      return prova;
+    }
+  }];
+})();
+
+// ---------- Extra A: casas no chão nas lições de soma e subtração ----------
+[
+  [3, 0, () => { const a = rnd(0, 5), b = rnd(1, 5); return casas(a, b, `${a} + ${b} = ?`, 0); }],
+  [3, 1, () => { const a = rnd(3, 10), b = rnd(1, a); return casas(a, -b, `${a} − ${b} = ?`, 0); }],
+  [7, 2, () => { const a = rnd(-5, 5), b = sortear([1, -1]) * rnd(1, 6); return casas(a, b, `${ent(a)} + ${ent(b)} = ?`); }],
+  [7, 4, () => { const a = rnd(-5, 5), b = sortear([1, -1]) * rnd(1, 6); return casas(a, b, `${ent(a)} + ${ent(b)} = ?`); }],
+  [8, 0, () => { const a = rnd(-4, 4), b = rnd(1, 6); return casas(a, -b, `${fmt(a)} − ${b} = ?`); }],
+  [8, 4, () => { const a = rnd(-5, 3), b = rnd(1, 6); return casas(a, b, `${fmt(a)} − (−${b}) = ?`); }]
+].forEach(([d, i, modelo]) => DIAS[d - 1].licoes[i].modelos.push(modelo, modelo));

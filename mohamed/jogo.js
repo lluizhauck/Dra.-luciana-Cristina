@@ -28,13 +28,13 @@ const Jogo = (() => {
   const perto = c => SVG('0 0 320 90', `<g fill="${c}"><circle cx="40" cy="72" r="26"/><circle cx="72" cy="64" r="32"/><circle cx="104" cy="76" r="20"/><rect x="196" y="40" width="10" height="50"/><circle cx="201" cy="36" r="24"/><circle cx="276" cy="80" r="16"/></g>`);
   const chao = (c, b) => SVG('0 0 64 100', `<rect width="64" height="100" fill="${c}"/><rect width="64" height="16" fill="${b}"/><rect x="6" y="42" width="22" height="8" rx="4" fill="#00000022"/><rect x="38" y="72" width="16" height="8" rx="4" fill="#00000022"/>`);
 
-  let el = {}, ocupado = false, geracao = 0, relogioId = null;
+  let el = {}, ocupado = false, geracao = 0;
   const esperar = ms => new Promise(r => setTimeout(r, ms));
   const animar = (alvo, kf, ms, easing = 'ease-out') =>
     new Promise(r => { alvo.animate(kf, { duration: ms, easing, fill: 'forwards' }).onfinish = r; });
   const tremer = x => { x.classList.remove('treme'); void x.offsetWidth; x.classList.add('treme'); };
 
-  function iniciar(caixa, { personagem, mundo = 0, total = 8 }) {
+  function iniciar(caixa, { personagem, mundo = 0, total = 8, chefe = false }) {
     const t = TEMAS[mundo] || TEMAS[0];
     geracao++;
     ocupado = false;
@@ -48,6 +48,7 @@ const Jogo = (() => {
     pose('corre');
     document.getElementById('trilha').dataset.n = '';
     trilha(0, total);
+    if (chefe) criarMonstro();
   }
 
   // poses: corre, pula, tombo
@@ -73,15 +74,19 @@ const Jogo = (() => {
   // ---------- pergunta: blocos "?" ou painel sobre o cenário ----------
   function limpar() {
     pararRelogio();
-    el.cena.querySelectorAll('.painel,.power,.relogio').forEach(x => x.remove());
+    el.cena.querySelectorAll('.painel,.power,.relogio,.casas,.buraco').forEach(x => x.remove());
+    el.cena.classList.remove('parada');
+    el.heroi.getAnimations().forEach(a => a.cancel());
+    if (!el.heroi.classList.contains('corre')) pose('corre');
     el.painel = null;
     el.blocos.className = 'blocos';
     el.blocos.innerHTML = '';
   }
 
-  function pergunta(ex, aoTocar, aoPainel) {
+  function pergunta(ex, aoTocar, aoPainel, op = {}) {
     limpar();
     if (PAINEIS[ex.tipo]) return PAINEIS[ex.tipo](ex, aoPainel);
+    if (op.ponte) abrirBuraco();
     const ops = ex.tipo === 'vf' ? [[true, '✔'], [false, '✘']]
       : ex.tipo === 'digitar' ? [[null, '?']]
       : ex.opcoes.map(o => [o, typeof o === 'number' ? fmt(o) : String(o)]);
@@ -107,6 +112,7 @@ const Jogo = (() => {
   }
 
   function travar() {
+    el.cena.querySelectorAll('.power').forEach(x => x.remove()); // power-up não gasta depois da resposta
     el.blocos.classList.add('travado');
     if (el.painel) el.painel.classList.add('travado');
   }
@@ -389,13 +395,189 @@ const Jogo = (() => {
     abrirPainel('p-tabuleiro', `<div class="tab">${casas.join('')}</div>`);
   }
 
-  const PAINEIS = { conjunto: pConjunto, ligar: pLigar, ordenar: pOrdenar, reta: pReta, padrao: pPadrao, grade: pGrade, tabuleiro: pTabuleiro };
+  // ordem das operações: toque nas operações na ordem em que são feitas
+  function pFila(ex, fim) {
+    const toks = ex.tokens.map(t => (t.op ? `<button class="op" data-id="${t.id}">${t.op}</button>` : `<span>${t.t}</span>`)).join('');
+    const p = abrirPainel('p-fila', `<div class="expr">${toks}</div><div class="vagas">${ex.ordem.map((_, i) => `<i class="vaga">${i + 1}º</i>`).join('')}</div>`);
+    const passo = passos(ex.ordem.length, fim);
+    let k = 0;
+    p.onclick = e => {
+      const b = e.target.closest('.op');
+      if (!b || b.disabled || ocupado) return;
+      if (+b.dataset.id !== ex.ordem[k]) return passo.errado(ex.conta || ex.pergunta, b);
+      const vaga = p.querySelectorAll('.vaga')[k];
+      vaga.textContent = ex.passos[k];
+      vaga.classList.add('cheia');
+      b.disabled = true;
+      b.dataset.n = ++k;
+      b.classList.add('feita');
+      passo.certo();
+    };
+  }
+
+  // divisão: bolinhas repartidas entre amigos; as que sobram ficam de lado
+  function pRepartir(ex) {
+    const { n, k } = ex, q = Math.floor(n / k), r = n % k;
+    const t = Math.max(7, Math.min(14, Math.floor(150 / Math.max(q, 1)), Math.floor(100 / k) - 4));
+    let html = `<div class="amigos" style="--t:${t}px">`;
+    for (let i = 0; i < k; i++) html += `<div class="amigo"><b>🙂</b>${Array.from({ length: q }, (_, j) => `<i style="animation-delay:${(j * k + i) * .06}s"></i>`).join('')}</div>`;
+    html += '</div>' + (r ? `<div class="sobra">${'<i></i>'.repeat(r)}</div>` : '') + `<p>${ex.rotulo || `${n} ÷ ${k} =`} <b class="slot">?</b></p>`;
+    abrirPainel('p-repartir', html);
+  }
+
+  // Extra A: o chão vira reta numérica com casas; o personagem pula até a casa tocada
+  async function pCasas(ex, fim) {
+    const g = geracao, h = el.heroi, box = document.createElement('div');
+    box.className = 'casas';
+    for (let v = ex.min; v <= ex.max; v++) {
+      box.insertAdjacentHTML('beforeend', `<button class="casa${v < 0 ? ' neg' : v === 0 ? ' zero' : ''}${v === ex.de ? ' saida' : ''}" data-v="${v}" style="--d:${Math.max(0, -v)}">${fmt(v)}</button>`);
+    }
+    el.cena.appendChild(box);
+    el.painel = box;
+    el.cena.classList.add('parada');
+    const base = h.getBoundingClientRect();
+    const ponto = v => { const r = box.querySelector(`[data-v="${v}"]`).getBoundingClientRect(); return { x: r.left + r.width / 2 - (base.left + base.width / 2), y: r.top - base.bottom }; };
+    const tr = (p, sobe = 0) => `translate(${p.x}px,${p.y - sobe}px)`;
+    let atual = ex.de;
+    pose('parado');
+    await animar(h, [{ transform: 'none' }, { transform: tr(ponto(atual)) }], 450);
+    box.onclick = async e => {
+      const b = e.target.closest('.casa');
+      if (!b || ocupado || box.dataset.feito) return;
+      box.dataset.feito = 1;
+      ocupado = true;
+      const alvo = +b.dataset.v, dir = Math.sign(alvo - atual);
+      pose('pula');
+      while (atual !== alvo) {
+        const a = ponto(atual), c = ponto(atual + dir);
+        atual += dir;
+        som('clique');
+        await animar(h, [{ transform: tr(a) }, { transform: tr({ x: (a.x + c.x) / 2, y: Math.min(a.y, c.y) }, 18), offset: .5 }, { transform: tr(c) }], 170);
+        if (g !== geracao) return;
+      }
+      const certo = alvo === ex.resposta;
+      b.classList.add(certo ? 'certo' : 'errado');
+      if (!certo) box.querySelector(`[data-v="${ex.resposta}"]`).classList.add('certa');
+      ocupado = false;
+      fim(certo, { dada: fmt(alvo), conta: ex.conta || ex.pergunta, animado: true });
+    };
+  }
+
+  // fim de uma animação feita pelo próprio painel (casas): só a reação final
+  function fechar(certo, fim) {
+    const g = geracao;
+    travar();
+    if (certo) {
+      const rh = el.heroi.getBoundingClientRect();
+      moeda({ left: rh.left, width: rh.width, top: rh.top - 70, height: 34 }, rh);
+      som('moeda');
+      vibrar(25);
+    } else {
+      pose('tombo');
+      vibrar([70, 40, 70]);
+    }
+    balao(certo ? sortear(['Boa!', 'Isso!', 'Uau!']) : sortear(['Quase!', 'Ops!']));
+    setTimeout(() => { if (g === geracao && fim) fim(); }, 550);
+  }
+
+  const PAINEIS = { conjunto: pConjunto, ligar: pLigar, ordenar: pOrdenar, reta: pReta, padrao: pPadrao, grade: pGrade, tabuleiro: pTabuleiro, fila: pFila, repartir: pRepartir, casas: pCasas };
+
+  // ---------- Extra B: buraco no caminho; a resposta certa constrói a ponte ----------
+  function abrirBuraco() {
+    const b = document.createElement('div');
+    b.className = 'buraco chega';
+    b.innerHTML = '<i class="tabuas"></i>';
+    el.cena.appendChild(b);
+    setTimeout(() => { if (b.isConnected && !ocupado) { el.cena.classList.add('parada'); pose('parado'); } }, 600);
+  }
+
+  async function ponte(i, certo, fim) {
+    const g = geracao, h = el.heroi, bu = el.cena.querySelector('.buraco'), b = el.blocos.children[i];
+    if (!bu) return bater(i, certo, fim);
+    ocupado = true;
+    travar();
+    if (b) b.classList.add('bate', certo ? 'certo' : 'errado');
+    const c = el.cena.getBoundingClientRect(), rb = bu.getBoundingClientRect(), rh = h.getBoundingClientRect();
+    const meio = rb.left + rb.width / 2 - (rh.left + rh.width / 2), alem = rb.right + 8 - rh.left;
+    if (certo) {
+      bu.classList.add('ponte');
+      som('moeda');
+      vibrar(25);
+      await esperar(450);
+      if (g !== geracao) return;
+      el.cena.classList.remove('parada');
+      pose('corre');
+      await animar(h, [{ transform: 'none' }, { transform: `translateX(${alem}px)` }], 650, 'linear');
+      if (g !== geracao) return;
+      el.blocos.classList.add('some');
+      await Promise.all([
+        animar(h, [{ transform: `translateX(${alem}px)` }, { transform: 'none' }], 600, 'ease-in-out'),
+        animar(bu, [{ transform: 'none' }, { transform: `translateX(${-(rb.right - c.left) - 20}px)` }], 600, 'ease-in')
+      ]);
+    } else {
+      pose('pula');
+      som('pulo');
+      await animar(h, [{ transform: 'none' }, { transform: `translate(${meio / 2}px,-40px)`, offset: .5 }, { transform: `translate(${meio}px,0)` }], 420);
+      if (g !== geracao) return;
+      pose('tombo');
+      som('erro');
+      vibrar([70, 40, 70]);
+      await animar(h, [{ transform: `translate(${meio}px,0)` }, { transform: `translate(${meio}px,130px) rotate(-120deg)`, opacity: 0 }], 480, 'ease-in');
+      await esperar(250);
+      if (g !== geracao) return;
+      pose('parado'); // volta ao início do trecho
+      await animar(h, [{ transform: 'translateX(-30px)', opacity: 0 }, { transform: 'none', opacity: 1 }], 380);
+    }
+    terminar(g, certo, fim);
+  }
+
+  // ---------- Extra C: chefão com monstrinho e barra de vida ----------
+  const MONSTRO = '<svg viewBox="0 0 100 100"><path d="M24 34 L28 6 L42 28Z M76 34 L72 6 L58 28Z" fill="#FFC531" stroke="#1E1240" stroke-width="4" stroke-linejoin="round"/><ellipse cx="50" cy="60" rx="40" ry="34" fill="#14B8A6" stroke="#1E1240" stroke-width="4"/><circle cx="50" cy="50" r="15" fill="#fff" stroke="#1E1240" stroke-width="3"/><circle cx="44" cy="52" r="7" fill="#1E1240"/><path d="M30 74 Q50 88 70 74Z" fill="#fff" stroke="#1E1240" stroke-width="4" stroke-linejoin="round"/><rect x="28" y="90" width="14" height="9" rx="4" fill="#1E1240"/><rect x="58" y="90" width="14" height="9" rx="4" fill="#1E1240"/></svg>';
+  function criarMonstro() {
+    el.cena.classList.add('chefe');
+    const m = document.createElement('div');
+    m.className = 'monstro';
+    m.innerHTML = `<div class="vida"><i></i></div>${MONSTRO}`;
+    el.cena.appendChild(m);
+    el.monstro = m;
+    el.passos = 0;
+  }
+
+  // acerto: o personagem lança uma bolinha no monstro
+  function monstroDano(vida, max) {
+    const m = el.monstro;
+    if (!m) return;
+    const c = el.cena.getBoundingClientRect(), rh = el.heroi.getBoundingClientRect(), rm = m.getBoundingClientRect(), b = document.createElement('div');
+    const x0 = rh.left - c.left + rh.width / 2 - 9, y0 = rh.top - c.top + 20;
+    const dx = rm.left - c.left + rm.width / 2 - 9 - x0, dy = rm.top - c.top + rm.height / 2 - 9 - y0;
+    b.className = 'bolinha';
+    b.style.cssText = `left:${x0}px;top:${y0}px`;
+    el.cena.appendChild(b);
+    b.animate([{ transform: 'none' }, { transform: `translate(${dx / 2}px,${Math.min(dy, 0) - 60}px)`, offset: .5 }, { transform: `translate(${dx}px,${dy}px)` }], { duration: 520, easing: 'ease-in-out' }).onfinish = () => {
+      b.remove();
+      m.querySelector('.vida i').style.width = Math.max(0, (100 * vida) / max) + '%';
+      tremer(m.querySelector('svg'));
+      som('pulo');
+      if (vida <= 0) { m.classList.add('derrotado'); som('vitoria'); confete(); aviso('🎉 Vitória!'); }
+    };
+  }
+
+  // erro: o monstro avança um passo
+  function monstroAvanca() {
+    const m = el.monstro;
+    if (!m) return;
+    el.passos++;
+    m.style.setProperty('--x', `${-el.passos * 14}px`);
+    m.classList.remove('pisa');
+    void m.offsetWidth;
+    m.classList.add('pisa');
+  }
 
   // power-up: botão que abre uma dica visual por cima da cena
-  function powerup(qtd, usar) {
+  function powerup(icone, qtd, usar) {
     const b = document.createElement('button');
     b.className = 'power';
-    b.innerHTML = `🖐️<small>${qtd}</small>`;
+    b.innerHTML = `${icone}<small>${qtd}</small>`;
     b.onclick = () => {
       if (ocupado) return;
       b.remove();
@@ -410,21 +592,40 @@ const Jogo = (() => {
   }
 
   // contra o tempo: barra que esvazia; ao acabar, conta como erro
+  let relogioId = null, relogioFim = 0, relogioResta = 0, relogioCb = null;
+  function armarRelogio(ms) {
+    relogioFim = Date.now() + ms;
+    relogioId = setTimeout(() => { const cb = relogioCb; relogioId = null; relogioCb = null; if (cb) cb(); }, ms);
+  }
   function relogio(seg, aoAcabar) {
     pararRelogio();
     const r = document.createElement('div');
     r.className = 'relogio';
     r.innerHTML = `<i style="animation-duration:${seg}s"></i>`;
     el.cena.appendChild(r);
-    relogioId = setTimeout(() => { relogioId = null; aoAcabar(); }, seg * 1000);
+    relogioCb = aoAcabar;
+    armarRelogio(seg * 1000);
   }
-
   function pararRelogio() {
     clearTimeout(relogioId);
     relogioId = null;
+    relogioCb = null;
     const r = el.cena && el.cena.querySelector('.relogio i');
     if (r) r.style.animationPlayState = 'paused';
   }
+  // app em segundo plano: o relógio espera o aluno voltar
+  document.addEventListener('visibilitychange', () => {
+    const barra = el.cena && el.cena.querySelector('.relogio i');
+    if (!relogioCb || !barra) return;
+    if (document.hidden) {
+      clearTimeout(relogioId);
+      relogioResta = Math.max(0, relogioFim - Date.now());
+      barra.style.animationPlayState = 'paused';
+    } else {
+      barra.style.animationPlayState = 'running';
+      armarRelogio(relogioResta);
+    }
+  });
 
   // combo: 3 acertos dão brilho, 5 soltam confete
   function combo(n, mult) {
@@ -451,5 +652,5 @@ const Jogo = (() => {
     if (el.cena) el.cena.classList.add('parada');
   }
 
-  return { iniciar, pergunta, escrever, bater, reagir, trilha, combo, aviso, powerup, relogio, pararRelogio, parar, ocupado: () => ocupado };
+  return { iniciar, pergunta, escrever, bater, reagir, ponte, fechar, trilha, combo, aviso, powerup, relogio, pararRelogio, monstroDano, monstroAvanca, parar, ocupado: () => ocupado };
 })();
