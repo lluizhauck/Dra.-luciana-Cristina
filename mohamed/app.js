@@ -43,7 +43,7 @@ const novoEstado = () => ({
   xp: 0, diaAtual: 1, diasConcluidos: [], licoes: {},
   cartas: [], medalhas: [], erros: [], seguidos: 0,
   itens: { cores: [], acessorios: [] }, frases: [], andar: null,
-  revisao: [], streak: { dias: 0, ultimo: '' }
+  revisao: [], streak: { dias: 0, ultimo: '' }, moedas: 0, masmorras: {}
 });
 let estado = carregar();
 function carregar() {
@@ -95,10 +95,12 @@ function som(tipo) {
 
 // ---------- personagem (SVG reutilizável: telas, mapa e jogo) ----------
 const TINTA = '#1E1240';
-function desenharPersonagem(p = {}, pose = 'parado') {
+// dir: 'baixo' (de frente, padrão), 'cima' (de costas), 'esquerda', 'direita' · poses de andar: 'anda1', 'anda2'
+function desenharPersonagem(p = {}, pose = 'parado', dir = 'baixo') {
   const cor = p.cor || CORES[0];
   const rosto = pose === 'tombo' ? 'tonto' : p.rosto || 'feliz';
-  const pula = pose === 'pula';
+  const pula = pose === 'pula', passo = pose === 'anda1' ? 1 : pose === 'anda2' ? -1 : 0;
+  const svg = miolo => `<svg viewBox="0 -12 100 132" xmlns="http://www.w3.org/2000/svg">${miolo}</svg>`;
   const L = `stroke="${TINTA}" stroke-width="4" stroke-linecap="round" fill="none"`;
   const T = `stroke="${TINTA}" stroke-width="3" stroke-linejoin="round"`;
   const olho = (x, r = 11) => `<circle cx="${x}" cy="50" r="${r}" fill="#fff"/><circle cx="${x + 2}" cy="51" r="${r / 2}" fill="${TINTA}"/><circle cx="${x + 4}" cy="48" r="2" fill="#fff"/>`;
@@ -121,18 +123,40 @@ function desenharPersonagem(p = {}, pose = 'parado') {
     capacete: `<circle cx="50" cy="58" r="47" fill="#BFE9FF" fill-opacity=".35" stroke="#fff" stroke-width="4"/><path d="M18 44 Q22 24 40 16" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/>`,
     flor: `<g transform="translate(30 20)" ${T}>${[0, 72, 144, 216, 288].map(a => `<circle cy="-8" r="6" fill="#fff" transform="rotate(${a})"/>`).join('')}<circle r="5" fill="#FFC531"/></g>`
   };
+  const tronco = `<rect x="14" y="22" width="72" height="80" rx="36" fill="${cor}"/>`, barriga = '<ellipse cx="50" cy="82" rx="22" ry="14" fill="#fff" opacity=".22"/>';
+
+  // de lado: um olho grande, um pequeno, um braço na frente; a esquerda é o espelho da direita
+  if (dir === 'esquerda' || dir === 'direita') {
+    const perna = (x, giro) => `<rect x="${x}" y="92" width="14" height="22" rx="7" fill="${TINTA}" transform="rotate(${giro} ${x + 7} 94)"/>`;
+    const cara = '<circle cx="62" cy="50" r="10" fill="#fff"/><circle cx="66" cy="51" r="5" fill="' + TINTA + '"/><circle cx="78" cy="50" r="6" fill="#fff"/><circle cx="80" cy="51" r="3" fill="' + TINTA + '"/>' +
+      (rosto === 'surpreso' ? `<ellipse cx="72" cy="70" rx="5" ry="6" fill="${TINTA}"/>` : `<path d="M62 67 Q71 74 80 66" ${L}/>`) + '<circle cx="78" cy="63" r="5" fill="#FF7AA8" opacity=".5"/>';
+    const braco = `<rect x="43" y="54" width="14" height="30" rx="7" fill="${cor}" stroke="#00000030" stroke-width="3" transform="rotate(${-28 * passo} 50 58)"/>`;
+    const acc = p.acessorio === 'oculos' ? `<rect x="54" y="40" width="30" height="20" rx="8" fill="${TINTA}"/>` : ACESS[p.acessorio] || '';
+    const tudo = perna(36, 22 * passo) + perna(50, -22 * passo) + tronco + barriga + braco + cara + acc;
+    return svg(dir === 'esquerda' ? `<g transform="translate(100 0) scale(-1 1)">${tudo}</g>` : tudo);
+  }
+
   const bracos = pula
     ? `<rect x="4" y="22" width="14" height="32" rx="7" fill="${cor}" transform="rotate(-30 11 50)"/><rect x="82" y="22" width="14" height="32" rx="7" fill="${cor}" transform="rotate(30 89 50)"/>`
-    : `<rect x="6" y="56" width="14" height="28" rx="7" fill="${cor}"/><rect x="80" y="56" width="14" height="28" rx="7" fill="${cor}"/>`;
+    : `<rect x="6" y="${56 + 4 * passo}" width="14" height="28" rx="7" fill="${cor}"/><rect x="80" y="${56 - 4 * passo}" width="14" height="28" rx="7" fill="${cor}"/>`;
   const pernas = pula
     ? `<rect x="28" y="96" width="16" height="14" rx="7" fill="${TINTA}"/><rect x="56" y="96" width="16" height="14" rx="7" fill="${TINTA}"/>`
-    : `<rect class="perna-a" x="29" y="94" width="14" height="22" rx="7" fill="${TINTA}"/><rect class="perna-b" x="57" y="94" width="14" height="22" rx="7" fill="${TINTA}"/>`;
-  const corpo = `<rect x="14" y="22" width="72" height="80" rx="36" fill="${cor}"/><ellipse cx="50" cy="82" rx="22" ry="14" fill="#fff" opacity=".22"/><circle cx="25" cy="64" r="6" fill="#FF7AA8" opacity=".5"/><circle cx="75" cy="64" r="6" fill="#FF7AA8" opacity=".5"/>`;
-  return `<svg viewBox="0 -12 100 132" xmlns="http://www.w3.org/2000/svg">${pernas}${bracos}${corpo}${ROSTO[rosto] || ROSTO.feliz}${ACESS[p.acessorio] || ''}</svg>`;
+    : passo
+      ? `<rect x="29" y="${passo > 0 ? 90 : 94}" width="14" height="${passo > 0 ? 20 : 22}" rx="7" fill="${TINTA}"/><rect x="57" y="${passo < 0 ? 90 : 94}" width="14" height="${passo < 0 ? 20 : 22}" rx="7" fill="${TINTA}"/>`
+      : `<rect class="perna-a" x="29" y="94" width="14" height="22" rx="7" fill="${TINTA}"/><rect class="perna-b" x="57" y="94" width="14" height="22" rx="7" fill="${TINTA}"/>`;
+
+  // de costas: sem rosto, só a nuca e os acessórios que aparecem por trás
+  if (dir === 'cima') {
+    const acc = p.acessorio === 'oculos' ? '' : p.acessorio === 'bone' ? ACESS.bone.split('<rect')[0] : ACESS[p.acessorio] || '';
+    return svg(pernas + bracos + tronco + '<path d="M34 42 Q50 32 66 42" stroke="#00000022" stroke-width="6" fill="none" stroke-linecap="round"/>' + acc);
+  }
+
+  const corpo = tronco + barriga + '<circle cx="25" cy="64" r="6" fill="#FF7AA8" opacity=".5"/><circle cx="75" cy="64" r="6" fill="#FF7AA8" opacity=".5"/>';
+  return svg(`${pernas}${bracos}${corpo}${ROSTO[rosto] || ROSTO.feliz}${ACESS[p.acessorio] || ''}`);
 }
 
 // ---------- navegação ----------
-const TELAS = { 't-inicio': telaInicio, 't-personagem': telaPersonagem, 't-mapa': telaMapa, 't-dia': telaDia, 't-album': telaAlbum, 't-relatorio': () => Relatorio.tela() };
+const TELAS = { 't-inicio': telaInicio, 't-personagem': telaPersonagem, 't-mapa': telaMapa, 't-dia': telaDia, 't-album': telaAlbum, 't-relatorio': () => Relatorio.tela(), 't-masmorra': telaMasmorra };
 function irPara(id) {
   $$('.tela').forEach(t => t.classList.toggle('ativa', t.id === id));
   window.scrollTo(0, 0);
@@ -274,6 +298,18 @@ function pintarRanking() {
     const i = p.dia - 1, pos = POS[i], k = (porDia[i] = (porDia[i] || 0) + 1), lado = pos.x > 180 ? -1 : 1;
     return `<g transform="translate(${pos.x + lado * (36 + k * 16)} ${pos.y - 26})"><circle r="12" fill="#fff" stroke="${MUNDOS[DIAS[i].mundo].cor}" stroke-width="3"/><text y="4" text-anchor="middle" font-size="11" font-weight="900" fill="${TINTA}">${esc(p.apelido.slice(0, 2).toUpperCase())}</text></g>`;
   }).join('');
+}
+
+// ---------- masmorra do dia (jogo.js) ----------
+function telaMasmorra() {
+  const d = DIAS[diaAberto - 1];
+  const progresso = (estado.masmorras[d.n] = estado.masmorras[d.n] || { pegos: [], visitadas: [] });
+  Masmorra.abrir({
+    mundo: d.mundo, personagem: estado.personagem, progresso, vidas: 5,
+    aoMoeda: n => { estado.moedas += n; salvar(); },
+    aoSalvar: salvar,
+    aoSaida: () => { toast('🏁 Saída! Hora da lição'); irPara('t-dia'); } // parte 1: a saída leva às lições do dia
+  });
 }
 
 // ---------- lições do dia ----------
@@ -653,7 +689,7 @@ function iniciarApp() {
     if (!g || g.classList.contains('bloq')) return;
     som('clique');
     diaAberto = +g.dataset.dia;
-    irPara('t-dia');
+    irPara('t-masmorra'); // o mapa abre a masmorra do dia
   };
   $('#dia-licoes').onclick = e => {
     const b = e.target.closest('.licao-no');

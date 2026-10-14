@@ -654,3 +654,447 @@ const Jogo = (() => {
 
   return { iniciar, pergunta, escrever, bater, reagir, ponte, fechar, trilha, combo, aviso, powerup, relogio, pararRelogio, monstroDano, monstroAvanca, parar, ocupado: () => ocupado };
 })();
+
+// =====================================================================
+// MASMORRA vista de cima (Canvas) · parte 1: salas, movimento e mini mapa
+// =====================================================================
+
+// Salas em dados: 11 colunas × 13 linhas. Legenda:
+// #  parede   .  chão   o  moeda   c  baú   X  saída   @  início
+// ^ v < >  portas (norte, sul, oeste, leste): levam à sala vizinha em "pos" [coluna, linha]
+const SALAS_MASMORRA = [
+  { pos: [0, 0], mapa: [
+    '###########',
+    '#.........#',
+    '#.o.....o.#',
+    '#..##.##..#',
+    '#.........#',
+    '#.o.....o.#',
+    '#....@....>',
+    '#.........#',
+    '#..#...#..#',
+    '#..#.c.#..#',
+    '#.........#',
+    '#.o.....o.#',
+    '###########'] },
+  { pos: [1, 0], mapa: [
+    '###########',
+    '#.........#',
+    '#.##...##.#',
+    '#.#o...o#.#',
+    '#.........#',
+    '#...###...#',
+    '<...#c#...#',
+    '#...#.#...#',
+    '#.........#',
+    '#.o.....o.#',
+    '#.##...##.#',
+    '#.........#',
+    '#####v#####'] },
+  { pos: [1, 1], mapa: [
+    '#####^#####',
+    '#.........#',
+    '#..o...o..#',
+    '#.#######.#',
+    '#.........#',
+    '#.o.#.#.o.#',
+    '<...#c#...#',
+    '#.........#',
+    '#.#######.#',
+    '#..o...o..#',
+    '#.........#',
+    '#.........#',
+    '###########'] },
+  { pos: [0, 1], mapa: [
+    '###########',
+    '#.........#',
+    '#.o.o.o.o.#',
+    '#.........#',
+    '#.#.#.#.#.#',
+    '#.........#',
+    '#.........>',
+    '#.#.#.#.#.#',
+    '#.........#',
+    '#.o.o.o.o.#',
+    '#....c....#',
+    '#.........#',
+    '#####v#####'] },
+  { pos: [0, 2], mapa: [
+    '#####^#####',
+    '#.........#',
+    '#.o.....o.#',
+    '#..#...#..#',
+    '#.........#',
+    '#...###...#',
+    '#...#X#...#',
+    '#.........#',
+    '#..#...#..#',
+    '#.o.....o.#',
+    '#.........#',
+    '#.........#',
+    '###########'] }
+];
+
+const Masmorra = (() => {
+  const T = 32, COLS = 11, LINS = 13, VEL = 3.4;      // px por casa · tamanho da sala · casas por segundo
+  const CORPO = { l: .56, a: .44 };                     // caixa de colisão dos pés (em casas)
+  const VETOR = { cima: [0, -1], baixo: [0, 1], esquerda: [-1, 0], direita: [1, 0] };
+  const PORTAS = { '^': 'cima', v: 'baixo', '<': 'esquerda', '>': 'direita' };
+  const OPOSTA = { cima: 'v', baixo: '^', esquerda: '>', direita: '<' };
+  const TECLAS = { arrowup: 'cima', arrowdown: 'baixo', arrowleft: 'esquerda', arrowright: 'direita', w: 'cima', s: 'baixo', a: 'esquerda', d: 'direita' };
+  // cor do cenário por mundo: chão, chão alternado, parede, topo da parede, sombra
+  const PALETAS = [
+    { chao: '#E9FFF2', chao2: '#DDF7E8', parede: '#2FBF71', topo: '#86E3AE', sombra: '#1C8A50' },
+    { chao: '#EEF6FF', chao2: '#E1EDFC', parede: '#4E9BE8', topo: '#B8DBFF', sombra: '#2F6DB0' },
+    { chao: '#FFF2E8', chao2: '#FFE5D2', parede: '#E2552B', topo: '#F9A66C', sombra: '#9A3412' },
+    { chao: '#EAFDFF', chao2: '#D7F6FA', parede: '#0EA5B7', topo: '#67E8F9', sombra: '#0B6E7A' },
+    { chao: '#2A2463', chao2: '#241F57', parede: '#7C3AED', topo: '#A78BFA', sombra: '#4C1D95' }
+  ];
+
+  let M = null, cv = null, ctx = null, raf = 0, ligado = false, cache = { chave: '', imgs: {} };
+  const joy = { x: 0, y: 0 }, teclas = new Set();
+
+  const sala = () => M.salas[M.atual];
+  const casa = (c, l) => (sala().g[l] || [])[c] || '#';
+  const solido = (c, l) => '#cC'.includes(casa(c, l));
+  const vizinha = (s, dir) => M.salas.findIndex(o => o.pos[0] === s.pos[0] + VETOR[dir][0] && o.pos[1] === s.pos[1] + VETOR[dir][1]);
+
+  // ---------- abrir a masmorra do dia ----------
+  function abrir(op) {
+    cv = document.getElementById('mas-tela');
+    ctx = cv.getContext('2d');
+    if (!ligado) ligarControles();
+    const prog = op.progresso;
+    M = {
+      op, prog, cor: PALETAS[op.mundo] || PALETAS[0], vidas: op.vidas || 5, atual: 0, textos: [], transicao: null, ultimo: 0, fim: false,
+      salas: SALAS_MASMORRA.map((s, i) => {
+        const g = s.mapa.map((linha, l) => linha.split('').map((ch, c) =>
+          ch === '@' ? '.' : prog.pegos.includes(`${i}:${c}:${l}`) ? (ch === 'c' ? 'C' : '.') : ch));
+        return { pos: s.pos, g, portas: [...new Set(s.mapa.join('').split('').filter(ch => PORTAS[ch]).map(ch => PORTAS[ch]))], saida: s.mapa.join('').includes('X') };
+      })
+    };
+    SALAS_MASMORRA[0].mapa.forEach((linha, l) => { const c = linha.indexOf('@'); if (c >= 0) M.P = { x: c + .5, y: l + .5, dir: 'baixo', passo: 0, andando: false }; });
+    sprites();
+    visitar(0);
+    pintarVidas();
+    ajustar();
+    teclas.clear();
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(quadro);
+  }
+
+  // personagem do aluno: a função SVG vira imagens nas 4 direções (parado e 2 passos)
+  function sprites() {
+    const chave = JSON.stringify(M.op.personagem);
+    if (cache.chave === chave) return;
+    cache = { chave, imgs: {} };
+    for (const dir of Object.keys(VETOR)) for (const pose of ['parado', 'anda1', 'anda2']) {
+      const img = new Image();
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(desenharPersonagem(M.op.personagem, pose, dir).replace('<svg ', '<svg width="100" height="132" '));
+      cache.imgs[dir + pose] = img;
+    }
+  }
+
+  // câmera fixa: a sala inteira cabe no palco, nítida em qualquer tela
+  function ajustar() {
+    const palco = cv.parentElement, dpr = window.devicePixelRatio || 1;
+    const k = Math.max(.4, Math.min(palco.clientWidth / (COLS * T), palco.clientHeight / (LINS * T)));
+    cv.style.width = COLS * T * k + 'px';
+    cv.style.height = LINS * T * k + 'px';
+    cv.width = Math.round(COLS * T * k * dpr);
+    cv.height = Math.round(LINS * T * k * dpr);
+    ctx.setTransform(k * dpr, 0, 0, k * dpr, 0, 0);
+  }
+
+  // ---------- controles: joystick virtual e setas ----------
+  function ligarControles() {
+    ligado = true;
+    const base = document.getElementById('joy'), bola = base.querySelector('i');
+    let id = null;
+    const mexer = e => {
+      const r = base.getBoundingClientRect(), raio = r.width / 2 - 16;
+      let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      const d = Math.hypot(dx, dy);
+      if (d > raio) { dx *= raio / d; dy *= raio / d; }
+      bola.style.transform = `translate(${dx}px,${dy}px)`;
+      joy.x = dx / raio;
+      joy.y = dy / raio;
+    };
+    const soltar = e => {
+      if (e.pointerId !== id) return;
+      id = null;
+      joy.x = joy.y = 0;
+      bola.style.transform = '';
+      base.classList.remove('ativo');
+    };
+    base.addEventListener('pointerdown', e => { id = e.pointerId; base.setPointerCapture(id); base.classList.add('ativo'); mexer(e); });
+    base.addEventListener('pointermove', e => { if (e.pointerId === id) mexer(e); });
+    base.addEventListener('pointerup', soltar);
+    base.addEventListener('pointercancel', soltar);
+    addEventListener('keydown', e => {
+      const d = TECLAS[(e.key || '').toLowerCase()];
+      if (!d || !M || !document.getElementById('t-masmorra').classList.contains('ativa')) return;
+      teclas.delete(d);
+      teclas.add(d);
+      e.preventDefault();
+    });
+    addEventListener('keyup', e => teclas.delete(TECLAS[(e.key || '').toLowerCase()]));
+    addEventListener('resize', () => { if (M) ajustar(); });
+  }
+
+  // só 4 direções: vale a tecla mais recente ou o eixo mais forte do joystick
+  function direcao() {
+    if (teclas.size) return [...teclas].pop();
+    if (Math.hypot(joy.x, joy.y) < .3) return null;
+    return Math.abs(joy.x) > Math.abs(joy.y) ? (joy.x > 0 ? 'direita' : 'esquerda') : joy.y > 0 ? 'baixo' : 'cima';
+  }
+
+  // ---------- movimento e colisão ----------
+  function colide(x, y) {
+    const c0 = Math.floor(x - CORPO.l / 2), c1 = Math.floor(x + CORPO.l / 2 - 1e-6);
+    const l0 = Math.floor(y - CORPO.a / 2), l1 = Math.floor(y + CORPO.a / 2 - 1e-6);
+    for (let l = l0; l <= l1; l++) for (let c = c0; c <= c1; c++) if (solido(c, l)) return true;
+    return false;
+  }
+
+  function andar(eixo, passo) {
+    const P = M.P, novo = { x: P.x, y: P.y };
+    novo[eixo] += passo;
+    if (!colide(novo.x, novo.y)) { P[eixo] = novo[eixo]; return; }
+    const outro = eixo === 'x' ? 'y' : 'x', s = Math.sign(passo), meia = (eixo === 'x' ? CORPO.l : CORPO.a) / 2;
+    const frente = Math.floor(P[eixo] + s * (meia + .05)), meio = Math.floor(P[outro]);
+    const ali = eixo === 'x' ? [frente, meio] : [meio, frente];
+    if (casa(...ali) === 'c') return abrirBau(...ali);
+    // quina: escorrega para o centro da fileira livre mais perto (passa fácil em portas e corredores)
+    let alvo = null;
+    for (const k of [meio, meio - 1, meio + 1]) {
+      const livre = eixo === 'x' ? !solido(frente, k) : !solido(k, frente);
+      const dist = Math.abs(k + .5 - P[outro]);
+      if (livre && dist < .75 && (alvo === null || dist < Math.abs(alvo + .5 - P[outro]))) alvo = k;
+    }
+    if (alvo === null) return;
+    const d = alvo + .5 - P[outro], tenta = { x: P.x, y: P.y };
+    tenta[outro] += Math.sign(d) * Math.min(Math.abs(d), Math.abs(passo));
+    if (!colide(tenta.x, tenta.y)) P[outro] = tenta[outro];
+  }
+
+  // ---------- moedas, baús, portas e saída ----------
+  const guardar = (c, l) => { M.prog.pegos.push(`${M.atual}:${c}:${l}`); M.op.aoSalvar(); };
+
+  function coletar() {
+    const P = M.P;
+    for (let l = Math.floor(P.y) - 1; l <= Math.floor(P.y) + 1; l++) for (let c = Math.floor(P.x) - 1; c <= Math.floor(P.x) + 1; c++) {
+      if (casa(c, l) !== 'o' || Math.hypot(c + .5 - P.x, l + .5 - P.y) > .62) continue;
+      sala().g[l][c] = '.';
+      guardar(c, l);
+      M.op.aoMoeda(1);
+      som('moeda');
+      vibrar(15);
+      flutuar('+1 🪙', c + .5, l + .2);
+    }
+  }
+
+  function abrirBau(c, l) {
+    sala().g[l][c] = 'C';
+    guardar(c, l);
+    M.op.aoMoeda(5);
+    som('bau');
+    vibrar(40);
+    flutuar('+5 🪙', c + .5, l - .1);
+  }
+
+  function conferirCasa() {
+    const P = M.P, ch = casa(Math.floor(P.x), Math.floor(P.y));
+    if (PORTAS[ch] && !M.transicao) {
+      const destino = vizinha(sala(), PORTAS[ch]);
+      if (destino >= 0) { som('clique'); M.transicao = { t: 0, destino, dir: PORTAS[ch], trocou: false }; }
+    }
+    if (ch === 'X' && !M.fim) {
+      M.fim = true;
+      som('vitoria');
+      flutuar('🏁', P.x, P.y - 1);
+      setTimeout(() => M.op.aoSaida(), 450);
+    }
+  }
+
+  // troca de sala: escurece, muda e clareia (0,36 s); o aluno entra pela porta oposta
+  function trocarSala() {
+    const tr = M.transicao, [dx, dy] = VETOR[tr.dir];
+    M.atual = tr.destino;
+    sala().g.forEach((linha, l) => linha.forEach((ch, c) => { if (ch === OPOSTA[tr.dir]) { M.P.x = c + .5 + dx; M.P.y = l + .5 + dy; } }));
+    tr.trocou = true;
+    visitar(M.atual);
+  }
+
+  function visitar(i) {
+    if (!M.prog.visitadas.includes(i)) { M.prog.visitadas.push(i); M.op.aoSalvar(); }
+    pintarMini();
+  }
+
+  const flutuar = (txt, x, y) => M.textos.push({ txt, x, y, t: 0 });
+
+  // ---------- laço do jogo ----------
+  function quadro(ms) {
+    if (!M) return;
+    if (!document.getElementById('t-masmorra').classList.contains('ativa')) return parar();
+    const dt = M.ultimo ? Math.min(.05, (ms - M.ultimo) / 1000) : 0;
+    M.ultimo = ms;
+    atualizar(dt);
+    desenhar(ms / 1000);
+    raf = requestAnimationFrame(quadro);
+  }
+
+  function atualizar(dt) {
+    M.textos = M.textos.filter(f => (f.t += dt) < .5);
+    const tr = M.transicao, P = M.P;
+    if (tr) {
+      tr.t += dt;
+      if (tr.t >= .14 && !tr.trocou) trocarSala();
+      if (tr.t >= .36) M.transicao = null;
+      return;
+    }
+    const d = M.fim ? null : direcao();
+    P.andando = !!d;
+    if (!d) return;
+    P.dir = d;
+    P.passo += dt;
+    const [dx, dy] = VETOR[d];
+    if (dx) andar('x', dx * VEL * dt);
+    else andar('y', dy * VEL * dt);
+    coletar();
+    conferirCasa();
+  }
+
+  // ---------- desenho ----------
+  function circ(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+  function caixa(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.fill();
+  }
+
+  function desenhar(t) {
+    const C = M.cor, g = sala().g;
+    ctx.fillStyle = C.chao;
+    ctx.fillRect(0, 0, COLS * T, LINS * T);
+    for (let l = 0; l < LINS; l++) for (let c = 0; c < COLS; c++) {
+      const ch = g[l][c], x = c * T, y = l * T;
+      if (ch === '#') {
+        ctx.fillStyle = C.parede;
+        ctx.fillRect(x, y, T, T);
+        ctx.fillStyle = C.topo;
+        ctx.fillRect(x, y, T, T * .62);
+        if (l + 1 < LINS && g[l + 1][c] !== '#') { ctx.fillStyle = C.sombra; ctx.fillRect(x, y + T - 5, T, 5); }
+        continue;
+      }
+      if ((c + l) % 2) { ctx.fillStyle = C.chao2; ctx.fillRect(x, y, T, T); }
+      if (PORTAS[ch]) porta(x, y, PORTAS[ch]);
+      else if (ch === 'o') moeda(x + T / 2, y + T / 2 + Math.sin(t * 4 + c + l) * 2.5);
+      else if (ch === 'c' || ch === 'C') bau(x, y, ch === 'C');
+      else if (ch === 'X') saida(x + T / 2, y + T / 2, t);
+    }
+    heroi();
+    textos();
+    if (M.transicao) {
+      const tr = M.transicao, a = tr.t < .14 ? tr.t / .14 : 1 - (tr.t - .14) / .22;
+      ctx.fillStyle = `rgba(20,15,46,${Math.max(0, Math.min(1, a))})`;
+      ctx.fillRect(0, 0, COLS * T, LINS * T);
+    }
+  }
+
+  function porta(x, y, dir) {
+    ctx.fillStyle = M.cor.sombra;
+    ctx.globalAlpha = .3;
+    ctx.fillRect(x, y, T, T);
+    ctx.globalAlpha = .75;
+    ctx.fillStyle = '#fff';
+    const [dx, dy] = VETOR[dir], cx = x + T / 2 + dx * 4, cy = y + T / 2 + dy * 4;
+    ctx.beginPath();
+    ctx.moveTo(cx + dx * 7, cy + dy * 7);
+    ctx.lineTo(cx - dy * 7 - dx * 4, cy + dx * 7 - dy * 4);
+    ctx.lineTo(cx + dy * 7 - dx * 4, cy - dx * 7 - dy * 4);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function moeda(x, y) {
+    ctx.fillStyle = '#E09B00'; circ(x, y + 1.5, 8);
+    ctx.fillStyle = '#FFC531'; circ(x, y, 8);
+    ctx.fillStyle = '#FFF3B0'; circ(x - 2.5, y - 2.5, 2.6);
+  }
+
+  function bau(x, y, aberto) {
+    const px = x + 5, py = y + 8, w = T - 10;
+    ctx.fillStyle = '#9A3412'; caixa(px, py + 6, w, 14, 4);
+    ctx.fillStyle = aberto ? '#5B1F0A' : '#C2410C'; caixa(px, aberto ? py - 3 : py, w, 9, 4);
+    ctx.fillStyle = '#FFC531'; ctx.fillRect(px + w / 2 - 3, py + 2, 6, 16);
+    if (aberto) { ctx.globalAlpha = .7; ctx.fillStyle = '#FFE48A'; circ(px + w / 2, py + 3, 6); ctx.globalAlpha = 1; }
+  }
+
+  function saida(x, y, t) {
+    const p = 1 + Math.sin(t * 5) * .08;
+    ctx.fillStyle = '#7B2FF7'; circ(x, y, 13 * p);
+    ctx.fillStyle = '#C4B5FD'; circ(x, y, 8 * p);
+    ctx.fillStyle = '#fff'; circ(x, y, 3.5);
+  }
+
+  function heroi() {
+    const P = M.P, pose = P.andando ? (Math.floor(P.passo * 8) % 2 ? 'anda1' : 'anda2') : 'parado';
+    const img = cache.imgs[P.dir + pose], w = T * 1.15, h = w * 1.32, pe = (P.y + CORPO.a / 2) * T;
+    ctx.fillStyle = 'rgba(0,0,0,.18)';
+    ctx.beginPath();
+    ctx.ellipse(P.x * T, pe - 2, w * .32, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (img && img.complete && img.naturalWidth) ctx.drawImage(img, P.x * T - w / 2, pe - h * (128 / 132), w, h);
+  }
+
+  function textos() {
+    ctx.font = '900 13px ui-rounded, "Nunito", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = TINTA;
+    ctx.fillStyle = '#fff';
+    for (const f of M.textos) {
+      const y = (f.y - f.t * 1.2) * T;
+      ctx.globalAlpha = 1 - f.t / .5;
+      ctx.strokeText(f.txt, f.x * T, y);
+      ctx.fillText(f.txt, f.x * T, y);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------- corações e mini mapa (HUD) ----------
+  function pintarVidas() {
+    document.getElementById('mas-vidas').innerHTML = Array.from({ length: 5 }, (_, k) => (k < M.vidas ? '❤️' : '🤍')).join('');
+  }
+
+  function pintarMini() {
+    const Q = 12, G = 6, vis = M.prog.visitadas, centro = s => [s.pos[0] * (Q + G) + Q / 2, s.pos[1] * (Q + G) + Q / 2];
+    const W = Math.max(...M.salas.map(s => s.pos[0])) + 1, H = Math.max(...M.salas.map(s => s.pos[1])) + 1;
+    let linhas = '', quadros = '';
+    M.salas.forEach((s, i) => {
+      if (!vis.includes(i)) return;
+      for (const dir of s.portas) {
+        const j = vizinha(s, dir);
+        if (j > i && vis.includes(j)) { const [a, b] = centro(s), [c, d] = centro(M.salas[j]); linhas += `<line x1="${a}" y1="${b}" x2="${c}" y2="${d}"/>`; }
+      }
+      const [x, y] = [s.pos[0] * (Q + G), s.pos[1] * (Q + G)];
+      quadros += `<rect x="${x}" y="${y}" width="${Q}" height="${Q}" rx="3" fill="${i === M.atual ? '#7B2FF7' : '#FFFFFF66'}"/>` + (s.saida ? `<circle cx="${x + Q / 2}" cy="${y + Q / 2}" r="2.5" fill="#FFC531"/>` : '');
+    });
+    const mini = document.getElementById('mas-mini');
+    mini.setAttribute('viewBox', `-3 -3 ${W * (Q + G) - G + 6} ${H * (Q + G) - G + 6}`);
+    mini.innerHTML = `<g stroke="#FFFFFF66" stroke-width="3">${linhas}</g>${quadros}`;
+  }
+
+  function parar() {
+    cancelAnimationFrame(raf);
+    teclas.clear();
+    joy.x = joy.y = 0;
+  }
+
+  return { abrir, parar };
+})();
