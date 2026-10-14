@@ -129,7 +129,7 @@ function desenharPersonagem(p = {}, pose = 'parado') {
 }
 
 // ---------- navegação ----------
-const TELAS = { 't-inicio': telaInicio, 't-personagem': telaPersonagem, 't-mapa': telaMapa, 't-dia': telaDia, 't-album': telaAlbum };
+const TELAS = { 't-inicio': telaInicio, 't-personagem': telaPersonagem, 't-mapa': telaMapa, 't-dia': telaDia, 't-album': telaAlbum, 't-relatorio': () => Relatorio.tela() };
 function irPara(id) {
   $$('.tela').forEach(t => t.classList.toggle('ativa', t.id === id));
   window.scrollTo(0, 0);
@@ -204,7 +204,6 @@ function noMapa(d, p, m) {
 
 function telaMapa() {
   $('#chip-xp').textContent = `⚡ ${estado.xp}`;
-  $('#chip-dias').textContent = `⭐ ${estado.diasConcluidos.length}`;
   $('#bt-perfil').innerHTML = desenharPersonagem(estado.personagem);
   let estradas = '', faixas = '', placas = '', nos = '';
   DIAS.forEach((d, i) => {
@@ -273,11 +272,15 @@ function telaDia() {
 
 // ---------- motor da lição ----------
 let L = null; // lição em andamento
-const norm = v => String(v).replace(/−/g, '-').replace(/\s/g, '').toLowerCase();
+const norm = v => {
+  const s = String(v).replace(/−/g, '-').replace(/\s/g, '').toLowerCase();
+  return /^-?\d+$/.test(s) ? String(Number(s)) : s; // "−0" = "0", "07" = "7"
+};
 
 function iniciarLicao(dia, idx) {
   const lic = dia.licoes[idx];
-  L = { dia, idx, lic, exs: lic.gerar(), i: 0, vidas: 5, xp: 0, combo: 0, maxCombo: 0, acertos: 0, erros: 0, entrada: '', travado: false };
+  L = { dia, idx, lic, exs: lic.gerar(), i: 0, vidas: 5, xp: 0, combo: 0, maxCombo: 0, acertos: 0, erros: 0, entrada: '', travado: false, power: 3 };
+  Relatorio.licao(dia.n, lic.titulo);
   irPara('t-licao');
   $('#folha').className = 'folha';
   Jogo.iniciar($('#cena'), { personagem: estado.personagem, mundo: dia.mundo, total: L.exs.length });
@@ -290,10 +293,14 @@ function desenharVidas(perdeu) {
     .map(k => `<span class="${perdeu && k === L.vidas ? 'perde' : ''}">${k < L.vidas ? '❤️' : '🤍'}</span>`).join('');
 }
 
+// tipos de exercício: blocos "?" (bater), teclado e painéis sobre o cenário
+const BLOCOS = ['escolha', 'vf', 'digitar'];
+const TECLADO = ['digitar', 'padrao', 'grade', 'tabuleiro'];
+
 function proximo() {
   if (L.vidas <= 0) return fimLicao(false);
   if (L.i >= L.exs.length) return fimLicao(true);
-  const ex = L.exs[L.i], p = $('#pergunta');
+  const ex = L.exs[L.i], p = $('#pergunta'), atual = L;
   L.entrada = '';
   L.travado = false;
   Jogo.trilha(L.i, L.exs.length);
@@ -301,16 +308,28 @@ function proximo() {
   p.classList.remove('entra');
   void p.offsetWidth;
   p.classList.add('entra');
-  Jogo.pergunta(ex, responder);
-  $('#teclado').hidden = ex.tipo !== 'digitar';
+  Jogo.pergunta(ex, responder, (certo, det) => avaliar(certo, det.dada, det.conta, fim => Jogo.reagir(certo, fim)));
+  $('#teclado').hidden = !TECLADO.includes(ex.tipo);
   if (ex.surpresa) { Jogo.aviso('⚡ Surpresa!'); som('bau'); }
+  if (ex.dedos && L.power > 0) Jogo.powerup(L.power, () => { L.power--; return dedos(ex.dedos); });
+  if (ex.limite) Jogo.relogio(ex.limite, () => { if (L === atual) avaliar(false, '⏰', null, fim => Jogo.reagir(false, fim)); });
 }
 
+// resposta dos blocos e do teclado
 function responder(v, i = 0) {
   if (!L || L.travado) return;
-  L.travado = true;
-  const ex = L.exs[L.i], atual = L;
+  const ex = L.exs[L.i];
   const certo = ex.tipo === 'vf' ? v === ex.resposta : norm(v) === norm(ex.resposta);
+  const dada = ex.tipo === 'vf' ? (v ? 'V' : 'F') : String(v);
+  avaliar(certo, dada, null, fim => BLOCOS.includes(ex.tipo) ? Jogo.bater(i, certo, fim) : Jogo.reagir(certo, fim));
+}
+
+// pontua qualquer tipo de exercício, anima a cena e abre o feedback
+function avaliar(certo, dada, conta, animar) {
+  if (!L || L.travado) return;
+  L.travado = true;
+  Jogo.pararRelogio();
+  const ex = L.exs[L.i], atual = L;
   let ganho = 0;
   if (certo) {
     L.combo++;
@@ -324,17 +343,15 @@ function responder(v, i = 0) {
     L.vidas--;
     L.erros++;
     estado.seguidos = 0;
-    const vfTxt = b => (b ? 'V' : 'F');
     estado.erros = [...estado.erros, {
       dia: L.dia.n, licao: L.lic.id, pergunta: ex.pergunta,
-      dada: ex.tipo === 'vf' ? vfTxt(v) : String(v),
-      certa: ex.tipo === 'vf' ? vfTxt(ex.resposta) : String(ex.resposta),
-      quando: Date.now()
+      dada, certa: gabarito(ex) || '', quando: Date.now()
     }].slice(-200);
   }
+  Relatorio.registrar(certo, conta || ex.conta || ex.pergunta);
   salvar();
   $('#teclado').hidden = true;
-  Jogo.bater(i, certo, () => {
+  animar(() => {
     if (L !== atual) return;
     if (!certo) desenharVidas(true);
     Jogo.combo(L.combo, L.combo >= 5 ? 3 : 2);
@@ -343,13 +360,19 @@ function responder(v, i = 0) {
   });
 }
 
+function gabarito(ex) {
+  if (ex.gabarito) return ex.gabarito;
+  if (ex.tipo === 'vf') return ex.resposta ? '✔' : '✘';
+  if (ex.resposta === undefined) return null;
+  return typeof ex.resposta === 'number' ? fmt(ex.resposta) : String(ex.resposta);
+}
+
 // feedback: verde com XP, ou vermelho com a dica visual
 function mostrarFolha(certo, ex, ganho) {
-  const f = $('#folha');
-  const resp = ex.tipo === 'vf' ? (ex.resposta ? '✔' : '✘') : ex.resposta;
+  const f = $('#folha'), resp = gabarito(ex);
   f.innerHTML = (certo
     ? `<div class="folha-titulo">✅ ${sortear(['Mandou bem!', 'Certinho!', 'Arrasou!', 'Perfeito!'])}<span class="xp">+${ganho} ⚡</span></div>`
-    : `<div class="folha-titulo">❌ Era ${resp}</div><div class="dica">💡 ${ex.dica || 'Olhe com calma'}${ex.visual ? `<div class="visual">${ex.visual}</div>` : ''}</div>`)
+    : `<div class="folha-titulo">❌ ${resp === null ? 'Quase!' : 'Era ' + resp}</div><div class="dica">💡 ${ex.dica || 'Olhe com calma'}${ex.visual ? `<div class="visual">${ex.visual}</div>` : ''}</div>`)
     + `<button class="btn ${certo ? 'ok' : 'erro'}" id="bt-continuar">Continuar ▶</button>`;
   f.className = `folha aberta ${certo ? 'ok' : 'erro'}`;
   som(certo ? 'ok' : 'erro');
@@ -507,6 +530,7 @@ function telaAlbum() {
 // ---------- início do app ----------
 function iniciarApp() {
   montarTeclado();
+  Relatorio.iniciar();
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-ir]');
     if (b) { som('clique'); irPara(b.dataset.ir); }

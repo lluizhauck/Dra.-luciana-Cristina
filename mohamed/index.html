@@ -185,6 +185,68 @@ svg{display:block}
 .confete{position:fixed;inset:0;pointer-events:none;z-index:70;overflow:hidden}
 .confete i{position:absolute;top:-16px;width:10px;height:14px;border-radius:3px;animation:cai 1.6s ease-in forwards}
 
+/* ---------- painéis sobre o cenário (conjunto, ligar, ordenar, reta, padrão, grade, tabuleiro) ---------- */
+.painel{position:absolute;left:27%;right:3%;top:7%;bottom:25%;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:20px;background:#ffffffeb;box-shadow:0 5px 0 #0000001f;animation:surge .35s cubic-bezier(.3,1.6,.6,1);overflow:hidden}
+.painel.travado,.blocos.travado{pointer-events:none}
+.fichas{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.ficha{position:relative;min-width:44px;height:38px;padding:0 8px;border-radius:12px;background:var(--ouro);color:#6B3E00;font-size:19px;font-weight:900;white-space:nowrap;box-shadow:0 3px 0 #0000002a;touch-action:none;transition:background .2s,opacity .2s}
+.ficha.sel{background:var(--acc);color:#fff}
+.ficha.arrasta{z-index:9;box-shadow:0 8px 14px #0000004d;transition:none}
+.ficha.ok{background:var(--ok);color:#fff}
+.ficha.usada{opacity:.25}
+.ficha.treme{animation:treme .4s}
+.conj{position:relative;display:flex;gap:4px;border-radius:16px}
+.conj .rot{position:absolute;top:1px;left:8px;font-size:15px}
+.cz{flex:1;width:100%;min-height:0;padding:20px 6px 6px;border:3px solid var(--acc);background:#7B2FF714}
+.cn{flex:1.3;padding:20px 4px 4px;border:3px solid var(--ok);background:#1FC46B1f}
+.cz>.rot{color:var(--acc)}
+.cn>.rot{color:var(--ok-esc)}
+.dentro{flex:1;display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start}
+.dentro .ficha{min-width:34px;height:30px;padding:0 6px;font-size:15px}
+.p-ligar{flex-direction:row;gap:10px}
+.p-ligar .col{flex:1;display:flex;flex-direction:column;gap:6px}
+.p-ligar .ficha{width:100%;height:auto;min-height:34px;padding:3px 6px;font-size:16px;line-height:1.1;white-space:normal}
+.p-ligar .ficha.ok{opacity:.55}
+.vagas{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px}
+.vaga{min-width:40px;height:36px;padding:0 4px;border-radius:10px;border:3px dashed var(--cinza-esc);display:grid;place-items:center;font-style:normal;font-weight:900;font-size:17px}
+.vaga.cheia{border:3px solid var(--ok);background:var(--ok-cl);color:var(--ok-esc)}
+.sinal{font-weight:900;color:var(--tx2)}
+.p-reta svg{width:100%;height:auto;cursor:pointer}
+.p-padrao p{font-size:20px;font-weight:800;color:var(--tx2)}
+.p-padrao .ultima{font-size:22px;color:var(--tx)}
+.slot{display:inline-block;min-width:44px;padding:0 6px;border-radius:10px;background:var(--acc-cl);color:var(--acc);font-style:normal;text-align:center}
+.pontos{display:grid;gap:3px}
+.pontos i{width:var(--t);height:var(--t);border-radius:50%;background:var(--acc);transition:opacity .6s,transform .6s}
+.pontos.some i{opacity:0;transform:scale(.3)}
+.p-grade p{font-size:22px;font-weight:900}
+.tab{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;width:100%}
+.tab span{display:flex;flex-direction:column;align-items:center;padding:3px 0;border-radius:10px;background:#F3F0FA;font-size:12px;font-weight:800;color:var(--tx2)}
+.tab b{min-height:22px;font-size:17px;color:var(--tx)}
+.tab .cheia{background:var(--ok-cl)}
+.tab .atual{background:var(--acc-cl);outline:3px solid var(--acc)}
+.tab .slot{min-width:0;padding:0 2px;background:none}
+.p-dica{z-index:7;cursor:pointer}
+.p-dica svg{width:100%;height:auto}
+.p-dica p{font-size:15px;font-weight:800;color:var(--tx2)}
+.power{position:absolute;top:8px;right:8px;z-index:5;padding:4px 10px;border-radius:999px;background:#fff;font-size:22px;box-shadow:0 3px 0 #0002;animation:pula 1.2s ease-in-out infinite}
+.power small{margin-left:2px;font-size:14px;font-weight:900;color:var(--acc)}
+.relogio{position:absolute;left:12px;right:12px;bottom:8px;z-index:6;height:8px;border-radius:99px;background:#ffffff99;overflow:hidden}
+.relogio i{display:block;height:100%;background:var(--erro);transform-origin:left;animation:relogio linear forwards}
+
+/* ---------- tempo ativo e relatório ---------- */
+.tempo{font-variant-numeric:tabular-nums;transition:opacity .3s}
+.tempo.pausado{opacity:.5}
+.lado{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.tempo.mini{font-size:13px;font-weight:900;color:var(--tx2)}
+.tempo-grande{font-size:64px;font-weight:900;color:var(--acc);letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.barra{width:100%;height:14px;border-radius:99px;background:var(--cinza);overflow:hidden}
+.barra i{display:block;width:0;height:100%;border-radius:inherit;background:var(--acc);transition:width .5s}
+.erradas{width:100%;display:flex;flex-direction:column;gap:8px}
+.erradas .secao{margin:6px 0 0}
+.errada{display:flex;justify-content:space-between;gap:10px;padding:10px 16px;border-radius:16px;background:var(--erro-cl);color:var(--erro-esc);font-size:17px;font-weight:800;text-align:left}
+.btn.duas{flex-direction:column;gap:0;padding:8px 20px;font-size:19px;line-height:1.15}
+.btn small{display:block;font-size:15px;opacity:.85}
+
 /* ---------- animações ---------- */
 @keyframes entra{from{opacity:0;transform:translateY(12px)}}
 @keyframes flutua{50%{transform:translateY(-8px)}}
@@ -207,6 +269,7 @@ svg{display:block}
 @keyframes toast{0%{opacity:0;transform:translate(-50%,-20px)}10%,85%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-20px)}}
 @keyframes vira{from{transform:rotateY(90deg) scale(.7)}}
 @keyframes fade{from{opacity:0}}
+@keyframes relogio{to{transform:scaleX(0)}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -243,8 +306,8 @@ svg{display:block}
   <div class="topo">
     <button class="btn-ico" id="bt-perfil" data-ir="t-personagem" aria-label="Personagem"></button>
     <span class="espaco"></span>
+    <button class="chip tempo" data-ir="t-relatorio" aria-label="Relatório">⏱ 00:00</button>
     <span class="chip" id="chip-xp">⚡ 0</span>
-    <span class="chip" id="chip-dias">⭐ 0</span>
     <button class="btn-ico" data-ir="t-album" aria-label="Álbum">🃏</button>
   </div>
   <div class="mapa-rolagem" id="mapa"></div>
@@ -252,7 +315,7 @@ svg{display:block}
 
 <!-- Lições do dia -->
 <section class="tela" id="t-dia">
-  <div class="topo"><button class="btn-ico" data-ir="t-mapa" aria-label="Mapa">←</button></div>
+  <div class="topo"><button class="btn-ico" data-ir="t-mapa" aria-label="Mapa">←</button><span class="espaco"></span><span class="chip tempo"></span></div>
   <div class="centro">
     <p class="sub" id="dia-mundo"></p>
     <h2 class="titulo" id="dia-titulo"></h2>
@@ -266,7 +329,7 @@ svg{display:block}
   <div class="licao-topo">
     <button class="btn-ico" id="bt-sair" aria-label="Sair">✕</button>
     <div id="trilha"></div>
-    <div id="vidas"></div>
+    <div class="lado"><div id="vidas"></div><span class="tempo mini"></span></div>
   </div>
   <div id="cena"></div>
   <div class="pergunta" id="pergunta"></div>
@@ -291,6 +354,24 @@ svg{display:block}
   <div class="secao">🏅 Medalhas</div>
   <div class="medalhas" id="album-medalhas"></div>
   <div id="album-cartas"></div>
+</section>
+
+<!-- 7. Relatório da sessão -->
+<section class="tela" id="t-relatorio">
+  <div class="topo">
+    <button class="btn-ico" data-ir="t-mapa" aria-label="Mapa">←</button>
+    <span class="espaco"></span>
+    <span class="chip" id="rel-fila" hidden></span>
+  </div>
+  <div class="centro">
+    <div class="tempo-grande" id="rel-tempo">00:00</div>
+    <p class="sub" id="rel-estado"></p>
+    <div class="barra"><i id="rel-barra"></i></div>
+    <p class="sub" id="rel-licao"></p>
+    <div class="stats" id="rel-stats"></div>
+    <div class="erradas" id="rel-erradas"></div>
+  </div>
+  <div class="rodape"><button class="btn duas" id="bt-enviar" disabled></button></div>
 </section>
 
 <script src="conteudo.js"></script>
