@@ -286,6 +286,7 @@ const Audio2 = (() => {
       [69, 73, 76, 81].forEach(n => voz(t + .27, nota(n), .45, { tipo: 'triangle', vol: .07, ataque: .01, solta: .5, envio: .45 }, S()));
     },
     derrota: t => [64, 63, 60, 57].forEach((n, i) => voz(t + i * .17, nota(n), i === 3 ? .5 : .15, { tipo: 'sawtooth', vol: .06, corte: 1100, desafina: 8, solta: i === 3 ? .6 : .08, envio: .3 }, S())),
+    espreita: t => [45, 51].forEach((n, i) => voz(t + i * .08, nota(n), .3, { tipo: 'sine', vol: .05, ataque: .12, solta: .3 }, S())), // aviso baixo, sem susto
     bau: t => [72, 76, 79, 84, 88].forEach((n, i) => voz(t + i * .045, nota(n), .07, { tipo: 'triangle', vol: .09, solta: .25, envio: .45 }, S())),
     chefe: t => {
       bumbo(t, busSfx, 1);

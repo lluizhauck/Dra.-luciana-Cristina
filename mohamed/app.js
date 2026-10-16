@@ -351,7 +351,8 @@ function cargas() {
 
 function telaMasmorra() {
   const d = DIAS[diaAberto - 1];
-  const p = (estado.masmorras[d.n] = estado.masmorras[d.n] || { pegos: [], visitadas: [] });
+  const p = (estado.masmorras[d.n] = estado.masmorras[d.n] || {});
+  if (p.versao !== 2) Object.assign(p, { versao: 2, pegos: [], mapa: 0, vistos: {}, salvo: null }); // mapas grandes: progresso novo
   p.melhorias = p.melhorias || { dano: 0, coracoes: 0, dicas: 0 };
   p.usados = p.usados || { nove: 0, escudo: 0, dica: 0, dicasGratis: 0 };
   RUN = p;
@@ -367,14 +368,20 @@ function telaMasmorra() {
     aoSalvar: salvar,
     aoBatalha: batalhar,
     aoDesafio: desafio,
-    aoSalaLimpa: (i, semErro, chefe) => salaLimpa(d, i, semErro, chefe),
+    aoSalaLimpa: (i, semErro, chefe, n) => salaLimpa(d, i, semErro, chefe, n),
     aoSaida: () => concluirMasmorra(d)
   });
 }
 
-// sala sem monstros: a carta da lição daquela sala; a sala do chefão dá as cartas finais e conclui o dia
-function salaLimpa(d, i, semErro, chefe) {
-  const lics = chefe ? d.licoes.filter((l, k) => k >= i || l.chefao) : [d.licoes[i]];
+// mapa i de n: as lições do dia se dividem entre os mapas (as perguntas dos monstros saem delas)
+function licoesDoMapa(d, i, n) {
+  const comuns = d.licoes.filter(l => !l.chefao), a = Math.floor((i * comuns.length) / n);
+  return comuns.slice(a, Math.max(a + 1, Math.floor(((i + 1) * comuns.length) / n)));
+}
+
+// objetivo do mapa cumprido: as cartas das lições do mapa; o chefão dá todas as que faltam e conclui o dia
+function salaLimpa(d, i, semErro, chefe, n) {
+  const lics = chefe ? d.licoes : licoesDoMapa(d, i, n);
   for (const lic of lics) {
     if (!lic || (lic.chefao && !chefe)) continue;
     estado.licoes[lic.id] = true;
@@ -468,9 +475,14 @@ function geradorDoMonstro(tema, d, sala, tipos) {
 
 // ---------- batalha por turnos: a matemática vira dano ----------
 let B = null;
+// as perguntas do monstro saem de uma das lições do mapa onde ele mora
+function salaDoMonstro(d, mon) {
+  const lics = licoesDoMapa(d, mon.mapa || 0, mon.mapas || 1);
+  return d.licoes.indexOf(sortear(lics.length ? lics : d.licoes));
+}
 function batalhar(mon, coracoes, fim) {
   const d = DIAS[diaAberto - 1];
-  B = { mon, vidas: coracoes.vidas, max: coracoes.max, fim, seguidos: 0, erros: 0, q: null, t0: 0, travado: true, dica: false, fora: [], dobro: 0, escudo: false, fase: 0, gerar: mon.chefe ? null : geradorDoMonstro(mon.tema, d, mon.sala) };
+  B = { mon, vidas: coracoes.vidas, max: coracoes.max, fim, seguidos: 0, erros: 0, q: null, t0: 0, travado: true, dica: false, fora: [], dobro: 0, escudo: false, fase: 0, gerar: mon.chefe ? null : geradorDoMonstro(mon.tema, d, salaDoMonstro(d, mon)) };
   Batalha.abrir({ monstro: mon, personagem: estado.personagem, vidas: B.vidas, maxVidas: B.max, aoResponder: responderBatalha, aoDica: dicaBatalha, aoPoder: abrirPoderes });
   efeitos();
   setTimeout(proximaBatalha, mon.chefe ? 1500 : 500);
