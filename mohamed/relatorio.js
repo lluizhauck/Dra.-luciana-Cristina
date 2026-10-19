@@ -119,6 +119,7 @@ const Relatorio = (() => {
     if (falta() > 0) return;
     R.fila.push(montarRelatorio('relatorio'));
     zerar();
+    dispatchEvent(new CustomEvent('mohamed:relatorio')); // a vila ganha +1 nível de produção hoje e chove nas plantas
     som('vitoria');
     confete();
     const s = document.createElement('div');

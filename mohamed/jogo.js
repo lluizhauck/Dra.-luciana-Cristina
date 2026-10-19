@@ -292,6 +292,7 @@ const Masmorra = (() => {
     flutuar: (txt, x, y) => flutuar(txt, x, y),
     som: nome => (['clique', 'acerto', 'erro', 'golpe', 'moeda', 'porta', 'vitoria', 'derrota', 'bau', 'chefe', 'espreita'].includes(nome) ? Audio2.sfx(nome) : som(nome)),
     moeda: n => M.op.aoMoeda(n),
+    gema: n => { if (M.op.aoGema) M.op.aoGema(n); },
     bau: (c, l) => { M.mapa.g[l][c] = 'B'; M.mapa.extras.push(`${c}:${l}`); },
     abrirPorta: (c, l) => { M.mapa.g[l][c] = '.'; M.P.casa = -1; },
     fecharPorta: (c, l) => { M.mapa.g[l][c] = 'D'; },
@@ -311,17 +312,20 @@ const Masmorra = (() => {
     cv = document.getElementById('mas-tela');
     ctx = cv.getContext('2d');
     if (!ligado) ligarControles();
-    Audio2.musica('masmorra');
     const nome = BIOMA_DO_MUNDO[op.mundo] || 'campo';
+    Audio2.bioma(nome); // a trilha e os sons ambientes seguem o bioma
+    Audio2.ambiente(nome);
     M = {
       op, prog: op.progresso, nome, bio: BIOMAS[nome], roteiro: receitaDoDia(op.dia),
       vidas: op.vidas, maxVidas: op.vidas, cam: { x: 0, y: 0 }, textos: [], particulas: [], transicao: null, entrada: null,
-      ultimo: 0, fim: false, pausa: false, graca: 0, inv: 0, toque: 0, acorda: 0, aviso: 0, errosMapa: 0, salvoEm: 0, vistoSujo: false, visto: false
+      ultimo: 0, fim: false, pausa: false, graca: 0, inv: 0, toque: 0, acorda: 0, aviso: 0, errosMapa: 0, salvoEm: 0, vistoSujo: false, visto: false,
+      faixa: null, tenso: 0
     };
     M.prog.mapa = Math.min(M.prog.mapa || 0, M.roteiro.length - 1);
     sprites();
     ajustar();
     montar(M.prog.mapa);
+    tocar();
     pintarVidas();
     teclas.clear();
     cancelAnimationFrame(raf);
@@ -661,6 +665,7 @@ const Masmorra = (() => {
   function abrirBau(c, l) {
     desafio('bau', r => {
       const n = r.certo ? 5 : 2;
+      if (M.op.aoBau) M.op.aoBau(false);
       M.mapa.g[l][c] = 'b';
       pegar(c, l);
       M.op.aoMoeda(n);
@@ -672,6 +677,7 @@ const Masmorra = (() => {
   function abrirOuro(c, l) {
     desafio('bau', r => {
       const n = r.certo ? 10 : 5;
+      if (M.op.aoBau) M.op.aoBau(true);
       M.mapa.g[l][c] = 'g';
       pegar(c, l);
       M.op.aoMoeda(n);
@@ -746,7 +752,8 @@ const Masmorra = (() => {
         M.prog.salvo = null;
         M.op.aoSalvar();
         montar(prox);
-        Audio2.musica('masmorra');
+        M.tenso = 0;
+        tocar();
         const tm = M.mapa.TM;
         toast(`${tm.icone} ${tm.nome} · ${tm.dica}`);
       } };
@@ -823,7 +830,7 @@ const Masmorra = (() => {
           M.entrada = { t: 0, nome: m.nome };
           som('chefe');
           vibrar([120, 60, 120]);
-          Audio2.musica('chefao');
+          tocar();
           return;
         }
         if (m.anunciado && m.def.padrao) {
@@ -930,7 +937,7 @@ const Masmorra = (() => {
     vibrar(60);
     gravarVistos();
     if (furtivo) flutuar('🗡️ Furtivo!', m.x, m.y - 1);
-    M.op.aoBatalha(m, { vidas: M.vidas, max: M.maxVidas, furtivo }, res => {
+    M.op.aoBatalha(m, { vidas: M.vidas, max: M.maxVidas, furtivo, mapa: M.mapa.tipo }, res => {
       M.pausa = false;
       M.ultimo = 0;
       M.graca = 1.2;
@@ -947,7 +954,8 @@ const Masmorra = (() => {
         M.transicao = { t: 0, trocou: false, trocar: () => { montar(M.mapa.i); flutuar('💪', M.P.x, M.P.y - 1); } };
       }
       pintarVidas();
-      Audio2.musica(res.venceu && M.mapa.monstros.some(x => x.chefe && x.anunciado) ? 'chefao' : 'masmorra');
+      M.faixa = null;
+      tocar();
     });
   }
 
@@ -1034,10 +1042,19 @@ const Masmorra = (() => {
     // armadilhas que ferem onde o herói está
     if (M.inv <= 0) { const f = Perigos.ferindo(G, P.x, P.y); if (f) ferir(f.x, f.y, { empurra: f.empurra }); }
     if (!M.pausa && !M.transicao) moverMonstros(dt);
+    M.tenso = G.monstros.some(m => m.estado === 'caca') ? 4 : Math.max(0, M.tenso - dt); // perseguição: trilha tensa por mais 4 s
+    if (!M.pausa) tocar();
     descanso();
     pintarReinicio();
     if (M.vistoSujo && performance.now() - M.salvoEm > 3000) { M.salvoEm = performance.now(); gravarVistos(); M.op.aoSalvar(); }
   }
+
+  // trilha do bioma: chefão anunciado, tensa (furtividade, fuga ou perseguição) ou exploração
+  function trilha() {
+    if (M.mapa.monstros.some(x => x.chefe && x.anunciado)) return 'chefao';
+    return M.tenso > 0 || ['furtividade', 'fuga'].includes(M.mapa.tipo) ? 'furtividade' : 'masmorra';
+  }
+  function tocar() { const f = trilha(); if (f !== M.faixa) { M.faixa = f; Audio2.musica(f); } }
 
   // entrou numa casa nova: pisar em placas, pisos e poças; buracos; ponto salvo
   function entrouNaCasa() {
@@ -1494,6 +1511,8 @@ const Masmorra = (() => {
     joy.x = joy.y = 0;
     shift = false;
     if (M && M.mapa && M.vistoSujo) { gravarVistos(); M.op.aoSalvar(); }
+    Audio2.ambiente(null);
+    Audio2.bioma(null);
     const bt = document.getElementById('mas-reinicia');
     if (bt) bt.hidden = true;
   }
@@ -1528,8 +1547,11 @@ const Batalha = (() => {
     arena.classList.toggle('chefe', !!m.chefe);
     b.style.setProperty('--a1', m.cores.a1);
     b.style.setProperty('--a2', m.cores.a2);
-    $b('b-nome').textContent = `${ICONE_TEMA[m.tema] || ''} ${m.nome}${m.fraqueza ? ` · fraco a ${PODER_ICONE[m.fraqueza]}` : ''}`;
+    nome(m);
     $b('b-arte').className = 'b-arte-m' + (m.chefe ? ' grande' : '');
+    $b('b-carga').hidden = !o.carga;
+    carga(0);
+    relogio(0);
     $b('b-arte').innerHTML = m.arte || desenharMonstro(m.tema, m.chefe);
     $b('b-poderes').hidden = true;
     $b('b-efeitos').textContent = '';
@@ -1554,6 +1576,39 @@ const Batalha = (() => {
       vibrar([150, 60, 150]);
       setTimeout(() => animar(arena, 'balanca'), 450);
     }
+  }
+
+  // nome com o tema, a fraqueza e os modificadores (🧱 escudo · 🧬 mutante · 😡 enfurecido)
+  function nome(m) {
+    $b('b-nome').textContent = `${ICONE_TEMA[m.tema] || ''} ${m.nome}${m.fraqueza ? ` · fraco a ${PODER_ICONE[m.fraqueza]}` : ''}${m.mods && m.mods.length ? ' · ' + m.mods.map(k => ICONE_MOD[k]).join('') : ''}`;
+  }
+
+  // barra fina do bônus rápido: esvazia sozinha em "seg" segundos, sem som; relogio(0) para e some
+  function relogio(seg) {
+    const r = $b('b-relogio'), i = r.firstElementChild;
+    if (!seg) { i.style.width = getComputedStyle(i).width; r.classList.remove('vivo'); return; }
+    i.style.transition = 'none';
+    i.style.width = '100%';
+    void i.offsetWidth;
+    i.style.transition = `width ${seg}s linear`;
+    i.style.width = '0%';
+    r.classList.add('vivo');
+  }
+
+  // barra de carga do ataque forte (mini-chefe e chefão): brilha mais perto do fim, sem alarme
+  function carga(f) {
+    const c = $b('b-carga'), k = Math.max(0, Math.min(1, f));
+    c.firstElementChild.style.width = 100 * k + '%';
+    c.classList.toggle('quase', k >= .75);
+    $b('b-arte').classList.toggle('carrega', k >= .75 && !c.hidden);
+  }
+  const blindado = sim => $b('b-arte').classList.toggle('blindado', !!sim);
+  const furia = sim => $b('b-arte').classList.toggle('furia', !!sim);
+  function mutou(m) {
+    nome(m);
+    $b('b-arte').classList.add('mutante');
+    animar($b('b-arte'), 'muta');
+    banner(`${ICONE_MOD.mutante} ${ICONE_TEMA[m.tema] || ''}`);
   }
 
   function banner(txt) {
@@ -1639,28 +1694,31 @@ const Batalha = (() => {
   }
 
   // acerto: o aluno avança e ataca, o monstro treme e a vida desce
-  function acerto(i, dano, v, max, rapido, cb) {
+  function acerto(i, dano, v, max, rapido, cb, txt) {
     clearInterval(fala);
     travar();
     botoes()[i].classList.add('certa');
     animar($b('b-heroi'), 'ataca');
     Audio2.sfx('acerto');
+    carga(0);
     setTimeout(() => {
       animar($b('b-arte'), 'dor');
       vida(v, max);
-      numero(`Acerto! ${dano} de dano${rapido ? ' ⚡' : ''}`, '#fff');
+      numero(txt || `Acerto! ${dano} de dano${rapido ? ' ⚡' : ''}`, '#fff');
       Audio2.sfx('golpe');
       vibrar(30);
     }, 200);
     setTimeout(cb, 900);
   }
 
-  // erro: o monstro ataca, a tela balança, sai um coração e aparece a dica
+  // erro (ou ataque carregado, i = -1): o monstro ataca, a tela balança, sai um coração e aparece a dica
   function erro(i, certa, q, n, txt, cb) {
     clearInterval(fala);
     travar();
-    botoes()[i].classList.add('errada');
-    botoes()[certa].classList.add('certa');
+    if (botoes()[i]) botoes()[i].classList.add('errada');
+    if (botoes()[certa]) botoes()[certa].classList.add('certa');
+    if (i < 0) $b('b-fala').textContent = q.texto;
+    carga(0);
     animar($b('b-arte'), 'investe');
     setTimeout(() => {
       animar($b('arena'), 'balanca');
@@ -1701,8 +1759,9 @@ const Batalha = (() => {
 
   function fechar() {
     clearInterval(fala);
+    relogio(0);
     $b('batalha').hidden = true;
   }
 
-  return { abrir, perguntar, acerto, erro, dica, vitoria, derrota, fechar, fase, poderes, eliminar, efeitos, banner };
+  return { abrir, perguntar, acerto, erro, dica, vitoria, derrota, fechar, fase, poderes, eliminar, efeitos, banner, relogio, carga, blindado, furia, mutou };
 })();

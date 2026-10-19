@@ -43,7 +43,8 @@ const novoEstado = () => ({
   xp: 0, diaAtual: 1, diasConcluidos: [], licoes: {},
   cartas: [], medalhas: [], erros: [], seguidos: 0,
   itens: { cores: [], acessorios: [] }, frases: [], andar: null,
-  revisao: [], streak: { dias: 0, ultimo: '' }, moedas: 0, masmorras: {}, aldeia: { lotes: [] }
+  revisao: [], streak: { dias: 0, ultimo: '' }, moedas: 0, masmorras: {}, aldeia: { lotes: [] },
+  gemas: 0, tempos: {}, config: { calmo: false }, extras: { coracao: 0, dica: 0, lanterna: 0 }
 });
 let estado = carregar();
 function carregar() {
@@ -293,7 +294,7 @@ function pintarRanking() {
   const faixa = $('#faixa'), colegas = $('#colegas');
   if (!faixa || !colegas) return;
   const top = Relatorio.ranking(), s = streakAtivo();
-  faixa.innerHTML = `<button class="chip aldeia" data-ir="t-aldeia">🏘️ 🪙 ${estado.moedas}</button>` + (s ? `<span class="chip fogo">🔥 ${s} ${s > 1 ? 'dias' : 'dia'}</span>` : '') +
+  faixa.innerHTML = `<button class="chip aldeia" data-ir="t-aldeia">🏘️ 🪙 ${estado.moedas} 💎 ${estado.gemas}</button>` + (s ? `<span class="chip fogo">🔥 ${s} ${s > 1 ? 'dias' : 'dia'}</span>` : '') +
     (estado.apelido ? '' : '<button class="chip" data-ir="t-inicio">🦸 Apelido</button>') +
     top.map((p, i) => `<span class="chip${p.apelido === estado.apelido ? ' eu' : ''}">${['🥇', '🥈', '🥉'][i] || `${i + 1}º`} ${esc(p.apelido)} · ${p.xp}</span>`).join('');
   const porDia = {};
@@ -309,8 +310,6 @@ const CONFIG_BATALHA = {
   danoBase: 10,            // dano de cada acerto
   bonusSeguido: 5,         // + por acerto seguido…
   bonusSeguidoMax: 20,     // …até este limite
-  bonusRapido: 5,          // + se responder em até…
-  segundosRapido: 5,       // …estes segundos
   vidaMonstro: [30, 60],   // sorteada de 5 em 5 (3 a 5 acertos)
   vidaChefe: 150,          // 3 fases de 50
   coracoes: 5,
@@ -320,6 +319,18 @@ const CONFIG_BATALHA = {
   recompensaChefe: { moedas: 15, xp: 60 },
   custoDica: 2             // moedas por dica (as grátis vêm das melhorias)
 };
+// pressão de tempo gentil: ninguém perde por pensar devagar (tudo aqui é fácil de ajustar)
+const CONFIG_PRESSAO = {
+  rapido: { segundos: 5, bonus: 5 },                        // barra fina que esvazia: responder antes dá +5 de dano
+  carga: { fator: 2, min: 8, max: 15, padrao: 5, amostras: 10, teto: 30 }, // mini-chefe e chefão: 2× a média do tema (8 a 15 s)
+  enfurecido: { vida: .4, rapidez: 1.6, min: 6 },           // com 40% de vida carrega 1,6× mais rápido (nunca abaixo de 6 s)
+  escudo: { acertos: 2 },                                   // precisa de 2 acertos seguidos para tirar vida
+  mutante: { vida: .5 },                                    // troca de tema com metade da vida
+  chanceComum: .35,                                         // monstro comum com modificador (enfurecido só em mini-chefe e chefão)
+  porMundo: [[], ['escudo'], ['mutante'], ['enfurecido'], ['escudo', 'mutante', 'enfurecido']], // mundos 1 a 5
+  diasNovos: 2                                              // 2 primeiros dias de cada mundo (conteúdo novo): nada disso
+};
+const ICONE_MOD = { escudo: '🧱', mutante: '🧬', enfurecido: '😡' };
 // tema do monstro → dias de onde saem as perguntas (conteudo.js)
 const DIAS_DO_TEMA = { Natural: [1, 2, 3], Negativo: [4, 5, 6, 7, 8], Tabuada: [9, 10, 11, 12, 13, 14], 'Divisão': [15, 16, 17] };
 // chefão: cada fase usa um tipo de pergunta; a última bate mais forte
@@ -336,6 +347,12 @@ const FASES_MINI = [
 // mercador: preços em moedas e quanto a lanterna cresce
 const CONFIG_MERCADOR = { poder: 5, dica: 3, lanterna: 8, lanternaMais: .5, lanternaMax: 1.5 };
 const LANTERNA_BASE = CONFIG_LUZ.lanterna;
+const lanternaTotal = () => LANTERNA_BASE + (estado.lanterna || 0) + estado.extras.lanterna * CONFIG_VILA.lanternaPasso;
+// acertos e erros: relatório do professor e baldes de água da vila
+function registrar(certo, conta, tema) {
+  Relatorio.registrar(certo, conta, tema);
+  Vila.estudo(certo);
+}
 // cartas viram poderes: a posição da lição no dia escolhe o poder (até 3 de cada por dia)
 const PODERES = {
   nove: { icone: '⚡', nome: 'Poder do 9', efeito: 'Dano em dobro por 3 acertos' },
@@ -367,15 +384,17 @@ function telaMasmorra() {
   p.extras = p.extras || { nove: 0, escudo: 0, dica: 0 };
   RUN = p;
   B = null;
-  CONFIG_LUZ.lanterna = LANTERNA_BASE + (estado.lanterna || 0); // lanterna comprada no mercador
+  CONFIG_LUZ.lanterna = lanternaTotal(); // lanterna do mercador e da loja da vila
   Batalha.fechar();
   $('#desafio').hidden = true;
   $('#melhoria').hidden = true;
   Relatorio.licao(d.n, '🏰 Masmorra');
   toast(`${MUNDOS[d.mundo].emoji} Dia ${d.n} · ${d.titulo}`);
   Masmorra.abrir({
-    mundo: d.mundo, dia: d.n, personagem: estado.personagem, progresso: p, vidas: CONFIG_BATALHA.coracoes + p.melhorias.coracoes,
-    aoRegistro: (certo, conta, tema) => { Relatorio.registrar(certo, conta, tema); salvar(); }, // puzzles de matemática
+    mundo: d.mundo, dia: d.n, personagem: estado.personagem, progresso: p, vidas: CONFIG_BATALHA.coracoes + p.melhorias.coracoes + estado.extras.coracao,
+    aoRegistro: (certo, conta, tema) => { registrar(certo, conta, tema); salvar(); }, // puzzles de matemática
+    aoGema: n => Vila.gemas(n),
+    aoBau: ouro => Vila.bau(ouro),
     aoMercador: abrirMercador,
     aoMoeda: n => { estado.moedas += n; salvar(); },
     aoSalvar: salvar,
@@ -465,7 +484,7 @@ function abrirMercador(fim) {
     const o = ofertas.find(x => x.id === b.dataset.o);
     if (!o) { caixa.hidden = true; caixa.classList.remove('loja'); caixa.querySelector('.titulo').textContent = '✨ Escolha 1'; som('clique'); fim(); return; }
     estado.moedas -= o.preco;
-    if (o.id === 'lanterna') { estado.lanterna = (estado.lanterna || 0) + C.lanternaMais; CONFIG_LUZ.lanterna = LANTERNA_BASE + estado.lanterna; o.esgotou = estado.lanterna >= C.lanternaMax; }
+    if (o.id === 'lanterna') { estado.lanterna = (estado.lanterna || 0) + C.lanternaMais; CONFIG_LUZ.lanterna = lanternaTotal(); o.esgotou = estado.lanterna >= C.lanternaMax; }
     else if (o.id === 'dica') RUN.melhorias.dicas++;
     else RUN.extras[o.id]++;
     salvar();
@@ -531,16 +550,67 @@ function temaValido(tema, d) {
   if (DIAS_DO_TEMA[tema] && DIAS_DO_TEMA[tema].some(n => n <= d.n)) return tema;
   return TEMAS_MONSTRO[d.mundo] || 'Natural';
 }
+// 2 primeiros dias de cada mundo: conteúdo novo, sem cronômetro nem modificadores
+const diaNovo = d => DIAS.filter(x => x.mundo === d.mundo).findIndex(x => x.n === d.n) < CONFIG_PRESSAO.diasNovos;
+// modificadores do mundo: mini-chefe e chefão levam todos; o comum, às vezes um (menos enfurecido, que precisa da barra de carga)
+function modificadores(mon, d) {
+  if (diaNovo(d)) return [];
+  const lista = CONFIG_PRESSAO.porMundo[d.mundo] || [];
+  if (mon.chefe || mon.mini) return lista.slice();
+  const comuns = lista.filter(m => m !== 'enfurecido');
+  return comuns.length && Math.random() < CONFIG_PRESSAO.chanceComum ? [sortear(comuns)] : [];
+}
+// tempo médio de resposta do aluno em cada tema (as últimas 10)
+const mediaTempo = tema => { const l = estado.tempos[tema] || []; return l.length ? l.reduce((a, b) => a + b, 0) / l.length : CONFIG_PRESSAO.carga.padrao; };
+function guardarTempo(tema, s) { const C = CONFIG_PRESSAO.carga; estado.tempos[tema] = [...(estado.tempos[tema] || []), Math.min(C.teto, s)].slice(-C.amostras); }
+const furioso = () => B.mods.enfurecido && B.mon.vida / B.mon.max <= CONFIG_PRESSAO.enfurecido.vida;
+function tempoCarga() {
+  const P = CONFIG_PRESSAO, C = P.carga, s = Math.max(C.min, Math.min(C.max, C.fator * mediaTempo(B.mon.tema)));
+  return furioso() ? Math.max(P.enfurecido.min, s / P.enfurecido.rapidez) : s;
+}
+const blindado = () => B.mods.escudo && B.trinca < CONFIG_PRESSAO.escudo.acertos - 1;
+
+let relogioB = 0;
 function batalhar(mon, coracoes, fim) {
   const d = DIAS[diaAberto - 1], CF = CONFIG_MONSTROS.furtivo;
   mon.tema = temaValido(mon.tema, d);
   // ataque furtivo: o monstro começa com 25% de vida a menos e o primeiro acerto vale dobrado
   if (coracoes.furtivo && mon.vida === mon.max) mon.vida = Math.round(mon.max * (1 - CF.vidaMenos));
-  B = { mon, vidas: coracoes.vidas, max: coracoes.max, fim, seguidos: 0, erros: 0, q: null, t0: 0, travado: true, dica: false, fora: [], dobro: 0, escudo: false, fase: 0, primeiro: coracoes.furtivo ? CF.primeiroGolpe : 1, fraco: false, gerar: mon.chefe || mon.mini ? null : geradorDoMonstro(mon.tema, d, salaDoMonstro(d, mon)) };
-  Batalha.abrir({ monstro: mon, personagem: estado.personagem, vidas: B.vidas, maxVidas: B.max, aoResponder: responderBatalha, aoDica: dicaBatalha, aoPoder: abrirPoderes });
+  mon.mods = mon.mods || modificadores(mon, d);
+  // cronômetro só fora do modo calmo, fora dos dias novos e fora dos mapas de fuga (lá a pressão é o mapa)
+  const pressa = !estado.config.calmo && !diaNovo(d) && coracoes.mapa !== 'fuga';
+  B = {
+    mon, vidas: coracoes.vidas, max: coracoes.max, fim, seguidos: 0, erros: 0, q: null, t0: 0, travado: true, dica: false, fora: [], dobro: 0, escudo: false, fase: 0,
+    primeiro: coracoes.furtivo ? CF.primeiroGolpe : 1, fraco: false, gerar: mon.chefe || mon.mini ? null : geradorDoMonstro(mon.tema, d, salaDoMonstro(d, mon)),
+    pressa, temCarga: pressa && !!(mon.chefe || mon.mini), carga: 0, cargaMax: 0, ult: performance.now(),
+    mods: Object.fromEntries(mon.mods.map(m => [m, true])), trinca: 0, mutou: false
+  };
+  Batalha.abrir({ monstro: mon, personagem: estado.personagem, vidas: B.vidas, maxVidas: B.max, carga: B.temCarga, aoResponder: responderBatalha, aoDica: dicaBatalha, aoPoder: abrirPoderes });
+  Batalha.blindado(blindado());
   if (coracoes.furtivo) setTimeout(() => Batalha.banner('🗡️ Ataque furtivo!'), 150);
+  if (mon.mods.length) setTimeout(() => B && Batalha.banner(mon.mods.map(m => ICONE_MOD[m]).join(' ')), coracoes.furtivo ? 1400 : 250);
   efeitos();
+  clearInterval(relogioB);
+  relogioB = setInterval(tiqueBatalha, 100);
   setTimeout(proximaBatalha, mon.chefe ? 1500 : mon.mini ? 900 : 500);
+}
+
+// barra de carga: enche enquanto a pergunta espera; pausa com a dica aberta, com a aba oculta e entre perguntas
+function tiqueBatalha() {
+  if (!B) return clearInterval(relogioB);
+  const agora = performance.now(), dt = Math.min(.5, (agora - B.ult) / 1000);
+  B.ult = agora;
+  if (!B.temCarga || B.travado || B.t0 === Infinity || B.dica || document.hidden || !B.cargaMax) return;
+  B.carga += dt;
+  Batalha.carga(B.carga / B.cargaMax);
+  if (B.carga >= B.cargaMax) ataqueCarregado();
+}
+// a barra encheu: o monstro solta o ataque forte, que conta como um erro (sem ir para a lista de erros)
+function ataqueCarregado() {
+  if (!B || B.travado) return;
+  B.travado = true;
+  Batalha.relogio(0);
+  levarGolpe(-1, true);
 }
 
 // chefão: a fase muda com a vida (150 → 100 → 50) e traz outro tipo de pergunta
@@ -566,18 +636,37 @@ function perguntarBatalha() {
   B.travado = false;
   B.dica = false;
   B.fora = [];
-  B.t0 = Infinity; // o relógio do "rápido" começa quando a pergunta termina de aparecer
-  Batalha.perguntar(B.q, () => { if (B) B.t0 = performance.now(); });
+  B.t0 = Infinity; // o relógio do "rápido" e a carga começam quando a pergunta termina de aparecer
+  B.carga = 0;
+  B.cargaMax = B.temCarga ? tempoCarga() : 0;
+  Batalha.carga(0);
+  Batalha.furia(furioso());
+  Batalha.perguntar(B.q, () => {
+    if (!B) return;
+    B.t0 = B.ult = performance.now();
+    if (B.pressa) Batalha.relogio(CONFIG_PRESSAO.rapido.segundos);
+  });
 }
 
 function responderBatalha(i) {
   if (!B || B.travado) return;
   B.travado = true;
-  const C = CONFIG_BATALHA, q = B.q, d = DIAS[diaAberto - 1], certo = i === q.certa;
-  Relatorio.registrar(certo, q.conta, B.mon.tema);
+  const C = CONFIG_BATALHA, P = CONFIG_PRESSAO, q = B.q, certo = i === q.certa, seg = (performance.now() - B.t0) / 1000;
+  Batalha.relogio(0);
+  if (!B.dica && seg >= 0 && seg < Infinity) guardarTempo(B.mon.tema, seg); // com a dica aberta o tempo não conta na média
+  registrar(certo, q.conta, B.mon.tema);
+  if (certo && blindado()) { // escudo: o primeiro acerto só trinca; o próximo seguido já tira vida
+    B.trinca++;
+    B.seguidos++;
+    estado.seguidos++;
+    salvar();
+    Batalha.blindado(blindado());
+    Batalha.acerto(i, 0, B.mon.vida, B.mon.max, false, proximaBatalha, `${ICONE_MOD.escudo} Trincou!`);
+    return;
+  }
   if (certo) {
-    const rapido = performance.now() - B.t0 <= C.segundosRapido * 1000;
-    let dano = C.danoBase + C.melhoriaDano * RUN.melhorias.dano + Math.min(C.bonusSeguidoMax, C.bonusSeguido * B.seguidos) + (rapido ? C.bonusRapido : 0);
+    const rapido = B.pressa && seg <= P.rapido.segundos;
+    let dano = C.danoBase + C.melhoriaDano * RUN.melhorias.dano + Math.min(C.bonusSeguidoMax, C.bonusSeguido * B.seguidos) + (rapido ? P.rapido.bonus : 0);
     if (B.dobro > 0) { dano *= 2; B.dobro--; } // Poder do 9
     if (B.primeiro > 1) { dano *= B.primeiro; B.primeiro = 1; } // primeiro golpe do ataque furtivo
     if (B.fraco) dano = Math.round(dano * (1 + CONFIG_MONSTROS.fraqueza.bonus)); // usou o poder da fraqueza
@@ -589,26 +678,53 @@ function responderBatalha(i) {
     Relatorio.golpe(dano);
     salvar();
     efeitos();
-    Batalha.acerto(i, dano, B.mon.vida, B.mon.max, rapido, () => (B.mon.vida > 0 ? proximaBatalha() : vencerBatalha()));
-  } else {
-    // escudo perdoa o erro; na última fase do chefão o golpe tira 2 corações
-    const perde = B.escudo ? 0 : B.mon.chefe && B.fase === 3 ? C.coracoesUltimaFase : 1;
-    if (B.escudo) B.escudo = false;
-    else B.seguidos = 0;
-    B.erros++;
-    B.vidas = Math.max(0, B.vidas - perde);
-    estado.seguidos = 0;
+    Batalha.acerto(i, dano, B.mon.vida, B.mon.max, rapido, () => {
+      if (!B) return; // a batalha fechou durante a animação
+      if (B.mon.vida <= 0) return vencerBatalha();
+      if (mutar()) setTimeout(proximaBatalha, 900);
+      else proximaBatalha();
+    });
+  } else levarGolpe(i, false);
+}
+
+// erro ou ataque carregado: escudo do aluno perdoa; na última fase do chefão o golpe tira 2 corações
+function levarGolpe(i, carregado) {
+  const C = CONFIG_BATALHA, q = B.q, d = DIAS[diaAberto - 1];
+  const perde = B.escudo ? 0 : B.mon.chefe && B.fase === 3 ? C.coracoesUltimaFase : 1;
+  if (B.escudo) B.escudo = false;
+  else B.seguidos = 0;
+  B.trinca = 0; // o escudo do monstro volta inteiro
+  B.erros++;
+  B.vidas = Math.max(0, B.vidas - perde);
+  estado.seguidos = 0;
+  if (!carregado) {
     estado.erros = [...estado.erros, { dia: d.n, licao: 'masmorra', pergunta: q.texto, dada: q.opcoes[i], certa: q.opcoes[q.certa], quando: Date.now() }].slice(-200);
     guardarErro(q.ex, q.ex.diaOrigem || d.n);
-    salvar();
-    efeitos();
-    Batalha.erro(i, q.certa, q, B.vidas, perde ? `−${perde} ❤️` : '🛡️ Defendido!', () => (B.vidas > 0 ? proximaBatalha() : Batalha.derrota(() => terminarBatalha(false))));
   }
+  salvar();
+  efeitos();
+  Batalha.blindado(blindado());
+  Batalha.erro(i, q.certa, q, B.vidas, perde ? `${carregado ? '💢 ' : ''}−${perde} ❤️` : '🛡️ Defendido!', () => (B.vidas > 0 ? proximaBatalha() : Batalha.derrota(() => terminarBatalha(false))));
+}
+
+// mutante: com metade da vida troca para outro tema já estudado (uma vez por luta)
+function mutar() {
+  if (!B.mods.mutante || B.mutou || B.mon.vida / B.mon.max > CONFIG_PRESSAO.mutante.vida) return false;
+  B.mutou = true;
+  const d = DIAS[diaAberto - 1], outros = Object.keys(DIAS_DO_TEMA).filter(t => t !== B.mon.tema && DIAS_DO_TEMA[t].some(n => n <= d.n));
+  if (!outros.length) return false;
+  B.mon.tema = sortear(outros);
+  const fases = B.mon.chefe ? FASES_CHEFE : B.mon.mini ? FASES_MINI : null;
+  B.gerar = geradorDoMonstro(B.mon.tema, d, fases ? null : salaDoMonstro(d, B.mon), fases && B.fase ? fases[B.fase - 1].tipos : undefined);
+  Batalha.mutou(B.mon);
+  som('chefe');
+  return true;
 }
 
 function vencerBatalha() {
   const P = B.mon.chefe ? CONFIG_BATALHA.recompensaChefe : CONFIG_BATALHA.recompensa, bonus = marcarStreak();
   estado.moedas += P.moedas;
+  if (B.mon.chefe) Vila.chefao(); // chefão: gemas e sementes
   estado.xp += P.xp + bonus;
   Relatorio.monstro();
   salvar();
@@ -619,6 +735,7 @@ function terminarBatalha(venceu) {
   const b = B;
   if (!b) return;
   B = null;
+  clearInterval(relogioB);
   Batalha.fechar();
   b.fim({ venceu, vidas: b.vidas, erros: b.erros });
 }
@@ -626,15 +743,16 @@ function terminarBatalha(venceu) {
 // selos dos poderes ativos e rótulos dos botões
 function efeitos() {
   if (!B) return;
-  const gratis = RUN.melhorias.dicas - RUN.usados.dicasGratis, c = cargas();
+  const gratis = dicasGratis(), c = cargas();
   Batalha.efeitos([B.dobro ? `⚡×2 · ${B.dobro}` : '', B.escudo ? '🛡️' : ''].filter(Boolean).join('  '),
     gratis > 0 ? `💡 Dica · grátis ${gratis}` : `💡 Dica · ${CONFIG_BATALHA.custoDica}🪙`, `⚡ Poder · ${c.nove + c.escudo + c.dica}`);
 }
 
-// dica: mostra a dica visual (grátis pelas melhorias ou paga com moedas)
+const dicasGratis = () => RUN.melhorias.dicas + estado.extras.dica - RUN.usados.dicasGratis;
+// dica: mostra a dica visual (grátis pelas melhorias ou paga com moedas); a barra de carga pausa enquanto ela está aberta
 function dicaBatalha() {
   if (!B || B.travado || B.dica) return;
-  if (RUN.melhorias.dicas > RUN.usados.dicasGratis) RUN.usados.dicasGratis++;
+  if (dicasGratis() > 0) RUN.usados.dicasGratis++;
   else if (estado.moedas >= CONFIG_BATALHA.custoDica) estado.moedas -= CONFIG_BATALHA.custoDica;
   else { toast(`🪙 A dica custa ${CONFIG_BATALHA.custoDica}`); return; }
   B.dica = true;
@@ -690,7 +808,7 @@ function desafio(tipo, fim) {
   $('#des-pergunta').textContent = ex.pergunta.replace(/^⏱ /, '');
   $('#des-volta').onclick = () => { som('clique'); caixa.hidden = true; fim({ aberto: false }); };
   Jogo.desafio($('#des-palco'), ex, (certo, det) => {
-    Relatorio.registrar(certo, (det && det.conta) || ex.conta || ex.pergunta);
+    registrar(certo, (det && det.conta) || ex.conta || ex.pergunta);
     if (!certo) guardarErro(ex, d.n);
     salvar();
     const aberto = certo || ex.tipo !== 'reta'; // completou o desafio (na reta, só vale acertando)
@@ -756,6 +874,7 @@ function ganharMedalha(id) {
   salvar();
   const m = MEDALHAS.find(x => x.id === id);
   toast(`${m.emoji} ${m.nome}!`);
+  Vila.gemas(CONFIG_VILA.gemas.medalha);
   confete();
   som('vitoria');
 }
@@ -809,51 +928,38 @@ function revelar(s) {
     titulo = p.tipo === 'cor' ? '🎨 Cor nova!' : '✨ Acessório novo!';
     corpo = `<div class="premio">${desenharPersonagem(estado.personagem)}</div>`;
   }
+  const semente = Vila.sementes(1); // o baú do fim do dia também traz uma semente
   salvar();
-  s.querySelector('.caixa').innerHTML = `<h2 class="titulo">${titulo}</h2>${corpo}<button class="btn" id="bt-oba">Oba! ▶</button>`;
+  s.querySelector('.caixa').innerHTML = `<h2 class="titulo">${titulo}</h2>${corpo}<p class="sub">${semente} +1</p><button class="btn" id="bt-oba">Oba! ▶</button>`;
   s.querySelector('#bt-oba').onclick = () => { som('clique'); s.remove(); irPara('t-mapa'); };
 }
 
-// ---------- aldeia: cada carta desbloqueia uma construção; moedas constroem e enfeitam ----------
-const PREDIOS = ['🏠', '🏡', '🏰', '⛲', '🗼', '🏯', '🛖', '🎪', '🏛️', '🗿', '🎡', '🌉'];
-const ENFEITES = ['🌷', '🌳', '🏮', '🌻', '🪨', '🍄'];
-const CUSTO_ENFEITE = 3;
-const predioDaCarta = id => PREDIOS[[...id].reduce((t, ch) => t + ch.charCodeAt(0), 0) % PREDIOS.length];
-const custoPredio = id => 6 + 2 * Math.ceil(+(id.match(/^d(\d+)/) || [0, 1])[1] / 2);
+// ---------- vila (vila.js): construir, passear, produzir e plantar ----------
+function telaAldeia() {
+  Audio2.musica('aldeia');
+  Vila.abrir();
+}
 function cartaPorId(id) {
   for (const d of DIAS) for (const l of d.licoes || []) if (l.id === id) return l;
   return null;
 }
 
-function telaAldeia() {
-  Audio2.musica('aldeia');
-  const lotes = estado.aldeia.lotes, feitos = new Set(lotes.map(l => l.c).filter(Boolean));
-  const total = Math.max(16, Math.ceil((lotes.length + 1) / 4) * 4);
-  const livres = estado.cartas.filter(id => !feitos.has(id));
-  const travadas = DIAS.reduce((t, d) => t + (d.licoes || []).length, 0) - estado.cartas.length;
-  $('#ald-moedas').textContent = `🪙 ${estado.moedas}`;
-  $('#ald-grade').innerHTML = Array.from({ length: total }, (_, i) => {
-    const l = lotes[i];
-    return `<button class="lote${l ? ' cheio' : ''}" data-i="${i}">${l ? (l.c ? predioDaCarta(l.c) : l.e) : ''}</button>`;
-  }).join('');
-  $('#ald-construir').innerHTML = livres.map(id => {
-    const l = cartaPorId(id);
-    return `<button class="obra" data-c="${id}"><span>${predioDaCarta(id)}</span><b>${esc(l ? l.carta.titulo : id)}</b><small>🪙 ${custoPredio(id)}</small></button>`;
-  }).join('') + (travadas > 0 ? `<div class="obra trava"><span>🔒</span><b>+${travadas}</b><small>🃏</small></div>` : '');
-  $('#ald-enfeitar').innerHTML = ENFEITES.map(e => `<button class="obra mini" data-e="${e}"><span>${e}</span><small>🪙 ${CUSTO_ENFEITE}</small></button>`).join('');
-}
-
-function construir(item, custo) {
-  if (estado.moedas < custo) { toast(`🪙 Faltam ${custo - estado.moedas}`); vibrar(60); return; }
-  estado.moedas -= custo;
-  estado.aldeia.lotes.push(item);
-  salvar();
-  som('bau');
-  vibrar(30);
-  telaAldeia();
-  const novo = $(`#ald-grade .lote[data-i="${estado.aldeia.lotes.length - 1}"]`);
-  if (novo) novo.classList.add('surge');
-  if (item.c) confete(30);
+// ---------- ajustes: modo calmo (sem barras de tempo) ----------
+function abrirAjustes() {
+  som('clique');
+  const s = document.createElement('div');
+  s.className = 'sobre';
+  const pintar = () => {
+    const on = estado.config.calmo;
+    s.innerHTML = `<div class="caixa"><h2 class="titulo">⚙️ Ajustes</h2>
+      <button class="ajuste${on ? ' ligado' : ''}" id="aj-calmo" aria-pressed="${on}"><span>🧘</span><b>Modo calmo</b><i>${on ? 'Ligado' : 'Desligado'}</i></button>
+      <p class="sub">${on ? 'Sem barras de tempo ⏳' : 'Barras de tempo gentis ⏱'}</p>
+      <button class="btn" id="aj-ok">Ok ▶</button></div>`;
+    s.querySelector('#aj-calmo').onclick = () => { estado.config.calmo = !estado.config.calmo; salvar(); som('clique'); pintar(); };
+    s.querySelector('#aj-ok').onclick = () => { som('clique'); s.remove(); };
+  };
+  pintar();
+  document.body.appendChild(s);
 }
 
 // ---------- álbum de cartas e medalhas ----------
@@ -902,17 +1008,7 @@ function iniciarApp() {
     diaAberto = +g.dataset.dia;
     irPara('t-masmorra'); // o mapa abre a masmorra do dia
   };
-  $('#ald-construir').onclick = e => { const b = e.target.closest('[data-c]'); if (b) construir({ c: b.dataset.c }, custoPredio(b.dataset.c)); };
-  $('#ald-enfeitar').onclick = e => { const b = e.target.closest('[data-e]'); if (b) construir({ e: b.dataset.e }, CUSTO_ENFEITE); };
-  $('#ald-grade').onclick = e => {
-    const b = e.target.closest('.lote.cheio');
-    if (!b) return;
-    const l = estado.aldeia.lotes[+b.dataset.i], c = l.c && cartaPorId(l.c);
-    toast(c ? `${predioDaCarta(l.c)} ${c.carta.titulo}` : l.e);
-    b.classList.remove('surge');
-    void b.offsetWidth;
-    b.classList.add('surge');
-  };
+  $('#bt-ajustes').onclick = abrirAjustes;
   irPara(!estado.nome ? 't-inicio' : estado.criado ? 't-mapa' : 't-personagem');
 }
 iniciarApp();

@@ -22,7 +22,8 @@ const CONFIG_PUZZLE = {
   luzes: { intervalo: 4, mostra: .45 },      // alavancas: as luzes piscam a ordem a cada 4 s
   placas: { certas: .5 },                    // metade das placas segue a regra
   erro: { recuo: .9 },                       // pisar errado: armadilha leve (empurra, sem tirar coração)
-  ponte: { afunda: 1.2 }
+  ponte: { afunda: 1.2 },
+  gemaSemErro: 1                             // resolver sem nenhum erro dá gema
 };
 const CORES_PUZZLE = { vermelho: '#FF5A6E', azul: '#4DA3FF', verde: '#3DDC84', amarelo: '#FFD43B', roxo: '#B07CFF' };
 const NOMES_CORES = Object.keys(CORES_PUZZLE);
@@ -106,7 +107,7 @@ const Puzzles = (() => {
           if (pz.passo === pz.alavancas.length) resolver(pz, api);
         } else {
           for (const a of pz.alavancas) a.puxada = false;
-          pz.passo = 0; api.som('erro'); api.flutuar('🔁', c + .5, l);
+          pz.passo = 0; pz.errou = true; api.som('erro'); api.flutuar('🔁', c + .5, l);
         }
         return true;
       },
@@ -191,7 +192,7 @@ const Puzzles = (() => {
         if (j < 0 || pz.mostra) return;
         pz.aceso = j; pz.acesoT = .35; mexeu(pz);
         if (pz.seq[pz.passo] === j) { pz.passo++; api.som('clique'); if (pz.passo === pz.seq.length) resolver(pz, api); }
-        else { pz.passo = 0; api.som('erro'); api.flutuar('🔁', c + .5, l); setTimeout(() => mostrar(pz), 600); }
+        else { pz.passo = 0; pz.errou = true; api.som('erro'); api.flutuar('🔁', c + .5, l); setTimeout(() => mostrar(pz), 600); }
       },
       atualizar(pz, dt, api) {
         const P = api.heroi();
@@ -241,7 +242,7 @@ const Puzzles = (() => {
           p.pisada = true; api.som('acerto'); api.registrar(true, conta, pz.tema);
           if (pz.placas.every(x => !x.certa || x.pisada)) resolver(pz, api);
         } else {
-          p.erro = .6; api.som('erro'); api.registrar(false, conta, pz.tema);
+          p.erro = .6; pz.errou = true; api.som('erro'); api.registrar(false, conta, pz.tema);
           api.empurrar(c + .5, l + .5, C.erro.recuo); // armadilha leve: espinhos sobem e empurram, sem tirar coração
         }
       },
@@ -291,7 +292,7 @@ const Puzzles = (() => {
           const se = soma(pz, pz.esq), sd = soma(pz, pz.dir), chave = pz.sacos.map(x => x.c + ':' + x.l).join('|');
           const conta = `${pz.esq.map(p => ent(em(pz.sacos, p.c, p.l).n)).join(' + ')} = ${pz.dir.map(p => ent(em(pz.sacos, p.c, p.l).n)).join(' + ')}`;
           if (se === sd) { api.registrar(true, conta, pz.tema); resolver(pz, api); }
-          else if (chave !== pz.tentativa) { pz.tentativa = chave; api.registrar(false, conta, pz.tema); api.som('erro'); api.flutuar(`⚖️ ${fmt(se)} ≠ ${fmt(sd)}`, nc + .5, nl); }
+          else if (chave !== pz.tentativa) { pz.tentativa = chave; pz.errou = true; api.registrar(false, conta, pz.tema); api.som('erro'); api.flutuar(`⚖️ ${fmt(se)} ≠ ${fmt(sd)}`, nc + .5, nl); }
         }
         return true;
       },
@@ -358,7 +359,7 @@ const Puzzles = (() => {
           p.acesa = true; pz.proxima++; api.som('acerto'); api.registrar(true, conta, pz.tema);
           if (pz.proxima === pz.fileiras) resolver(pz, api);
         } else {
-          p.afunda = C.ponte.afunda; api.som('erro'); api.registrar(false, conta, pz.tema);
+          p.afunda = C.ponte.afunda; pz.errou = true; api.som('erro'); api.registrar(false, conta, pz.tema);
           api.flutuar('💦', c + .5, l); api.levarPara(pz.inicio.c, pz.inicio.l);
         }
       },
@@ -400,6 +401,7 @@ const Puzzles = (() => {
     api.flutuar('✨ Resolvido!', x, y);
     if (pz.recompensa === 'bau' && pz.bau) api.bau(pz.bau[0], pz.bau[1]);
     else { api.moeda(C.moedas); api.flutuar(`+${C.moedas} 🪙`, x, y + .6); }
+    if (!pz.errou && api.gema) { api.gema(C.gemaSemErro); api.flutuar(`💎 +${C.gemaSemErro}`, x, y - .6); }
     api.resolvido(pz);
   }
 
