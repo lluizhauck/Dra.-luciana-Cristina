@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Laboratório de Código · Missões</title>
+  <link rel="stylesheet" href="css/lab.css">
+</head>
+<body data-tela="carregando">
+  <a class="pular" href="#principal">Pular para o conteúdo</a>
+
+  <header id="cabecalho" class="cabecalho">
+    <div class="marca">
+      <span class="marca-simbolo" aria-hidden="true">&lt;/&gt;</span>
+      <span class="marca-nome">Laboratório de Código</span>
+      <span class="marca-sub">Missões</span>
+    </div>
+    <div class="cab-info" data-so-logado hidden>
+      <span id="cab-aluno" class="cab-aluno"></span>
+      <span id="cab-turma" class="cab-turma"></span>
+      <span id="cab-pontos" class="cab-pontos" tabindex="0"></span>
+    </div>
+    <nav class="cab-acoes" aria-label="Ações do aluno" data-so-logado hidden>
+      <button type="button" id="bt-mapa" class="bt bt-cab">Mapa de missões</button>
+      <button type="button" id="bt-relatorio" class="bt bt-cab">Gerar relatório</button>
+      <button type="button" id="bt-exportar" class="bt bt-cab">Código de progresso</button>
+      <button type="button" id="bt-encerrar" class="bt bt-cab bt-cab-forte">Encerrar sessão</button>
+    </nav>
+  </header>
+
+  <main id="principal">
+    <div id="erro-armazenamento" class="faixa-erro" role="alert" hidden>
+      Este navegador está bloqueando o armazenamento local (localStorage). Nada será salvo.
+      Saia do modo anônimo ou libere "dados de sites" nas configurações e recarregue a página.
+    </div>
+
+    <!-- ============================================ TURMA -->
+    <section id="tela-turma" class="tela tela-entrada" hidden>
+      <div class="entrada-capa">
+        <p class="entrada-sobre">Projeto de Aplicações Web · Capítulo 4</p>
+        <h1 class="entrada-titulo">Laboratório de Código<em>Missões</em></h1>
+        <p class="entrada-texto">Você é dev júnior e acabou de pegar seu primeiro cliente: uma açaíteria do bairro que quer vender pelo site. O site está quebrado. Bora consertar?</p>
+      </div>
+      <div class="entrada-painel">
+        <h2>Qual é a sua turma?</h2>
+        <p id="aviso-trava" class="nota">Atenção: depois de escolher, este computador fica nessa turma. Para trocar, só com a senha do professor.</p>
+        <div id="lista-turmas" class="lista-turmas"></div>
+        <button type="button" class="link-discreto bt-modo-professor">Modo professor</button>
+      </div>
+    </section>
+
+    <!-- ============================================ PERFIL -->
+    <section id="tela-perfil" class="tela tela-entrada" hidden>
+      <div class="entrada-capa">
+        <p class="entrada-sobre">Computador da</p>
+        <h1 class="entrada-titulo" id="perfil-turma"></h1>
+        <p class="entrada-texto">Escolha seu nome. Seu PIN impede que outra pessoa abra o seu diário.</p>
+        <div class="entrada-links">
+          <button type="button" id="bt-importar" class="link-discreto">Importar código de progresso</button>
+          <button type="button" id="bt-trocar-turma" class="link-discreto">Trocar de turma</button>
+          <button type="button" class="link-discreto bt-modo-professor">Modo professor</button>
+        </div>
+      </div>
+      <div class="entrada-painel entrada-duas">
+        <div>
+          <h2>Já tenho perfil</h2>
+          <ul id="lista-perfis" class="lista-perfis"></ul>
+        </div>
+        <form id="form-novo-perfil" class="form-novo" novalidate>
+          <h2>Sou novo(a) aqui</h2>
+          <label for="novo-nome" class="rotulo">Nome e sobrenome</label>
+          <input id="novo-nome" type="text" autocomplete="off" maxlength="60" required>
+          <label for="novo-pin" class="rotulo">Crie um PIN de 4 números</label>
+          <input id="novo-pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required class="campo-pin">
+          <label for="novo-pin2" class="rotulo">Repita o PIN</label>
+          <input id="novo-pin2" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required class="campo-pin">
+          <p id="msg-novo-perfil" class="msg-campo" aria-live="polite"></p>
+          <button type="submit" class="bt bt-principal">Criar meu perfil</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============================================ RETOMAR -->
+    <section id="tela-retomar" class="tela tela-retomar" hidden>
+      <div class="retomar-caixa">
+        <p class="entrada-sobre">De volta ao laboratório</p>
+        <h1>Oi, <span id="retomar-nome"></span>. Vamos lembrar onde você parou.</h1>
+        <div id="retomar-resumo"></div>
+        <form id="form-aquecimento" class="aquecimento">
+          <h2>Aquecimento</h2>
+          <p id="aquecimento-pergunta" class="pergunta-destaque"></p>
+          <label for="aquecimento-resposta" class="rotulo">Sua resposta (com suas palavras, sem consultar)</label>
+          <textarea id="aquecimento-resposta" rows="4" data-foco-inicial></textarea>
+          <p id="msg-aquecimento" class="msg-campo" aria-live="polite"></p>
+          <button type="submit" class="bt bt-principal">Responder e abrir o editor</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============================================ MAPA -->
+    <section id="tela-mapa" class="tela tela-mapa" hidden>
+      <div class="mapa-cab">
+        <p class="entrada-sobre">Mapa de missões</p>
+        <h1 id="mapa-titulo"></h1>
+        <p id="mapa-sub" class="mapa-sub"></p>
+      </div>
+      <ol id="lista-missoes" class="lista-missoes"></ol>
+    </section>
+
+    <!-- ============================================ BANCADA -->
+    <section id="tela-bancada" class="tela tela-bancada" hidden>
+      <h1 class="sr" id="bancada-h1">Bancada de trabalho</h1>
+      <div class="bancada">
+        <aside class="col-esq" aria-label="Cliente e tarefa">
+          <div class="chat">
+            <div class="chat-cab">
+              <span id="chat-avatar" class="chat-avatar" aria-hidden="true"></span>
+              <div>
+                <p id="chat-nome" class="chat-nome"></p>
+                <p id="chat-negocio" class="chat-negocio"></p>
+              </div>
+            </div>
+            <div id="chat-mensagens" class="chat-mensagens" aria-live="polite" tabindex="0" aria-label="Mensagens do cliente"></div>
+          </div>
+          <div class="painel-tarefa">
+            <ol id="etapas-trilha" class="etapas-trilha" aria-label="Etapas da missão"></ol>
+            <div id="tarefa" class="tarefa"></div>
+            <h3 class="rotulo-pequeno">O cliente vai conferir</h3>
+            <ul id="criterios" class="criterios"></ul>
+            <div class="tarefa-botoes">
+              <button type="button" id="bt-ajuda" class="bt bt-secundario">Preciso de ajuda</button>
+              <button type="button" id="bt-restaurar" class="bt bt-texto">Restaurar código da etapa</button>
+            </div>
+          </div>
+        </aside>
+
+        <section class="col-centro" aria-labelledby="bancada-titulo">
+          <div class="editor-cab">
+            <h2 id="bancada-titulo" class="bancada-titulo"></h2>
+            <button type="button" id="bt-arquivos" class="bt bt-texto">Arquivos do projeto</button>
+          </div>
+          <p id="banner-revisao" class="banner-revisao" hidden>Missão concluída — modo revisão. Pode testar à vontade; nada mais é registrado.</p>
+          <div id="editor-abas" class="editor-abas" role="tablist" aria-label="Arquivos abertos"></div>
+          <div id="editor-area" class="editor-area"></div>
+          <div class="barra-executar">
+            <button type="button" id="bt-executar" class="bt bt-executar"><span class="tri" aria-hidden="true"></span>Executar</button>
+            <span class="atalho">Ctrl + Enter</span>
+            <span id="status-execucao" class="status-execucao" aria-live="polite"></span>
+          </div>
+        </section>
+
+        <section class="col-dir" aria-label="Pré-visualização do site">
+          <div id="moldura-navegador" class="navegador">
+            <div class="nav-barra">
+              <span class="nav-bolinhas" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="nav-aba"><span id="preview-titulo-aba">…</span></span>
+            </div>
+            <div class="nav-endereco">
+              <button type="button" id="bt-recarregar" class="nav-bt" title="Recarregar a página (como F5)" aria-label="Recarregar a página">&#8635;</button>
+              <span class="nav-url"><span class="nav-cadeado" aria-hidden="true"></span><span id="preview-url">https://acaiecia.com.br/</span></span>
+            </div>
+            <div class="nav-ferramentas">
+              <div id="seletor-largura" class="seletor-largura" role="group" aria-label="Largura da tela">
+                <button type="button" data-largura="painel" aria-pressed="true">Painel</button>
+                <button type="button" data-largura="celular" aria-pressed="false">Celular</button>
+                <button type="button" data-largura="tablet" aria-pressed="false">Tablet</button>
+                <button type="button" data-largura="desktop" aria-pressed="false">Desktop</button>
+              </div>
+              <span id="preview-largura-info" class="largura-info"></span>
+              <button type="button" id="bt-inspecionar" class="bt-inspecionar" aria-pressed="false">Inspecionar</button>
+            </div>
+            <div id="preview-palco" class="preview-palco">
+              <iframe id="preview-iframe" title="Site do cliente (pré-visualização)" sandbox="allow-scripts allow-modals"></iframe>
+            </div>
+            <div id="inspetor-ficha" class="inspetor-ficha" hidden role="region" aria-label="Ficha do elemento inspecionado">
+              <div class="insp-topo">
+                <strong>Inspecionar</strong>
+                <button type="button" id="bt-fechar-ficha" class="nav-bt" aria-label="Fechar ficha">&times;</button>
+              </div>
+              <div class="insp-corpo"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="bancada-baixo" aria-label="Console, diário e armazenamento">
+          <div class="baixo-abas" role="tablist">
+            <button type="button" role="tab" aria-selected="true" aria-controls="painel-console" data-painel="console">Console <span id="badge-console" class="badge" hidden></span></button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="painel-diario" data-painel="diario">Diário</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="painel-armazenamento" data-painel="armazenamento">Armazenamento</button>
+          </div>
+          <div id="painel-console" class="painel-baixo painel-console" role="tabpanel" aria-live="polite">
+            <p class="vazio">As mensagens do navegador aparecem aqui quando você executa o código.</p>
+          </div>
+          <div id="painel-diario" class="painel-baixo" role="tabpanel" hidden></div>
+          <div id="painel-armazenamento" class="painel-baixo" role="tabpanel" hidden>
+            <div class="arm-topo">
+              <span>localStorage do site de treino (o "mini back-end")</span>
+              <button type="button" id="bt-limpar-dados" class="bt bt-texto">Limpar dados do site</button>
+            </div>
+            <div id="tabela-armazenamento"></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ============================================ PROFESSOR -->
+    <section id="tela-professor" class="tela tela-professor" hidden>
+      <div class="prof-cab">
+        <div>
+          <p class="entrada-sobre">Modo professor · <span id="prof-tempo"></span></p>
+          <h1>Painel do professor</h1>
+        </div>
+        <button type="button" id="prof-sair" class="bt bt-secundario">Sair do modo professor</button>
+      </div>
+      <div id="prof-conteudo"></div>
+    </section>
+  </main>
+
+  <!-- ============================================ RAIO-X -->
+  <div id="raiox" class="overlay overlay-raiox" hidden role="dialog" aria-modal="true" aria-labelledby="raiox-titulo">
+    <div class="raiox-cab">
+      <div>
+        <p class="entrada-sobre">Cena final</p>
+        <h2 id="raiox-titulo">Raio-X</h2>
+        <p id="raiox-intro" class="raiox-intro"></p>
+      </div>
+      <span id="raiox-contador" class="raiox-contador"></span>
+      <button type="button" id="raiox-sair" class="bt bt-secundario" hidden>Fechar</button>
+    </div>
+    <div class="raiox-corpo">
+      <div class="raiox-site"><iframe id="raiox-iframe" title="Site em modo Raio-X" sandbox="allow-scripts"></iframe></div>
+      <div class="raiox-lado">
+        <div id="raiox-ficha" class="raiox-ficha"></div>
+        <p id="raiox-falta" class="raiox-falta"></p>
+        <div id="raiox-insight" class="raiox-insight" hidden>
+          <h3>Pergunta de insight</h3>
+          <p id="raiox-pergunta" class="pergunta-destaque"></p>
+          <label for="raiox-resposta" class="rotulo">Sua resposta (não tem correção automática: vale o seu raciocínio)</label>
+          <textarea id="raiox-resposta" rows="5"></textarea>
+          <p id="raiox-msg" class="msg-campo" aria-live="polite"></p>
+          <button type="button" id="raiox-concluir" class="bt bt-principal">Salvar resposta e concluir a missão</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ RELATÓRIO -->
+  <div id="relatorio" class="overlay overlay-relatorio" hidden role="dialog" aria-modal="true" aria-label="Relatório do aluno">
+    <div class="rel-barra">
+      <button type="button" id="rel-imprimir" class="bt bt-principal">Imprimir</button>
+      <button type="button" id="rel-json" class="bt bt-secundario">Exportar JSON</button>
+      <button type="button" id="rel-fechar" class="bt bt-secundario" data-foco-inicial>Fechar</button>
+    </div>
+    <article id="relatorio-corpo" class="relatorio-corpo"></article>
+  </div>
+
+  <div id="camada-modal" class="camada-modal" hidden></div>
+  <div id="avisos" class="avisos"></div>
+  <iframe id="validador-iframe" class="validador" sandbox="allow-scripts" title="Verificador oculto" aria-hidden="true" tabindex="-1"></iframe>
+
+  <script src="config.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/cripto.js"></script>
+  <script src="js/turmas.js"></script>
+  <script src="js/sessoes.js"></script>
+  <script src="js/diario.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/css-parser.js"></script>
+  <script src="js/preview.js"></script>
+  <script src="js/console.js"></script>
+  <script src="js/inspetor.js"></script>
+  <script src="js/validadores.js"></script>
+  <script src="js/motor.js"></script>
+  <script src="js/raiox.js"></script>
+  <script src="js/professor.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

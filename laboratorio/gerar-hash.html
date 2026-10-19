@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gerar hash da senha do professor</title>
+  <link rel="stylesheet" href="css/lab.css">
+  <style>
+    .pagina-hash { max-width: 720px; margin: 0 auto; padding: 40px 20px 60px; }
+    .pagina-hash h1 { font-family: var(--fonte-titulo); font-size: 34px; margin: 0 0 10px; }
+    .caixa { background: #fff; border: 1px solid var(--linha); border-radius: 10px; padding: 20px 22px; margin-top: 18px; }
+    .resultado { background: var(--ed-fundo); color: var(--ed-texto); padding: 14px 16px; border-radius: 8px; white-space: pre; overflow: auto; font-size: 13px; }
+    .passos li { margin-bottom: 6px; }
+    .linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+    input[type=number] { width: 140px; padding: 8px 10px; border: 1px solid var(--linha); border-radius: var(--raio); }
+  </style>
+</head>
+<body>
+  <main class="pagina-hash">
+    <p class="entrada-sobre">Laboratório de Código · ferramenta do professor</p>
+    <h1>Gerar o hash da senha</h1>
+    <p>Esta página transforma a sua senha num <strong>hash</strong> (PBKDF2-SHA256 com sal aleatório). Só o hash vai para o <code>config.js</code>: a senha nunca fica escrita no código. Nada sai deste computador.</p>
+
+    <form id="form" class="caixa" autocomplete="off">
+      <label class="rotulo" for="s1">Nova senha do professor (mínimo 8 caracteres)</label>
+      <input id="s1" type="password" autocomplete="new-password">
+      <label class="rotulo" for="s2">Repita a senha</label>
+      <input id="s2" type="password" autocomplete="new-password">
+      <div class="linha">
+        <label for="it">Iterações</label>
+        <input id="it" type="number" min="10000" step="10000" value="120000">
+        <span class="dica-campo">Mais iterações = mais difícil de quebrar, porém mais lento para entrar (principalmente sem crypto.subtle).</span>
+      </div>
+      <p id="msg" class="msg-campo" aria-live="polite"></p>
+      <button class="bt bt-principal" type="submit">Gerar hash</button>
+    </form>
+
+    <div id="saida" class="caixa" hidden>
+      <h2 style="margin-top:0">Cole isto no config.js</h2>
+      <p>Substitua o bloco <code>senhaProfessor: {...}</code> inteiro por:</p>
+      <pre id="codigo" class="resultado"></pre>
+      <div class="linha">
+        <button id="copiar" class="bt bt-secundario" type="button">Copiar</button>
+        <span id="motor" class="dica-campo"></span>
+      </div>
+    </div>
+
+    <div class="caixa">
+      <h2 style="margin-top:0">Passo a passo</h2>
+      <ol class="passos">
+        <li>Digite a nova senha duas vezes e clique em <strong>Gerar hash</strong>.</li>
+        <li>Abra o arquivo <code>config.js</code> num editor de texto (Bloco de Notas, VS Code…).</li>
+        <li>Troque o bloco <code>senhaProfessor</code> pelo que apareceu acima e salve.</li>
+        <li>Copie o <code>config.js</code> atualizado para todos os computadores do laboratório.</li>
+        <li>Recarregue o laboratório e teste a senha no "Modo professor".</li>
+      </ol>
+      <p class="nota">Leia a seção "Segurança" do README: sem servidor, esta proteção serve para organizar a aula, não para guardar segredos.</p>
+    </div>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/cripto.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var form = document.getElementById('form');
+      var msg = document.getElementById('msg');
+      form.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var s1 = document.getElementById('s1').value, s2 = document.getElementById('s2').value;
+        var it = parseInt(document.getElementById('it').value, 10) || 120000;
+        msg.className = 'msg-campo erro';
+        if (s1.length < 8) { msg.textContent = 'Use pelo menos 8 caracteres.'; return; }
+        if (s1 !== s2) { msg.textContent = 'As duas senhas não são iguais.'; return; }
+        if (it < 10000) { msg.textContent = 'Use pelo menos 10000 iterações.'; return; }
+        msg.className = 'msg-campo';
+        msg.textContent = 'Calculando… (pode levar alguns segundos)';
+        var sal = Lab.cripto.gerarSal(16);
+        var t0 = Date.now();
+        Lab.cripto.pbkdf2(s1, sal, it).then(function (hash) {
+          var bloco = 'senhaProfessor: {\n' +
+            "    algoritmo: 'PBKDF2-SHA256',\n" +
+            '    iteracoes: ' + it + ',\n' +
+            "    sal: '" + sal + "',\n" +
+            "    hash: '" + hash + "'\n" +
+            '  },';
+          document.getElementById('codigo').textContent = bloco;
+          document.getElementById('motor').textContent = 'Calculado em ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s usando ' + (Lab.cripto.temSubtle() ? 'crypto.subtle (nativo do navegador)' : 'SHA-256 em JavaScript puro (fallback)') + '.';
+          document.getElementById('saida').hidden = false;
+          msg.textContent = 'Pronto.';
+          document.getElementById('s1').value = '';
+          document.getElementById('s2').value = '';
+        });
+      });
+      document.getElementById('copiar').addEventListener('click', function () {
+        var t = document.getElementById('codigo').textContent;
+        var r = document.createRange();
+        r.selectNodeContents(document.getElementById('codigo'));
+        var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+        try { document.execCommand('copy'); } catch (e) { /* segue */ }
+        if (navigator.clipboard) navigator.clipboard.writeText(t).catch(function () {});
+        msg.textContent = 'Copiado. Agora cole no config.js.';
+      });
+    })();
+  </script>
+</body>
+</html>
