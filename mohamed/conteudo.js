@@ -1211,3 +1211,43 @@ const modelosDos = dias => dias.flatMap(n => (DIAS[n - 1].licoes || []).flatMap(
   [8, 0, () => { const a = rnd(-4, 4), b = rnd(1, 6); return casas(a, -b, `${fmt(a)} − ${b} = ?`); }],
   [8, 4, () => { const a = rnd(-5, 3), b = rnd(1, 6); return casas(a, b, `${fmt(a)} − (−${b}) = ?`); }]
 ].forEach(([d, i, modelo]) => DIAS[d - 1].licoes[i].modelos.push(modelo, modelo));
+
+// ---------- Puzzles de matemática da masmorra: placas, balança e ponte (sem tela de pergunta) ----------
+// puzzlesDoDia(n) → { tema, regra: { texto, testa, faixa }, sequencia: { texto, termos }, balanca: { min, max } }
+// O tema segue o dia (como os duelos): naturais, inteiros, tabuada, divisão; a revisão sorteia um deles.
+function puzzlesDoDia(n) {
+  const TAB = { 9: [2, 10], 10: [3, 4, 5], 11: [6, 7], 12: [8, 9], 13: [3, 4, 6, 7, 8, 9], 14: [2, 3, 4, 5] };
+  if (n >= 18) return puzzlesDoDia(sortear([2, 3, 6, 7, 11, 12, 15, 16, 17]));
+  const pa = (a, passo, qtd = 8) => Array.from({ length: qtd }, (_, i) => a + i * passo);
+  const seq = termos => ({ texto: termos.slice(0, 3).map(fmt).join(', ') + '…', termos });
+  if (n <= 3) {
+    const r = sortear([
+      { texto: 'Números pares', testa: x => x % 2 === 0, faixa: [0, 30] },
+      { texto: 'Números ímpares', testa: x => x % 2 === 1, faixa: [0, 30] },
+      { texto: 'Maiores que 12', testa: x => x > 12, faixa: [0, 25] },
+      { texto: 'Menores que 8', testa: x => x < 8, faixa: [0, 20] }
+    ]);
+    return { tema: 'Natural', regra: r, sequencia: seq(pa(rnd(0, 5), sortear([2, 3, 5, 10]))), balanca: { min: 1, max: 9 } };
+  }
+  if (n <= 8) {
+    const r = sortear([
+      { texto: 'Números negativos', testa: x => x < 0, faixa: [-12, 12] },
+      { texto: 'Maiores que −3', testa: x => x > -3, faixa: [-10, 8] },
+      { texto: 'Menores que −2', testa: x => x < -2, faixa: [-10, 8] }
+    ]);
+    const s = sortear([pa(rnd(4, 9), -2), pa(rnd(5, 9), -3), pa(-rnd(6, 9), 3)]);
+    return { tema: 'Negativo', regra: r, sequencia: seq(s), balanca: { min: -9, max: 9 } };
+  }
+  if (n <= 14) {
+    const k = sortear(TAB[n]), sinal = n === 14;
+    const r = { texto: `Múltiplos de ${k}`, testa: x => x % k === 0, faixa: sinal ? [-5 * k, 5 * k] : [1, 10 * k] };
+    const s = sinal ? Array.from({ length: 6 }, (_, i) => (-2) ** i) : pa(k * rnd(1, 2), k);
+    return { tema: 'Tabuada', regra: r, sequencia: seq(s), balanca: sinal ? { min: -9, max: 9 } : { min: 1, max: 12 } };
+  }
+  const k = rnd(2, 6), neg = n === 17;
+  const r = n === 16
+    ? { texto: `Resto 1 na divisão por ${k}`, testa: x => x % k === 1, faixa: [1, 9 * k] }
+    : { texto: `Divisões exatas por ${k}`, testa: x => x % k === 0, faixa: neg ? [-6 * k, 6 * k] : [1, 9 * k] };
+  const base = sortear([2, 3]), vezes = sortear([1, 3]), s = Array.from({ length: 6 }, (_, i) => base ** (5 - i) * vezes);
+  return { tema: 'Divisão', regra: r, sequencia: { texto: `${s.slice(0, 3).map(fmt).join(', ')}… (÷${base})`, termos: s }, balanca: neg ? { min: -9, max: 9 } : { min: 1, max: 12 } };
+}

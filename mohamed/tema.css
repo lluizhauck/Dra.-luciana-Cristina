@@ -188,3 +188,12 @@ body:has(.tela.ativa .rodape) .som-bt{bottom:calc(100px + env(safe-area-inset-bo
   .b-arte-m.dor::after,.arena.balanca::before{animation-duration:.01ms}
   body::after{display:none}
 }
+
+/* ---------- masmorra: correr, reiniciar puzzle e mercador ---------- */
+.joy.corre i{box-shadow:0 5px 0 var(--neon-esc),0 0 30px #22E8FFEE,0 0 0 4px #22E8FF55}
+#mas-reinicia{font-size:22px;color:#FFE08A;box-shadow:inset 0 0 0 1.5px #FFE08A66,0 0 14px #FFE08A33}
+.melhoria.loja .mel-opcoes{grid-template-columns:repeat(2,1fr)}
+.mel small{font-size:13px;font-weight:900;color:var(--ouro)}
+.mel:disabled{opacity:.4}
+.mel.sair{grid-column:1/-1;flex-direction:row;justify-content:center;padding:10px}
+.mel.sair span{font-size:24px}

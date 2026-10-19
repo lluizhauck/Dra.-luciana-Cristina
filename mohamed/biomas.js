@@ -225,6 +225,43 @@ const BIOMAS = (() => {
     g.restore();
   } };
 
+  // ---------- mato alto (M): passa por dentro e esconde o herói; balança mais quando tem alguém dentro ----------
+  const lamina = (g, cor, w, x0, y0, x1, y1, cx, cy) => { g.strokeStyle = cor; g.lineWidth = w; g.lineCap = 'round'; g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(cx, cy, x1, y1); g.stroke(); };
+  const giro = (t, k, h, mexe) => Math.sin(t * (mexe ? 7 : 2.2) + k + (h % 7)) * (mexe ? 4.5 : 2.2);
+  const grama = (escura, clara) => (g, x, y, t, h, mexe) => {
+    for (let k = 0; k < 7; k++) {
+      const bx = x + 3 + k * 4.4 + ((h >> k) & 3), a = giro(t, k, h, mexe), alto = 8 + (k % 3) * 4;
+      lamina(g, k % 2 ? clara : escura, 2.4, bx, y + 30, bx + a, y + alto, bx + a * .4, y + 18);
+    }
+  };
+  const folhas = (g, x, y, t, h, mexe) => { // samambaia: folhas largas
+    for (let k = 0; k < 4; k++) {
+      const bx = x + 6 + k * 7, a = giro(t, k, h, mexe) * .06;
+      g.save(); g.translate(bx, y + 28); g.rotate(-.5 + k * .33 + a);
+      g.fillStyle = k % 2 ? '#2E6B3E' : '#1F4E2D'; g.beginPath(); g.ellipse(0, -11, 4.2, 12, 0, 0, TAU); g.fill();
+      g.strokeStyle = 'rgba(160,220,150,.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -21); g.stroke();
+      g.restore();
+    }
+  };
+  const algas = (g, x, y, t, h, mexe) => { // algas: fitas onduladas
+    for (let k = 0; k < 5; k++) {
+      const bx = x + 4 + k * 6, a = giro(t, k, h, mexe);
+      g.strokeStyle = k % 2 ? '#3E8E6E' : '#5E9A3A'; g.lineWidth = 2.6; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(bx, y + 30); g.bezierCurveTo(bx - 4 + a, y + 22, bx + 4 + a, y + 15, bx + a, y + 6 + (k % 2) * 4); g.stroke();
+    }
+  };
+  const cinzas = (g, x, y, t, h, mexe) => { // tufos secos cobertos de cinza
+    for (let k = 0; k < 6; k++) {
+      const bx = x + 4 + k * 5, a = giro(t, k, h, mexe) * .8;
+      lamina(g, k % 2 ? '#8A817C' : '#5E5450', 2, bx, y + 30, bx + a + (k % 2 ? 3 : -3), y + 10 + (k % 3) * 4, bx + a, y + 20);
+    }
+    g.fillStyle = 'rgba(190,182,176,.5)'; circ(g, x + 9, y + 12, 1.4); circ(g, x + 21, y + 9, 1.2);
+  };
+  const secas = (g, x, y, t, h, mexe) => { // castelo: monte de folhas secas e palha
+    for (let k = 0; k < 6; k++) { const bx = x + 4 + k * 5, a = giro(t, k, h, mexe) * .7; lamina(g, k % 2 ? '#B08A3A' : '#7A5A2A', 2.2, bx, y + 30, bx + a, y + 11 + (k % 3) * 4, bx + a * .5, y + 20); }
+    g.fillStyle = '#6E4E2A'; oval(g, x + 10, y + 26, 5, 2.5); g.fillStyle = '#8A6A3A'; oval(g, x + 22, y + 27, 5, 2.5);
+  };
+
   // ---------- detalhe das paredes (x, y = canto da casa) ----------
   const sebe = (g, x, y, s, v) => { g.fillStyle = 'rgba(24,70,30,.55)'; circ(g, x + 8 + v * 6, y + 7, 4); circ(g, x + 22, y + 11 + v * 3, 3.5); g.fillStyle = 'rgba(150,215,120,.3)'; circ(g, x + 12, y + 5, 2); };
   const copa = (g, x, y, s, v) => { g.fillStyle = '#12301D'; circ(g, x + 16, y + 10, 12.5); g.fillStyle = '#1B452A'; circ(g, x + 11 + v * 8, y + 8, 6.5); };
@@ -242,7 +279,7 @@ const BIOMAS = (() => {
       nome: 'Campo', luz: 1, ceu: '#14301E', chao: ['#5C9E4E', '#58994A', '#61A352'],
       parede: '#2C5E2F', topo: '#3B7F3C', sombra: '#1A3A1D', detalhe: sebe,
       agua: { cor: '#3489C2', cor2: 'rgba(175,228,250,.55)', margem: 'rgba(230,245,220,.5)' },
-      mato: '#3C8A3A', espinho: '#4E3A22', densidade: .55, olhos: '255,236,170',
+      mato: '#3C8A3A', matoAlto: grama('#2F7A32', '#4FA046'), espinho: '#4E3A22', densidade: .55, olhos: '255,236,170',
       clima: { tipo: 'vaga', cor: '255,247,194', qtd: 14, tam: 1.5, vel: 10 },
       manchas: [M.terra, M.grama, M.trevo], enfeites: [flor, cogumelo, pedra, toco, poca]
     },
@@ -250,7 +287,7 @@ const BIOMAS = (() => {
       nome: 'Floresta', luz: .15, ceu: '#04080A', chao: ['#1E2A22', '#1B261F', '#202D24'],
       parede: '#0E2016', topo: '#163522', sombra: '#06100A', detalhe: copa,
       agua: { cor: '#12302A', cor2: 'rgba(80,140,120,.4)', margem: 'rgba(120,160,130,.25)' },
-      mato: '#1E4A2D', espinho: '#3A2A1A', densidade: .55, olhos: '255,226,140',
+      mato: '#1E4A2D', matoAlto: folhas, espinho: '#3A2A1A', densidade: .55, olhos: '255,226,140',
       clima: { tipo: 'vaga', cor: '214,255,122', qtd: 16, tam: 1.8, vel: 8, brilho: true },
       manchas: [M.musgo, M.folhas, M.raiz], enfeites: [caveira, ossos, teia, tronco, vela]
     },
@@ -258,7 +295,7 @@ const BIOMAS = (() => {
       nome: 'Praia', luz: .95, ceu: '#0C3646', chao: ['#E1C68B', '#DCC085', '#E6CC92'],
       parede: '#7C5C3B', topo: '#A07A4E', sombra: '#4E3722', detalhe: rochedo,
       agua: { cor: '#2BA0C4', cor2: 'rgba(210,248,252,.6)', margem: 'rgba(255,255,255,.55)' },
-      mato: '#7FA65A', espinho: '#3E3046', densidade: .45, olhos: '255,236,170',
+      mato: '#7FA65A', matoAlto: algas, espinho: '#3E3046', densidade: .45, olhos: '255,236,170',
       clima: { tipo: 'lado', cor: '255,255,255', qtd: 14, tam: 1.3, vel: 22 },
       manchas: [M.molhada, M.ondas, M.pedrinhas], enfeites: [concha, estrelaMar, caranguejo, barco, pocaMare]
     },
@@ -266,7 +303,7 @@ const BIOMAS = (() => {
       nome: 'Vulcão', luz: .55, ceu: '#120705', chao: ['#4A3530', '#45312C', '#4F3833'],
       parede: '#2A1E1B', topo: '#45332E', sombra: '#140D0B', detalhe: basalto,
       agua: { cor: '#D9501C', cor2: 'rgba(255,200,90,.75)', margem: 'rgba(255,150,60,.6)', lava: true },
-      mato: '#4A3A2E', espinho: '#1E1614', densidade: .45, olhos: '255,190,120',
+      mato: '#4A3A2E', matoAlto: cinzas, espinho: '#1E1614', densidade: .45, olhos: '255,190,120',
       clima: { tipo: 'sobe', cor: '255,154,61', qtd: 20, tam: 1.6, vel: 16, brilho: true },
       manchas: [M.racha, M.rachaQuente, M.cinzas], enfeites: [rocha, esqueleto, cristal, chamine]
     },
@@ -274,7 +311,7 @@ const BIOMAS = (() => {
       nome: 'Castelo', luz: .12, ceu: '#07070B', chao: ['#3A3946', '#353441', '#3E3D4A'],
       parede: '#28262F', topo: '#43404D', sombra: '#141319', detalhe: tijolos,
       agua: { cor: '#1A2938', cor2: 'rgba(110,150,190,.35)', margem: 'rgba(160,170,190,.25)' },
-      mato: '#2E3A2C', espinho: '#5A5C66', densidade: .5, olhos: '190,230,255',
+      mato: '#2E3A2C', matoAlto: secas, espinho: '#5A5C66', densidade: .5, olhos: '190,230,255',
       clima: { tipo: 'vaga', cor: '205,195,175', qtd: 14, tam: 1.2, vel: 5 },
       manchas: [M.lajota, M.rachaPedra, M.limo], enfeites: [estatua, barril, tapete, estante, cadeira]
     }

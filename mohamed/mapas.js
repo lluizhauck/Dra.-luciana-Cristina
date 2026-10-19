@@ -1,106 +1,75 @@
-/* Mohamed — mapas.js: os mapas da masmorra em texto, fáceis de editar.
+/* Mohamed — mapas.js: tipos de mapa, receitas dos 20 dias e a legenda dos mapas em texto.
+   Os mapas em grade ficam em mapas1.js, mapas2.js, mapas3.js... (4 por arquivo).
 
    LEGENDA (uma letra por casa; todas as linhas de um mapa com o mesmo tamanho)
    #  parede                 .  chão                   ~  água (no vulcão é lava): não passa
-   =  ponte                  M  mato alto (passa)      S  espinhos: não passa
-   o  moeda                  B  baú com desafio        P  porta trancada com desafio
-   T  tocha na parede        F  braseiro no chão       (luz e ponto de salvamento)
+   =  ponte                  M  mato alto: passa e esconde o herói dos monstros
+   S  espinhos: não passa    o  moeda                  B  baú com desafio     G  baú dourado (tesouro)
+   P  porta trancada com desafio                       T  tocha na parede     F  braseiro no chão
+   R  fogueira de descanso (cura 1 coração, uma vez)   N  mercador
    @  início                 X  saída: abre quando o objetivo do mapa é cumprido
-   m  monstro                E  monstro à espreita (parado no escuro, acorda quando você chega perto)
-   C  chefão
+   m  monstro                E  emboscador (escondido)  Z  monstro dormindo
+   H  mini-chefe             C  chefão
+   Peças de puzzle (dentro da área do puzzle, veja puzzles.js):
+   K bloco ou saco · _ placa · D porta do puzzle · L alavanca · Q cristal · Y totem · k chave · [ ] pratos · * pedra
 
+   CADA MAPA: { nome, tipo, mapa: [...linhas], perigos?: [...] (perigos.js), puzzles?: [...] (puzzles.js),
+                monstros?: { 'c:l': 'corredor' } (jeito ou nome do monstro), fuga?: { tipo: 'auto', dir: 'cima' } }
    TAMANHO: de 1,5 a 3 telas (a tela mostra 11 casas de largura e uns 16 de altura); no máximo 40 × 30.
-   OBJETIVO: 'monstros' (derrotar todos) ou 'chefe' (derrotar o chefão).
-   Os baús ficam em becos; a decoração (biomas.js) é espalhada sozinha, sempre igual para cada mapa. */
+   Tochas, braseiros e fogueiras salvam o ponto de volta quando o herói chega perto. */
 
-const MAPAS = {
-  // corredores em L e T, clareira com lago, ala atrás da porta e desvio pelo sul (24 × 22)
-  clareira: { nome: 'Clareira', objetivo: 'monstros', mapa: [
-    '#################T######',
-    '#B...####T######.......#',
-    '####...o......o......X.#',
-    '##########.#####...m...#',
-    '##########o#####..o....#',
-    '##########.#####......o#',
-    '###...........##########',
-    '#..M..~~m...F...###...o#',
-    '#.....~~~....M..###.o..#',
-    'TM...~~~~~.o......P....#',
-    '#....~~~....M...###....#',
-    '#.E.M......Mm...#####.##',
-    '###...........#######o##',
-    '###.##########.######B##',
-    '###.##########.T########',
-    '#.....######.....#######',
-    '#...o.T#####.o...#######',
-    '#.@...######...m....oo##',
-    '#........o.......#######',
-    '#.....######....o#######',
-    '#....o##################',
-    '########################'
-  ] },
-  // ilhas ligadas por pontes, ilhota de desvio e dois becos com baú (30 × 24)
-  ilhas: { nome: 'Ilhas', objetivo: 'monstros', mapa: [
-    '##############################',
-    '#~~~~~~~~~~~~~~~~~~~~~~~~~~~~#',
-    '#~~~~~~~~~~~~~~~~~~~~~.....~~#',
-    '#~~~~~~~~~~~.B~~~~~~~.....X.~#',
-    '#~~~.....~~~...~~~~~~..o....~#',
-    '#~~.F...o.==.o.~~~~~~.......~#',
-    '#~~...m...~~~~~~~~~~~......o~#',
-    '#~~M......~~~~~~~~~~~.F.....~#',
-    '#~~.o.....~~~~~~~~~~~~.....~~#',
-    '#~~....M..==~....M~~~~~~=~.B~#',
-    '#~~~.....~~=....T#.~~~~~=~.o~#',
-    '#~~~~=~~~~~~.......~~~~~=~=~~#',
-    '#~~~~=~~~~~~...m..S~~~~~=~=~~#',
-    '#~~~~=~~~~~~.o.....~~......~~#',
-    '#~~~~=~~~~~~.....o.=........~#',
-    '#~~~~=~~~~~~~.....~~........~#',
-    '#~~.....~~~~~~=~~~~~..o....M~#',
-    '#~.o...Fo~~~....~~~~.S......~#',
-    '#~.......===o...~~~~....m...~#',
-    '#~..@....~~~..E.~~~~........~#',
-    '#~.M.....~~~...~~~~~..M...o.~#',
-    '#~~.....~~~~~~~~~~~~~......~~#',
-    '#~~~~~~~~~~~~~~~~~~~~~~~~~~~~#',
-    '##############################'
-  ] },
-  // corredor em T, ala oeste com beco, cofre atrás da porta e salão do chefão (26 × 28)
-  fortaleza: { nome: 'Fortaleza', objetivo: 'chefe', mapa: [
-    '##########################',
-    '##########################',
-    '######S.....X......S######',
-    '######...o..........######',
-    '#..M.#..T...C....T..######',
-    '#..o.#.............m######',
-    'T.m..#..............######',
-    '#....#..#........#..######',
-    '#....#.o........o...######',
-    '##.#.#S............S######',
-    '##.#.#######..############',
-    '##o#.#######..############',
-    '##.#.#######.o############',
-    '##B#.#######..############',
-    '####.#######m.############',
-    '####.#######..############',
-    '####.######T..T###########',
-    '####.o..........SS....T###',
-    '####................o.####',
-    '############..#######.####',
-    '############..#######E####',
-    '############..#######.####',
-    '########..........###P####',
-    '#######T..o....o..T.....##',
-    '########.F......F.#.o...##',
-    '########....@.....#...o.##',
-    '########M........M#....B##',
-    '##########################'
-  ] }
+const MAPAS = {};
+
+// ---------- tipos de mapa ----------
+// objetivo: 'monstros' (derrotar todos) · 'chegar' (a saída já está aberta) · 'puzzle' (resolver todos)
+//           'minichefe' (vencer o mini-chefe) · 'chefe' (vencer o chefão termina o dia)
+const TIPOS_MAPA = {
+  combate: { icone: '⚔️', nome: 'Combate', objetivo: 'monstros', dica: 'Derrote os monstros' },
+  furtividade: { icone: '🌿', nome: 'Furtividade', objetivo: 'chegar', dica: 'Passe sem ser visto', bonus: 3 },
+  armadilhas: { icone: '⚠️', nome: 'Armadilhas', objetivo: 'chegar', dica: 'Observe o ritmo' },
+  puzzle: { icone: '🧩', nome: 'Puzzle', objetivo: 'puzzle', dica: 'Resolva para abrir' },
+  fuga: { icone: '🏃', nome: 'Fuga', objetivo: 'chegar', dica: 'Corra até a saída' },
+  descanso: { icone: '🔥', nome: 'Descanso', objetivo: 'chegar', dica: 'A fogueira cura' },
+  mercador: { icone: '🛒', nome: 'Mercador', objetivo: 'chegar', dica: 'Troque suas moedas' },
+  tesouro: { icone: '💎', nome: 'Tesouro', objetivo: 'chegar', dica: 'Abra os baús' },
+  minichefe: { icone: '😈', nome: 'Mini-chefe', objetivo: 'minichefe', dica: 'Vença o mini-chefe' },
+  chefao: { icone: '👑', nome: 'Chefão', objetivo: 'chefe', dica: 'Desvie e encoste no chefão' }
 };
 
-// Mapas de cada dia, em ordem: o aluno passa de um para o outro pela saída; o último tem o chefão.
-// Para um mundo usar outros mapas: ROTEIRO_MASMORRA[2] = ['ilhas', 'clareira', 'fortaleza'] (0 = mundo 1).
-const ROTEIRO_MASMORRA = {
-  padrao: ['clareira', 'ilhas', 'fortaleza']
+// ---------- receitas dos 20 dias (fácil de editar) ----------
+// tipo:mapa em ordem, separados por ">"; de 3 a 5 mapas, sempre terminando no chefão.
+// Se o mapa ainda não existir (chega nos próximos arquivos), entra outro mapa do mesmo tipo.
+//  dia  receita                                                                              bioma
+const RECEITAS = {
+  1: 'combate:clareira > puzzle:sabedoria > armadilhas:trilha > chefao:fortaleza', //          campo
+  2: 'furtividade:toca > mercador:bazar > combate:ilhas > chefao:cripta', //                     campo
+  3: 'armadilhas:corredeira > descanso:acampamento > puzzle:galeria > minichefe:arena > chefao:fortaleza', // campo
+  4: 'furtividade:juncal > combate:clareira > chefao:cripta', //                                 floresta
+  5: 'combate:ilhas > armadilhas:trilha > mercador:tenda > chefao:fortaleza', //                 floresta
+  6: 'puzzle:sabedoria > fuga:escape > descanso:gruta > minichefe:covil > chefao:cripta', //     floresta
+  7: 'tesouro:cofre > furtividade:toca > combate:clareira > chefao:fortaleza', //                floresta
+  8: 'armadilhas:corredeira > puzzle:galeria > mercador:bazar > chefao:cripta', //               floresta
+  9: 'combate:ilhas > tesouro:naufragio > chefao:fortaleza', //                                  praia
+  10: 'puzzle:sabedoria > furtividade:juncal > descanso:acampamento > chefao:cripta', //         praia
+  11: 'fuga:desmoronamento > combate:clareira > mercador:tenda > minichefe:arena > chefao:fortaleza', // praia
+  12: 'armadilhas:trilha > puzzle:galeria > chefao:cripta', //                                   praia
+  13: 'furtividade:toca > tesouro:cofre > combate:ilhas > chefao:fortaleza', //                  praia
+  14: 'puzzle:sabedoria > armadilhas:corredeira > descanso:gruta > minichefe:covil > chefao:cripta', // praia
+  15: 'combate:clareira > fuga:escape > mercador:bazar > chefao:fortaleza', //                   vulcão
+  16: 'armadilhas:trilha > puzzle:galeria > descanso:acampamento > chefao:cripta', //            vulcão
+  17: 'furtividade:juncal > combate:ilhas > tesouro:naufragio > minichefe:arena > chefao:fortaleza', // vulcão
+  18: 'puzzle:sabedoria > fuga:desmoronamento > mercador:tenda > chefao:cripta', //              castelo
+  19: 'combate:clareira > armadilhas:corredeira > descanso:gruta > minichefe:covil > chefao:fortaleza', // castelo
+  20: 'tesouro:cofre > puzzle:galeria > fuga:escape > chefao:cripta' //                          castelo
 };
+
+// receita do dia → [{ tipo, id }], trocando o mapa que ainda não existe por outro do mesmo tipo
+function receitaDoDia(n) {
+  const texto = RECEITAS[n] || RECEITAS[1];
+  return texto.split('>').map(p => p.trim()).filter(Boolean).map(p => {
+    const [tipo, pedido] = p.split(':').map(s => s.trim());
+    if (MAPAS[pedido]) return { tipo, id: pedido };
+    const mesmos = Object.keys(MAPAS).filter(id => MAPAS[id].tipo === tipo);
+    return { tipo, id: mesmos[n % Math.max(1, mesmos.length)] || Object.keys(MAPAS)[0] };
+  });
+}

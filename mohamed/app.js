@@ -328,6 +328,14 @@ const FASES_CHEFE = [
   { rotulo: '🔢', tipos: ['escolha'] },
   { rotulo: '✏️', tipos: ['digitar', 'padrao', 'grade', 'tabuleiro', 'repartir'] }
 ];
+// mini-chefe: 2 fases (escolha → conta)
+const FASES_MINI = [
+  { rotulo: '🔢', tipos: ['escolha', 'vf'] },
+  { rotulo: '✏️', tipos: ['digitar', 'padrao', 'grade', 'tabuleiro', 'repartir'] }
+];
+// mercador: preços em moedas e quanto a lanterna cresce
+const CONFIG_MERCADOR = { poder: 5, dica: 3, lanterna: 8, lanternaMais: .5, lanternaMax: 1.5 };
+const LANTERNA_BASE = CONFIG_LUZ.lanterna;
 // cartas viram poderes: a posição da lição no dia escolhe o poder (até 3 de cada por dia)
 const PODERES = {
   nove: { icone: '⚡', nome: 'Poder do 9', efeito: 'Dano em dobro por 3 acertos' },
@@ -346,7 +354,8 @@ let RUN = null; // progresso do dia na masmorra: salas, melhorias e poderes usad
 function cargas() {
   const total = { nove: 0, escudo: 0, dica: 0 };
   estado.cartas.forEach(id => total[poderDaCarta(id)]++);
-  return Object.fromEntries(Object.keys(total).map(k => [k, Math.max(0, Math.min(3, total[k]) - (RUN.usados[k] || 0))]));
+  const extras = RUN.extras || {}; // poderes comprados no mercador
+  return Object.fromEntries(Object.keys(total).map(k => [k, Math.max(0, Math.min(3, total[k]) + (extras[k] || 0) - (RUN.usados[k] || 0))]));
 }
 
 function telaMasmorra() {
@@ -355,15 +364,19 @@ function telaMasmorra() {
   if (p.versao !== 2) Object.assign(p, { versao: 2, pegos: [], mapa: 0, vistos: {}, salvo: null }); // mapas grandes: progresso novo
   p.melhorias = p.melhorias || { dano: 0, coracoes: 0, dicas: 0 };
   p.usados = p.usados || { nove: 0, escudo: 0, dica: 0, dicasGratis: 0 };
+  p.extras = p.extras || { nove: 0, escudo: 0, dica: 0 };
   RUN = p;
   B = null;
+  CONFIG_LUZ.lanterna = LANTERNA_BASE + (estado.lanterna || 0); // lanterna comprada no mercador
   Batalha.fechar();
   $('#desafio').hidden = true;
   $('#melhoria').hidden = true;
   Relatorio.licao(d.n, '🏰 Masmorra');
   toast(`${MUNDOS[d.mundo].emoji} Dia ${d.n} · ${d.titulo}`);
   Masmorra.abrir({
-    mundo: d.mundo, personagem: estado.personagem, progresso: p, vidas: CONFIG_BATALHA.coracoes + p.melhorias.coracoes,
+    mundo: d.mundo, dia: d.n, personagem: estado.personagem, progresso: p, vidas: CONFIG_BATALHA.coracoes + p.melhorias.coracoes,
+    aoRegistro: (certo, conta, tema) => { Relatorio.registrar(certo, conta, tema); salvar(); }, // puzzles de matemática
+    aoMercador: abrirMercador,
     aoMoeda: n => { estado.moedas += n; salvar(); },
     aoSalvar: salvar,
     aoBatalha: batalhar,
@@ -429,6 +442,39 @@ function concluirMasmorra(d) {
   else { toast('🏁 Masmorra concluída!'); irPara('t-mapa'); }
 }
 
+// ---------- mercador: troca moedas por poder, dica ou lanterna ----------
+function abrirMercador(fim) {
+  const C = CONFIG_MERCADOR, caixa = $('#melhoria');
+  const ofertas = [
+    { id: 'nove', icone: '⚡', txt: 'Poder do 9 +1', preco: C.poder },
+    { id: 'escudo', icone: '🛡️', txt: 'Escudo +1', preco: C.poder },
+    { id: 'dica', icone: '💡', txt: 'Dica grátis', preco: C.dica },
+    { id: 'lanterna', icone: '🔦', txt: 'Lanterna maior', preco: C.lanterna, esgotou: (estado.lanterna || 0) >= C.lanternaMax }
+  ];
+  const pintar = () => {
+    caixa.querySelector('.titulo').textContent = `🛒 Mercador · 🪙 ${estado.moedas}`;
+    $('#mel-opcoes').innerHTML = ofertas.map(o => `<button class="mel" data-o="${o.id}"${o.esgotou || estado.moedas < o.preco ? ' disabled' : ''}><span>${o.icone}</span><b>${o.txt}</b><small>${o.esgotou ? 'esgotou' : '🪙 ' + o.preco}</small></button>`).join('') +
+      '<button class="mel sair" data-o="sair"><span>👋</span><b>Até logo</b></button>';
+  };
+  caixa.hidden = false;
+  caixa.classList.add('loja');
+  pintar();
+  $('#mel-opcoes').onclick = e => {
+    const b = e.target.closest('.mel');
+    if (!b || b.disabled) return;
+    const o = ofertas.find(x => x.id === b.dataset.o);
+    if (!o) { caixa.hidden = true; caixa.classList.remove('loja'); caixa.querySelector('.titulo').textContent = '✨ Escolha 1'; som('clique'); fim(); return; }
+    estado.moedas -= o.preco;
+    if (o.id === 'lanterna') { estado.lanterna = (estado.lanterna || 0) + C.lanternaMais; CONFIG_LUZ.lanterna = LANTERNA_BASE + estado.lanterna; o.esgotou = estado.lanterna >= C.lanternaMax; }
+    else if (o.id === 'dica') RUN.melhorias.dicas++;
+    else RUN.extras[o.id]++;
+    salvar();
+    som('bau');
+    toast(`${o.icone} ${o.txt}`);
+    pintar();
+  };
+}
+
 // ---------- perguntas da batalha: o motor atual vira 4 respostas ----------
 const TIPOS_BATALHA = ['escolha', 'vf', 'digitar', 'padrao', 'grade', 'tabuleiro', 'repartir'];
 function paraBatalha(ex) {
@@ -480,23 +526,33 @@ function salaDoMonstro(d, mon) {
   const lics = licoesDoMapa(d, mon.mapa || 0, mon.mapas || 1);
   return d.licoes.indexOf(sortear(lics.length ? lics : d.licoes));
 }
+// o tema do monstro só vale se já foi estudado; senão, vale o tema do dia
+function temaValido(tema, d) {
+  if (DIAS_DO_TEMA[tema] && DIAS_DO_TEMA[tema].some(n => n <= d.n)) return tema;
+  return TEMAS_MONSTRO[d.mundo] || 'Natural';
+}
 function batalhar(mon, coracoes, fim) {
-  const d = DIAS[diaAberto - 1];
-  B = { mon, vidas: coracoes.vidas, max: coracoes.max, fim, seguidos: 0, erros: 0, q: null, t0: 0, travado: true, dica: false, fora: [], dobro: 0, escudo: false, fase: 0, gerar: mon.chefe ? null : geradorDoMonstro(mon.tema, d, salaDoMonstro(d, mon)) };
+  const d = DIAS[diaAberto - 1], CF = CONFIG_MONSTROS.furtivo;
+  mon.tema = temaValido(mon.tema, d);
+  // ataque furtivo: o monstro começa com 25% de vida a menos e o primeiro acerto vale dobrado
+  if (coracoes.furtivo && mon.vida === mon.max) mon.vida = Math.round(mon.max * (1 - CF.vidaMenos));
+  B = { mon, vidas: coracoes.vidas, max: coracoes.max, fim, seguidos: 0, erros: 0, q: null, t0: 0, travado: true, dica: false, fora: [], dobro: 0, escudo: false, fase: 0, primeiro: coracoes.furtivo ? CF.primeiroGolpe : 1, fraco: false, gerar: mon.chefe || mon.mini ? null : geradorDoMonstro(mon.tema, d, salaDoMonstro(d, mon)) };
   Batalha.abrir({ monstro: mon, personagem: estado.personagem, vidas: B.vidas, maxVidas: B.max, aoResponder: responderBatalha, aoDica: dicaBatalha, aoPoder: abrirPoderes });
+  if (coracoes.furtivo) setTimeout(() => Batalha.banner('🗡️ Ataque furtivo!'), 150);
   efeitos();
-  setTimeout(proximaBatalha, mon.chefe ? 1500 : 500);
+  setTimeout(proximaBatalha, mon.chefe ? 1500 : mon.mini ? 900 : 500);
 }
 
 // chefão: a fase muda com a vida (150 → 100 → 50) e traz outro tipo de pergunta
 function proximaBatalha() {
   if (!B) return;
-  if (B.mon.chefe) {
-    const f = B.mon.vida > (B.mon.max * 2) / 3 ? 1 : B.mon.vida > B.mon.max / 3 ? 2 : 3;
+  if (B.mon.chefe || B.mon.mini) { // chefão: 3 fases · mini-chefe: 2 fases
+    const fases = B.mon.chefe ? FASES_CHEFE : FASES_MINI, n = fases.length;
+    const f = Math.min(n, n - Math.ceil((B.mon.vida / B.mon.max) * n) + 1);
     if (f !== B.fase) {
       B.fase = f;
-      B.gerar = geradorDoMonstro(B.mon.tema, DIAS[diaAberto - 1], null, FASES_CHEFE[f - 1].tipos);
-      Batalha.fase(f, FASES_CHEFE[f - 1].rotulo);
+      B.gerar = geradorDoMonstro(B.mon.tema, DIAS[diaAberto - 1], null, fases[f - 1].tipos);
+      Batalha.fase(f, fases[f - 1].rotulo);
       if (f > 1) som('chefe');
       return setTimeout(perguntarBatalha, 700);
     }
@@ -523,6 +579,8 @@ function responderBatalha(i) {
     const rapido = performance.now() - B.t0 <= C.segundosRapido * 1000;
     let dano = C.danoBase + C.melhoriaDano * RUN.melhorias.dano + Math.min(C.bonusSeguidoMax, C.bonusSeguido * B.seguidos) + (rapido ? C.bonusRapido : 0);
     if (B.dobro > 0) { dano *= 2; B.dobro--; } // Poder do 9
+    if (B.primeiro > 1) { dano *= B.primeiro; B.primeiro = 1; } // primeiro golpe do ataque furtivo
+    if (B.fraco) dano = Math.round(dano * (1 + CONFIG_MONSTROS.fraqueza.bonus)); // usou o poder da fraqueza
     B.seguidos++;
     estado.seguidos++;
     if (q.ex.revisao) acertouRevisao(q.ex);
@@ -559,6 +617,7 @@ function vencerBatalha() {
 
 function terminarBatalha(venceu) {
   const b = B;
+  if (!b) return;
   B = null;
   Batalha.fechar();
   b.fim({ venceu, vidas: b.vidas, erros: b.erros });
@@ -606,6 +665,8 @@ function usarPoder(id) {
     if (B.escudo) { toast('🛡️ Escudo já está ativo'); return; }
     B.escudo = true;
   }
+  // fraqueza: o poder certo dá dano extra no resto da batalha
+  if (id === B.mon.fraqueza && !B.fraco) { B.fraco = true; setTimeout(() => B && Batalha.banner('💥 Fraqueza!'), 120); }
   RUN.usados[id]++;
   salvar();
   som('bau');
