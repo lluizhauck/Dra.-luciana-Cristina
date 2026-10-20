@@ -224,6 +224,9 @@ const NOMES_MONSTRO = {
   Tabuada: ['Brasinha', 'Lavito', 'Fumacê'],
   'Divisão': ['Bolhudo', 'Gotão', 'Marolo']
 };
+// sprites desenhados por código (sprites_jogo.js); sem eles, fica a arte antiga
+const SJ = () => (typeof SpritesJogo !== 'undefined' ? SpritesJogo : null);
+
 function desenharMonstro(tema, chefe = false) {
   const K = '#1E1240', T = `stroke="${K}" stroke-width="4" stroke-linejoin="round"`;
   const olho = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" ${T}/><circle cx="${x - 2}" cy="${y + 1}" r="${r / 2}" fill="${K}"/>`;
@@ -1268,6 +1271,11 @@ const Masmorra = (() => {
 
   // mercador: barraca com toldo listrado e um vendedor de capuz
   function vendedor(x, y) {
+    const perto = Math.hypot(x / T + .5 - M.P.x, y / T + .5 - M.P.y) < 2.2;
+    if (SJ() && SJ().aliado(ctx, 'seuTroco', x + T / 2, y + T * .95, T * 1.05, { falando: perto })) {
+      for (let k = 0; k < 4; k++) { ctx.fillStyle = k % 2 ? '#F2E8D0' : '#3DDC84'; ctx.fillRect(x + 1 + k * 7.5, y - 14, 7.5, 6); }
+      return;
+    }
     ctx.fillStyle = '#6B4A2E'; ctx.fillRect(x + 2, y + 18, T - 4, 10);
     for (let k = 0; k < 4; k++) { ctx.fillStyle = k % 2 ? '#F2E8D0' : '#3DDC84'; ctx.fillRect(x + 1 + k * 7.5, y - 6, 7.5, 8); }
     ctx.fillStyle = '#5A4FA0'; circ(x + T / 2, y + 10, 8);
@@ -1305,6 +1313,11 @@ const Masmorra = (() => {
     ctx.ellipse(m.x * T, (m.y + .3) * T, w * (m.voa ? .24 : .34), 4, 0, 0, Math.PI * 2);
     ctx.fill();
     if (m.carga > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,200,90,.35)'; circ(m.x * T, (m.y - .2) * T, 18); ctx.globalCompositeOperation = 'source-over'; }
+    // sprite: dormindo (ou escondido no mato), atacando (avisando o tiro ou a investida), andando ou parado
+    const ataca = m.carga > 0 || m.alerta > 0 || (m.avanco && m.avanco.carga > 0);
+    const estado = m.estado === 'dormindo' || (m.estado === 'espreita' && m.alerta <= 0) ? 'dormindo' : ataca ? 'atacando' : parado || m.chefe ? 'idle' : 'andando';
+    const cx = Math.cos(m.ang), cy = Math.sin(m.ang), dir = Math.abs(cx) > Math.abs(cy) ? (cx < 0 ? 'esquerda' : 'lado') : (cy < 0 ? 'cima' : 'baixo');
+    if (SJ() && SJ().monstroMapa(ctx, m, m.x * T + treme, (m.y + .3) * T - (m.voa ? 4 : 0), T * m.tam, { estado, dir, bioma: M.nome })) return;
     if (img && img.complete && img.naturalWidth) {
       ctx.save();
       ctx.translate(m.x * T + treme, (m.y + .3) * T - pulo - voo);
@@ -1552,7 +1565,7 @@ const Batalha = (() => {
     $b('b-carga').hidden = !o.carga;
     carga(0);
     relogio(0);
-    $b('b-arte').innerHTML = m.arte || desenharMonstro(m.tema, m.chefe);
+    if (!(SJ() && SJ().batalha.abrir($b('b-arte'), m))) $b('b-arte').innerHTML = m.arte || desenharMonstro(m.tema, m.chefe);
     $b('b-poderes').hidden = true;
     $b('b-efeitos').textContent = '';
     $b('b-dano').classList.remove('pop');
@@ -1601,6 +1614,7 @@ const Batalha = (() => {
     c.firstElementChild.style.width = 100 * k + '%';
     c.classList.toggle('quase', k >= .75);
     $b('b-arte').classList.toggle('carrega', k >= .75 && !c.hidden);
+    if (SJ()) SJ().batalha.carga(c.hidden ? 0 : k);
   }
   const blindado = sim => $b('b-arte').classList.toggle('blindado', !!sim);
   const furia = sim => $b('b-arte').classList.toggle('furia', !!sim);
@@ -1622,6 +1636,7 @@ const Batalha = (() => {
     const a = $b('b-arte');
     a.classList.remove('fase2', 'fase3');
     if (n > 1) a.classList.add('fase' + n);
+    if (SJ()) SJ().batalha.fase(n);
     banner(`Fase ${n} · ${rotulo}`);
   }
 
@@ -1703,6 +1718,7 @@ const Batalha = (() => {
     carga(0);
     setTimeout(() => {
       animar($b('b-arte'), 'dor');
+      if (SJ()) SJ().batalha.evento('ferido');
       vida(v, max);
       numero(txt || `Acerto! ${dano} de dano${rapido ? ' ⚡' : ''}`, '#fff');
       Audio2.sfx('golpe');
@@ -1720,6 +1736,7 @@ const Batalha = (() => {
     if (i < 0) $b('b-fala').textContent = q.texto;
     carga(0);
     animar($b('b-arte'), 'investe');
+    if (SJ()) SJ().batalha.evento(i < 0 ? 'ataqueForte' : 'ataque');
     setTimeout(() => {
       animar($b('arena'), 'balanca');
       som('erro');
@@ -1740,7 +1757,7 @@ const Batalha = (() => {
   function vitoria(txt, cb, chefe) {
     $b('b-respostas').innerHTML = '';
     if (chefe) { banner('🏆 Vitória!'); confete(); }
-    animar($b('b-arte'), 'desmaia');
+    if (!(SJ() && SJ().batalha.evento('morrendo'))) animar($b('b-arte'), 'desmaia');
     numero(txt, '#FFE48A');
     $b('b-fala').textContent = '🎉 Monstro derrotado!';
     som('vitoria');
@@ -1760,6 +1777,7 @@ const Batalha = (() => {
   function fechar() {
     clearInterval(fala);
     relogio(0);
+    if (SJ()) SJ().batalha.fechar();
     $b('batalha').hidden = true;
   }
 

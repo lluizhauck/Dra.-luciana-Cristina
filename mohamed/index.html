@@ -455,6 +455,17 @@ svg{display:block}
 <script src="mapas1.js"></script>
 <script src="mapas2.js"></script>
 <script src="mapas3.js"></script>
+<script src="sprites.js"></script>
+<script src="personagens.js"></script>
+<script src="monstros_campo.js"></script>
+<script src="monstros_floresta.js"></script>
+<script src="monstros_praia.js"></script>
+<script src="monstros_vulcao.js"></script>
+<script src="monstros_castelo.js"></script>
+<script src="minichefes.js"></script>
+<script src="chefoes.js"></script>
+<script src="chefoes2.js"></script>
+<script src="sprites_jogo.js"></script>
 <script src="jogo.js"></script>
 <script src="relatorio.js"></script>
 <script src="audio.js"></script>
@@ -462,7 +473,7 @@ svg{display:block}
 <script src="app.js"></script>
 <script>
   // PWA: guarda os arquivos para funcionar sem internet
-  if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+  if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('service-worker.js').catch(() => {})); // aberto direto do arquivo (file://) não tem service worker: o jogo funciona igual, só não instala offline
 </script>
 </body>
 </html>

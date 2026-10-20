@@ -1,8 +1,9 @@
 // Mohamed — service worker: guarda todos os arquivos do app para funcionar offline.
 // Publicou mudanças? Troque a VERSAO para os alunos receberem os arquivos novos.
-const VERSAO = 'mohamed-v8';
+const VERSAO = 'mohamed-v18';
 const ARQUIVOS = [
   './', 'index.html', 'app.js', 'jogo.js', 'conteudo.js', 'relatorio.js', 'tema.css', 'audio.js', 'vila.js', 'biomas.js', 'monstros.js', 'perigos.js', 'puzzles.js', 'mapas.js', 'mapas1.js', 'mapas2.js', 'mapas3.js',
+  'sprites.js', 'personagens.js', 'monstros_campo.js', 'monstros_floresta.js', 'monstros_praia.js', 'monstros_vulcao.js', 'monstros_castelo.js', 'minichefes.js', 'chefoes.js', 'chefoes2.js', 'sprites_jogo.js',
   'manifest.json', 'icone.svg', 'icone-192.png', 'icone-512.png'
 ];
 

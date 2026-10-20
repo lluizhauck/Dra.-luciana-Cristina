@@ -478,17 +478,19 @@ function abrirMercador(fim) {
   caixa.hidden = false;
   caixa.classList.add('loja');
   pintar();
+  const rosto = SJ() && SJ().retrato(caixa.querySelector('.mel-caixa'), 'seuTroco', { falando: true, antes: true, w: 104, h: 80 }); // Seu Troco atende
   $('#mel-opcoes').onclick = e => {
     const b = e.target.closest('.mel');
     if (!b || b.disabled) return;
     const o = ofertas.find(x => x.id === b.dataset.o);
-    if (!o) { caixa.hidden = true; caixa.classList.remove('loja'); caixa.querySelector('.titulo').textContent = '✨ Escolha 1'; som('clique'); fim(); return; }
+    if (!o) { if (rosto) rosto.remove(); caixa.hidden = true; caixa.classList.remove('loja'); caixa.querySelector('.titulo').textContent = '✨ Escolha 1'; som('clique'); fim(); return; }
     estado.moedas -= o.preco;
     if (o.id === 'lanterna') { estado.lanterna = (estado.lanterna || 0) + C.lanternaMais; CONFIG_LUZ.lanterna = lanternaTotal(); o.esgotou = estado.lanterna >= C.lanternaMax; }
     else if (o.id === 'dica') RUN.melhorias.dicas++;
     else RUN.extras[o.id]++;
     salvar();
     som('bau');
+    if (rosto) SJ().evento('seuTroco', 'feliz');
     toast(`${o.icone} ${o.txt}`);
     pintar();
   };
@@ -805,6 +807,12 @@ function desafio(tipo, fim) {
   const d = DIAS[diaAberto - 1], ex = exercicioDeDesafio(d), caixa = $('#desafio');
   caixa.hidden = false;
   $('#des-icone').textContent = tipo === 'bau' ? '🎁' : '🔒';
+  if (SJ()) { // o Ancião das Cartas acompanha o desafio; o Zé se atrapalha junto quando erra
+    let amigos = $('#des-amigos');
+    if (!amigos) { amigos = document.createElement('span'); amigos.id = 'des-amigos'; amigos.className = 'des-amigos'; caixa.querySelector('.topo .espaco').before(amigos); }
+    SJ().retrato(amigos, 'anciao', { falando: true, w: 52, h: 56 });
+    SJ().retrato(amigos, 'ze', { w: 52, h: 56 });
+  }
   $('#des-pergunta').textContent = ex.pergunta.replace(/^⏱ /, '');
   $('#des-volta').onclick = () => { som('clique'); caixa.hidden = true; fim({ aberto: false }); };
   Jogo.desafio($('#des-palco'), ex, (certo, det) => {
@@ -813,12 +821,13 @@ function desafio(tipo, fim) {
     salvar();
     const aberto = certo || ex.tipo !== 'reta'; // completou o desafio (na reta, só vale acertando)
     som(aberto ? 'vitoria' : 'erro');
+    if (SJ()) SJ().evento(aberto ? 'anciao' : 'ze', aberto ? 'feliz' : 'erro');
     $('#des-pergunta').textContent = aberto ? (tipo === 'bau' ? '🎉 Baú aberto!' : '🔓 Porta aberta!') : '😅 Quase! Vem outro';
     setTimeout(() => {
       if (caixa.hidden) return;
       if (aberto) { caixa.hidden = true; fim({ aberto, certo }); } else desafio(tipo, fim);
     }, 900);
-  }, ok => { som(ok ? 'moeda' : 'erro'); vibrar(ok ? 20 : 60); });
+  }, ok => { som(ok ? 'moeda' : 'erro'); vibrar(ok ? 20 : 60); if (!ok && SJ()) SJ().evento('ze', 'erro'); });
 }
 
 let diaAberto = 1;

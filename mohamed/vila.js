@@ -89,6 +89,7 @@ const Vila = (() => {
   let vw = 0, vh = 0, zoom = 1, dpr = 1, P = null, textos = [], gotas = [], chuvaT = 0, prodEm = 0;
   const cam = { x: 0, y: 0 }, joy = { x: 0, y: 0 }, teclas = new Set(), anim = new Map(), previas = {};
   let sprites = { chave: '', imgs: {} };
+  let fagulha = null, tAnterior = 0;                             // a Fagulha (personagens.js) segue o herói no passeio
   const $v = id => document.getElementById(id);
 
   // ---------- dias (data local) ----------
@@ -188,6 +189,7 @@ const Vila = (() => {
       V.baldes--;
     }
     pl.rega = h;
+    if (SJ()) SJ().evento('seuBroto', 'feliz');
     if (pl.est < 3) { pl.est++; if (pl.est === 3) pl.colheu = h; } // árvore nova: o primeiro prêmio vem amanhã
     anim.set(it, { t: 0, tipo: 'cresce' });
     if (!chuva) { flutuar('💧', it.x + .5, it.y - .6); som('acerto'); salvar(); pintarHUD(); }
@@ -490,10 +492,12 @@ const Vila = (() => {
         salvar();
         som('bau');
         confete(24);
+        if (SJ()) SJ().evento('seuTroco', 'feliz');
         pintarHUD();
         pintar();
       };
       s.querySelector('#loja-ok').onclick = () => { som('clique'); s.remove(); };
+      if (SJ()) SJ().retrato(s.querySelector('.vila-loja'), 'seuTroco', { falando: true, antes: true, w: 104, h: 80 }); // Seu Troco atende
     };
     pintar();
     document.body.appendChild(s);
@@ -599,9 +603,15 @@ const Vila = (() => {
     }
     // coisas altas e o herói, de cima para baixo
     if (modo === 'passeio') altos.push({ heroi: true, y: P.y - .5, x: P.x });
+    if (SJ()) { // aliados: Seu Broto cuida do primeiro canteiro; a Fagulha voa atrás do herói
+      const cant = V.itens.find(it => !it.solto && def(it.id) && def(it.id).canteiro);
+      if (cant) { const lado = itemEm(cant.x + 1, cant.y) && !itemEm(cant.x - 1, cant.y) ? -1 : 1; altos.push({ npc: 'seuBroto', x: cant.x + lado + .5, y: cant.y + .95 }); }
+      if (modo === 'passeio') altos.push({ npc: 'fagulha', y: P.y + .2, x: P.x });
+    }
     altos.sort((a, b) => a.y - b.y || a.x - b.x);
     for (const it of altos) {
       if (it.heroi) { desenharHeroi(t); continue; }
+      if (it.npc) { desenharAliado(it, t); continue; }
       comAnim(it, () => (it.planta ? desenharPlanta(ctx, it, it.x * T, it.y * T, t) : desenharItem(ctx, it, it.x * T, it.y * T, t, vizinho)));
     }
     // luzes suaves de lampiões e cristais
@@ -637,6 +647,7 @@ const Vila = (() => {
         ctx.globalAlpha = 1;
       }
       if (menuDe) { ctx.strokeStyle = '#22E8FF'; ctx.lineWidth = 2; ctx.strokeRect(menuDe.x * T + 1, menuDe.y * T + 1, T - 2, T - 2); }
+      if (alvo && hover && dentro(...hover) && SJ()) SJ().aliado(ctx, 'construtor', (hover[0] + 1.3) * T, (hover[1] + 1) * T, T, { trabalhando: true }); // o Construtor martela ao lado
     }
     // textos que sobem
     for (const f of textos) {
@@ -707,6 +718,19 @@ const Vila = (() => {
     }
     ctx.stroke();
     ctx.restore();
+  }
+
+  function desenharAliado(n, t) {
+    if (n.npc === 'fagulha') {
+      const dt = Math.min(.1, Math.max(0, t - tAnterior));
+      tAnterior = t;
+      if (!fagulha) fagulha = { x: P.x * T, y: P.y * T - 26 };
+      if (typeof Personagens !== 'undefined') Personagens.seguir(fagulha, P.x * T, P.y * T - 4, dt, t);
+      SJ().aliado(ctx, 'fagulha', fagulha.x, fagulha.y, 19, { espelho: fagulha.espelho });
+      return;
+    }
+    const perto = modo === 'passeio' && Math.hypot(n.x - P.x, n.y - .5 - P.y) < 1.8;
+    SJ().aliado(ctx, n.npc, n.x * T, n.y * T, T * 1.15, { falando: perto });
   }
 
   function desenharHeroi(t) {

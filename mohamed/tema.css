@@ -244,3 +244,12 @@ body:has(.tela.ativa .rodape) .som-bt{bottom:calc(100px + env(safe-area-inset-bo
 .vila-loja .mel-opcoes{grid-template-columns:repeat(3,1fr)}
 .vila-loja .mel b{font-size:14px}
 body:has(#t-aldeia.ativa .vila-barra:not([hidden])) .som-bt{bottom:calc(150px + env(safe-area-inset-bottom))}
+
+/* ---------- sprites desenhados por código (sprites.js · sprites_jogo.js) ---------- */
+.b-arte-m.sprite canvas{position:absolute;left:-25%;top:-25%;width:150%;height:150%;pointer-events:none}
+.b-arte-m.sprite.mini{height:min(194px,62%);width:auto;aspect-ratio:1;top:6%;right:5%}
+.b-arte-m.sprite.chefao{height:min(50vh,84%);width:auto;aspect-ratio:1;top:3%;right:2%}
+.retrato-sprite{display:block;flex:none;margin:0 auto}
+.mel-caixa .retrato-sprite{margin-bottom:-6px}
+.des-amigos{display:flex;align-items:flex-end;gap:2px;margin-left:6px}
+.des-amigos .retrato-sprite{margin:-12px 0 -6px}
