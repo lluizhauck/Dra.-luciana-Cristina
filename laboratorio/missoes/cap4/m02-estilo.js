@@ -228,6 +228,8 @@ section h2 {
     {
       id: 'e1',
       titulo: 'O CSS não pega',
+      resumo: "Ligue a folha de estilo ao HTML.",
+      arquivo: 'index.html',
       minutos: '10–20',
       teaser: 'Ligar a folha de estilo ao HTML.',
       mensagens: [
@@ -283,6 +285,9 @@ section h2 {
     {
       id: 'e2',
       titulo: 'O preço sumiu na multidão',
+      resumo: "Faça os preços e o título usarem as cores da marca.",
+      arquivo: 'css/estilo.css',
+      checklist: [{"texto": "Preços em destaque e maiores que a descrição", "criterios": ["preco-cor", "preco-tamanho"]}, {"texto": "Nome da loja na cor da marca", "criterios": ["h1-cor"]}, {"texto": "Nenhum id repetido", "criterios": ["ids-unicos"]}],
       minutos: '20–30',
       teaser: 'Seletores: tag, id e classe.',
       mensagens: [
@@ -316,7 +321,7 @@ section h2 {
         } }
       ],
       errosPrevistos: [
-        { id: 'id-vs-classe', tipo: 'seletor (id × classe)',
+        { id: 'id-vs-classe', arquivo: 'css/estilo.css', tipo: 'seletor (id × classe)',
           detectar: function (api) {
             var css = api.css('css/estilo.css');
             var r = css.regras.filter(function (x) { return x.seletor.trim() === '#preco'; })[0];
@@ -325,7 +330,7 @@ section h2 {
           },
           evidencia: 'Inspecione um preço no preview. A ficha lista as regras de CSS que valem para ele. A regra da linha {linha} do estilo.css aparece na lista? Compare o seletor dela com os atributos do elemento.',
           pista: '# seleciona pelo id (um elemento único: id="..."). O ponto seleciona pela classe (class="..."), que pode se repetir em vários elementos. O seletor precisa combinar com o que está escrito no HTML.' },
-        { id: 'prop-errada-h1', tipo: 'digitação (propriedade)',
+        { id: 'prop-errada-h1', arquivo: 'css/estilo.css', tipo: 'digitação (propriedade)',
           detectar: function (api) {
             var css = api.css('css/estilo.css');
             for (var i = 0; i < css.regras.length; i++) {
@@ -372,6 +377,9 @@ section h2 {
     {
       id: 'e3',
       titulo: 'Tudo espremido',
+      resumo: "Dê respiro aos cartões e aumente a letra.",
+      arquivo: 'css/estilo.css',
+      checklist: [{"texto": "Cartões com espaço interno", "criterios": ["padding"]}, {"texto": "Descrições com letra de 17px ou mais e boa entrelinha", "criterios": ["fonte", "entrelinha"]}, {"texto": "Pelo menos 2 comentários explicando o CSS", "criterios": ["comentarios"]}],
       minutos: '20–30',
       teaser: 'Espaçamentos, unidades de medida e comentários no CSS.',
       mensagens: [
@@ -403,7 +411,7 @@ section h2 {
         } }
       ],
       errosPrevistos: [
-        { id: 'unidade-com-espaco', tipo: 'sintaxe (valor inválido)',
+        { id: 'unidade-com-espaco', arquivo: 'css/estilo.css', tipo: 'sintaxe (valor inválido)',
           detectar: function (api) {
             var css = api.css('css/estilo.css');
             for (var i = 0; i < css.regras.length; i++) {
@@ -414,7 +422,7 @@ section h2 {
           },
           evidencia: 'Inspecione um cartão de sabor: na ficha, a declaração "{prop}: {valor}" aparece riscada (linha {linha} do estilo.css).',
           pista: 'Número e unidade andam grudados, sem espaço no meio. Com espaço, o navegador não reconhece o valor e ignora a linha inteira.' },
-        { id: 'sem-unidade', tipo: 'sintaxe (valor sem unidade)',
+        { id: 'sem-unidade', arquivo: 'css/estilo.css', tipo: 'sintaxe (valor sem unidade)',
           detectar: function (api) {
             var css = api.css('css/estilo.css');
             for (var i = 0; i < css.regras.length; i++) {
@@ -458,6 +466,8 @@ section h2 {
     {
       id: 'e4',
       titulo: 'O mais vendido não aparece',
+      resumo: "Destaque o sabor mais vendido.",
+      arquivo: 'css/estilo.css',
       minutos: '15–25',
       teaser: 'Cascata: quando duas regras brigam.',
       mensagens: [
@@ -482,7 +492,7 @@ section h2 {
         } }
       ],
       errosPrevistos: [
-        { id: 'ordem-cascata', tipo: 'cascata (ordem das regras)',
+        { id: 'ordem-cascata', arquivo: 'css/estilo.css', tipo: 'cascata (ordem das regras)',
           detectar: function (api) {
             var css = api.css('css/estilo.css');
             var d = css.regras.filter(function (r) { return r.seletor.trim() === '.destaque'; })[0];
@@ -494,7 +504,7 @@ section h2 {
           },
           evidencia: 'Inspecione o cartão do Açaí da casa: as regras .destaque (linha {linhaDestaque}) e .sabor (linha {linhaSabor}) aparecem na ficha e as duas mudam o fundo. Qual delas vem por último no arquivo?',
           pista: 'Quando duas regras têm a mesma força (aqui, uma classe cada) e mudam a mesma propriedade, vence a que aparece DEPOIS no CSS. É a "cascata": a água que vem depois passa por cima.' },
-        { id: 'maiuscula', tipo: 'seletor (maiúsculas)',
+        { id: 'maiuscula', arquivo: 'css/estilo.css', tipo: 'seletor (maiúsculas)',
           detectar: function (api) {
             var css = api.css('css/estilo.css');
             var r = css.regras.filter(function (x) { return /\.selo\b/i.test(x.seletor) && !/\.selo\b/.test(x.seletor); })[0];

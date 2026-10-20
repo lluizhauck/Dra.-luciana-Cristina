@@ -232,7 +232,7 @@
       insights.sort(function (x, y) { return x.em - y.em; });
       hips.sort(function (x, y) { return x.em - y.em; });
       if (insights.length) itens.push(['Seu último insight', '“' + insights[insights.length - 1].resposta + '”']);
-      if (hips.length) { var h = hips[hips.length - 1]; itens.push(['Sua última hipótese', '“Acho que o problema está em ' + h.onde + ' porque ' + h.porque + '”']); }
+      if (hips.length) { var h = hips[hips.length - 1]; itens.push(['Sua última hipótese', '“' + (h.texto || ('Acho que o problema está em ' + h.onde + ' porque ' + h.porque)) + '”']); }
       cont.appendChild(el('dl', { class: 'recap' }, itens.reduce(function (acc, i) { return acc.concat([el('dt', null, i[0]), el('dd', null, i[1])]); }, [])));
 
       // aquecimento: 1 pergunta aberta sobre a aula anterior
@@ -330,12 +330,25 @@
       return r;
     },
 
+    // -------------------------------------------------------- meu diário
+    /** voltarParaMissao: veio da tela de atividade (botão da barra de status) */
+    mostrarDiario: function (voltarParaMissao) {
+      var missaoAberta = voltarParaMissao && Lab.motor.missaoAberta();
+      var idMissao = missaoAberta ? missaoAberta.id : null;
+      if (missaoAberta) Lab.motor.fecharMissao();
+      Lab.diario.renderPagina(document.getElementById('diario-conteudo'), idMissao ? function () { Lab.motor.abrirMissao(idMissao); } : null);
+      Lab.ui.mostrarTela('tela-diario');
+    },
+
     // --------------------------------------------------------- cabeçalho
     ligarCabecalho: function () {
       document.getElementById('bt-mapa').addEventListener('click', function () { Lab.motor.fecharMissao(); app.mostrarMapa(); });
       document.getElementById('bt-relatorio').addEventListener('click', function () { Lab.diario.abrirRelatorio(Lab.estado.aluno, Lab.estado.turma); });
       document.getElementById('bt-exportar').addEventListener('click', function () { app.exportarCodigo(); });
       document.getElementById('bt-encerrar').addEventListener('click', function () { app.encerrarSessao(); });
+      document.getElementById('bt-encerrar-2').addEventListener('click', function () { app.encerrarSessao(); });
+      document.getElementById('bt-diario').addEventListener('click', function () { Lab.motor.fecharMissao(); app.mostrarDiario(); });
+      document.getElementById('bt-diario-2').addEventListener('click', function () { app.mostrarDiario(true); });
       document.getElementById('form-novo-perfil').addEventListener('submit', app.criarPerfil);
       document.getElementById('bt-importar').addEventListener('click', app.importarCodigo);
       document.getElementById('bt-trocar-turma').addEventListener('click', app.mostrarTurmas);

@@ -7,17 +7,17 @@
   <link rel="stylesheet" href="css/lab.css">
   <style>
     .pagina-hash { max-width: 720px; margin: 0 auto; padding: 40px 20px 60px; }
-    .pagina-hash h1 { font-family: var(--fonte-titulo); font-size: 34px; margin: 0 0 10px; }
-    .caixa { background: #fff; border: 1px solid var(--linha); border-radius: 10px; padding: 20px 22px; margin-top: 18px; }
-    .resultado { background: var(--ed-fundo); color: var(--ed-texto); padding: 14px 16px; border-radius: 8px; white-space: pre; overflow: auto; font-size: 13px; }
+    .pagina-hash h1 { font-family: var(--f-ui); font-size: 34px; margin: 0 0 10px; }
+    .caixa { background: var(--c-superficie); border: 1px solid var(--c-borda); border-radius: 10px; padding: 20px 22px; margin-top: 18px; }
+    .resultado { background: var(--c-editor); color: var(--c-texto); padding: 14px 16px; border-radius: 8px; white-space: pre; overflow: auto; font-size: 13px; }
     .passos li { margin-bottom: 6px; }
     .linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
-    input[type=number] { width: 140px; padding: 8px 10px; border: 1px solid var(--linha); border-radius: var(--raio); }
+    input[type=number] { width: 140px; padding: 8px 10px; border: 1px solid var(--c-borda); border-radius: var(--r-1); }
   </style>
 </head>
 <body>
   <main class="pagina-hash">
-    <p class="entrada-sobre">Laboratório de Código · ferramenta do professor</p>
+    <p class="sobretitulo">Laboratório de Código · ferramenta do professor</p>
     <h1>Gerar o hash da senha</h1>
     <p>Esta página transforma a sua senha num <strong>hash</strong> (PBKDF2-SHA256 com sal aleatório). Só o hash vai para o <code>config.js</code>: a senha nunca fica escrita no código. Nada sai deste computador.</p>
 

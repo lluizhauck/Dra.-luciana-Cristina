@@ -91,6 +91,33 @@
       });
     },
 
+    // ------------------------------------------------- página "Meu diário"
+    renderPagina: function (cont, voltar) {
+      var a = Lab.estado.aluno;
+      U.limpar(cont);
+      var t = diario.totais(a);
+      if (voltar) cont.appendChild(el('button', { type: 'button', class: 'bt bt-secundario voltar-missao', onclick: voltar }, [Lab.iconeEl('voltar'), 'Voltar para a missão']));
+      cont.appendChild(el('div', { class: 'diario-resumo' }, Object.keys(CATEGORIAS).map(function (k) {
+        return el('div', { class: 'diario-medida' }, [el('span', { class: 'diario-num' }, String(t[k])), el('span', null, CATEGORIAS[k])]);
+      })));
+      var sessoes = a.sessoes.slice().reverse();
+      if (!a.diario.length) { cont.appendChild(el('p', { class: 'vazio' }, 'Seu diário ainda está vazio. Ele se escreve sozinho enquanto você trabalha.')); return; }
+      sessoes.forEach(function (s) {
+        var itens = a.diario.filter(function (e) { return e.sessao === s.id && e.tipo !== 'pontos'; });
+        if (!itens.length) return;
+        cont.appendChild(el('section', { class: 'diario-sessao' }, [
+          el('h2', { class: 'titulo-secao' }, 'Aula ' + s.numero + ' · ' + U.data(s.inicio) + ' · ' + U.duracao(s.ativoMs)),
+          el('ol', { class: 'diario-lista' }, itens.slice().reverse().map(function (e) {
+            return el('li', { class: 'diario-item tipo-' + e.tipo }, [
+              el('span', { class: 'diario-hora' }, U.hora(e.em)),
+              el('span', { class: 'diario-tipo' }, ROTULOS[e.tipo] || e.tipo),
+              el('span', { class: 'diario-texto' }, e.texto)
+            ]);
+          }))
+        ]));
+      });
+    },
+
     // ------------------------------------------------------ relatório
     dadosRelatorio: function (a, turmaId) {
       var trilhaId = Lab.cfg.trilha;
@@ -110,7 +137,7 @@
           tentativas: (prog.tentativas || []).length,
           etapasConcluidas: (prog.etapasConcluidas || []).map(function (e) { return titulos[e] || e; }),
           tiposErro: tipos,
-          hipoteses: (prog.hipoteses || []).map(function (h) { return { em: h.em, etapa: titulos[h.etapa] || h.etapa, texto: 'Acho que o problema está em ' + h.onde + ' porque ' + h.porque }; }),
+          hipoteses: (prog.hipoteses || []).map(function (h) { return { em: h.em, etapa: titulos[h.etapa] || h.etapa, texto: h.texto || ('Acho que o problema está em ' + h.onde + ' porque ' + h.porque) }; }),
           ajudas: (prog.ajudas || []).map(function (h) { return { em: h.em, etapa: titulos[h.etapa] || h.etapa, nivel: h.nivel, explicacao: h.explicacao || '' }; }),
           previsoes: (prog.previsoes || []).map(function (p) { return { etapa: titulos[p.etapa] || p.etapa, previsao: p.previsao, observado: p.observado, diferenca: p.diferenca || '' }; }),
           snapshots: (prog.snapshots || []).length,

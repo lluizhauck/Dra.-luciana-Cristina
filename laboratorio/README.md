@@ -6,6 +6,19 @@ HTML, CSS e JavaScript puros: sem framework, sem CDN, funciona **offline**.
 
 > **Etapa 1 entregue:** turmas, perfis com PIN, senha do professor, sessões (salvar/retomar), motor completo e as **Missões 1 (HTML) e 2 (CSS)** de ponta a ponta. As Missões 3 a 8 aparecem no mapa como "em preparação".
 
+## Interface
+
+Pensada para **1366×768**, com um tema grafite para a ferramenta e o site do cliente sempre claro dentro do preview. O fluxo vai em passos, e cada um mostra só o necessário:
+
+1. **Pedido**: tela só com a mensagem do cliente (até 3 balões) e o botão "Começar a missão".
+2. **Previsão** (só nos passos que pedem): uma pergunta, um campo e um botão.
+3. **Código**: barra de 48 px (missão · "Passo 2 de 4" · Pedido, Ajuda, **Executar**), o chip da tarefa (clique para ver até 3 itens de checklist), editor e preview 50/50 com divisória arrastável (também pelas setas do teclado) e barra de status de 28 px (salvo automaticamente, tempo da sessão, Meu diário, Encerrar sessão).
+4. **Resultado**: o preview reage. Se houver erro, uma faixa no rodapé mostra UMA mensagem em linguagem simples, com "Ver detalhes" (Console e Armazenamento).
+5. **Hipótese**: janela pequena, com um campo e um botão.
+6. **Raio-X e insight**: tela própria no fim da missão.
+
+O editor mostra uma aba por vez (o arquivo do passo, definido em `etapa.arquivo`). Ele tem realce de sintaxe próprio para HTML, CSS e JS (`js/realce.js`), linha atual destacada, trechos fixos esmaecidos e recolhidos, regiões editáveis marcadas por uma barra âmbar e erros reais do Console sublinhados na linha certa. Os erros *previstos* não são sublinhados, para não entregar a resposta: eles aparecem só na escada de ajuda, um nível por vez. Os tokens de design (cores, espaçamento em grade de 8 px, raios, sombras, tipografia 12/14/16/20/28) ficam no topo de `css/lab.css`, e os ícones SVG em traço fino ficam em `js/icones.js`.
+
 ## Como abrir
 
 1. Copie a pasta `laboratorio/` para o computador (ou pendrive).
@@ -100,10 +113,12 @@ Lab.registrarMissao({
   principal: 'index.html', assets: [], abertura: ['mensagem do cliente'],
   arquivos: [{ nome: 'index.html', linguagem: 'html', modelo: `...\n[[editavel:regiao]]\n...\n[[/editavel]]` }],
   etapas: [{
-    id: 'e1', titulo, minutos, teaser, mensagens: [], tarefa: '<p>html</p>', conceitos: [],
+    id: 'e1', titulo, resumo: 'uma frase para o chip', arquivo: 'index.html', minutos, teaser,
+    mensagens: [], tarefa: '<p>explicação (botão "Ver a explicação do passo")</p>', conceitos: [],
+    checklist: [{ texto: 'item visível', criterios: ['id1', 'id2'] }],   // no máximo 3 itens
     previsao: { pergunta, observar: function (api) { return 'texto'; } },          // opcional
     criterios: [{ id, texto, verificar: function (api) { return true; }, aposRecarregar: false }],
-    errosPrevistos: [{ id, tipo, detectar: function (api) { return { linha: 3 } || false; }, evidencia: '... {linha}', pista: '...' }],
+    errosPrevistos: [{ id, tipo, arquivo, detectar: function (api) { return { linha: 3 } || false; }, evidencia: '... {linha}', pista: '...' }],
     ajuda: { evidencia, pista }, solucao: { explicacao: '<p>…</p>', codigo: '...' }, aoConcluir: '...'
   }],
   raiox: { intro, pergunta }, encerramento: '...', aquecimento: ['pergunta 1', '...']

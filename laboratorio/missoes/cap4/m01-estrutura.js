@@ -60,6 +60,8 @@ Siga a gente no Instagram: @acaiecia
     {
       id: 'e1',
       titulo: 'A aba sem nome',
+      resumo: "Monte o esqueleto da página e dê um nome à aba do navegador.",
+      checklist: [{"texto": "A página começa com <!DOCTYPE html> e tem <html>, <head> e <body>", "criterios": ["doctype", "partes"]}, {"texto": "O head tem o título da aba e a codificação UTF-8", "criterios": ["titulo", "charset"]}, {"texto": "Todo o texto visível fica dentro do <body>", "criterios": ["conteudo"]}],
       minutos: '15–25',
       teaser: 'Você vai montar o esqueleto da página (head e body).',
       mensagens: [
@@ -152,6 +154,8 @@ Siga a gente no Instagram: @acaiecia
     {
       id: 'e2',
       titulo: 'Tudo virou outdoor',
+      resumo: "Organize o texto com títulos e parágrafos.",
+      checklist: [{"texto": "Um <h1> com o nome da loja e <h2> curtinhos nas seções", "criterios": ["h1", "h2", "sem-gigante"]}, {"texto": "Slogan e \"Sobre nós\" em parágrafos", "criterios": ["p"]}, {"texto": "Endereço em duas linhas", "criterios": ["br"]}],
       minutos: '20–30',
       teaser: 'Títulos e parágrafos: o texto gigante e grudado.',
       mensagens: [
@@ -165,7 +169,7 @@ Siga a gente no Instagram: @acaiecia
         '<p>Algo no rascunho está deixando tudo gigante. Investigue com <strong>Inspecionar</strong> antes de sair mudando.</p>',
       conceitos: ['<h1>…<h6>', '<p>', '<br>', 'abrir e fechar tags'],
       previsao: {
-        pergunta: 'Olhe no seu código o texto "Açaí com banana". Quando você executar, de que tamanho ele vai aparecer na tela, e dentro de qual tag ele vai estar?',
+        pergunta: 'No rascunho, o título "Cardápio" abre com <h2> e nunca fecha. Quando você fechar esse título, o que vai acontecer com o texto "Açaí com banana", que vem logo depois?',
         observar: function (api) {
           var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
           var n;
@@ -252,6 +256,8 @@ Siga a gente no Instagram: @acaiecia
     {
       id: 'e3',
       titulo: 'Cardápio de verdade',
+      resumo: "Transforme sabores e tamanhos em listas e conserte a foto.",
+      checklist: [{"texto": "Sabores e tamanhos em listas (<ul>/<ol> com <li>)", "criterios": ["ul-sabores", "lista-tamanhos", "li-dentro"]}, {"texto": "A foto da tigela aparece", "criterios": ["img-ok"]}, {"texto": "A foto tem uma descrição (alt)", "criterios": ["img-alt"]}],
       minutos: '20–30',
       teaser: 'Listas e a foto quebrada da tigela.',
       mensagens: [
@@ -347,6 +353,8 @@ Siga a gente no Instagram: @acaiecia
     {
       id: 'e4',
       titulo: 'Chama no Zap',
+      resumo: "Conserte o link do WhatsApp e crie um atalho para o cardápio.",
+      checklist: [{"texto": "O WhatsApp abre https://wa.me/…", "criterios": ["wa"]}, {"texto": "Só o texto certo é clicável", "criterios": ["texto-link"]}, {"texto": "Um link no topo leva ao #cardapio", "criterios": ["ancora-link", "ancora-alvo"]}],
       minutos: '15–25',
       teaser: 'Links: o WhatsApp que não abre e o atalho para o cardápio.',
       mensagens: [

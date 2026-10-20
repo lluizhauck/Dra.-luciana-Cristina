@@ -176,10 +176,10 @@
 
     atualizarPontos: function () {
       var a = Lab.estado.aluno;
-      var n = document.getElementById('cab-pontos');
+      var n = document.getElementById('status-pontos');
       if (!n || !a) return;
       var t = Lab.diario.totais(a);
-      n.textContent = t.total + ' pts de processo';
+      n.textContent = t.total + ' pts';
       n.title = Object.keys(Lab.diario.CATEGORIAS).map(function (k) { return Lab.diario.CATEGORIAS[k] + ': ' + t[k]; }).join('\n');
     },
 
